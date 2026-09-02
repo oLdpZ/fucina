@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; background: #1b130d; color: #f2e4ca; -webkit-font-smoothing: antialiased; }
+    a { color: #d9a63f; text-decoration: none; } a:hover { color: #edc064; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 980px; background: radial-gradient(120% 60% at 50% 0%, #2a1c12 0%, #1b130d 62%); display: flex; flex-direction: column; box-sizing: border-box;">
+
+  <div style="display: flex; align-items: center; gap: 14px; padding: 26px 22px 20px 22px;">
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px;">
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9.5px; letter-spacing: 0.2em; color: #a4805a;">IL TUO MAZZO</div>
+      <div style="font-family: 'Alegreya', Georgia, serif; font-size: 27px; font-weight: 700; line-height: 1.05; color: #f6e9cf;">Goblin veloci</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: #2e2015; border: 1px solid #7a5a2c; box-shadow: 0 0 18px rgba(217, 166, 63, 0.22);">
+      <div style="font-family: 'Alegreya', Georgia, serif; font-size: 23px; font-weight: 700; line-height: 1; color: #edc064;">78</div>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 0 22px 22px 22px;">
+    <div style="height: 1px; flex-grow: 1; background: linear-gradient(90deg, rgba(122,90,44,0), #7a5a2c);"></div>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="#a4805a"><path d="M12 2l2.4 7.6H22l-6.2 4.5 2.4 7.6L12 17.2 5.8 21.7l2.4-7.6L2 9.6h7.6z"></path></svg>
+    <div style="height: 1px; flex-grow: 1; background: linear-gradient(270deg, rgba(122,90,44,0), #7a5a2c);"></div>
+  </div>
+
+  <div style="margin: 0 22px 20px 22px; padding: 22px 20px; background: #251a11; border: 1px solid #3f2c1b; border-radius: 10px; box-shadow: inset 0 1px 0 rgba(246, 233, 207, 0.06); display: flex; flex-direction: column; gap: 20px;">
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <div style="font-family: 'Alegreya', Georgia, serif; font-size: 16px; font-weight: 500; color: #86b0c4; flex-grow: 1;">Fedelt&agrave; al tema</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 18px; font-weight: 600; color: #86b0c4;">82<span style="font-size: 11px; font-weight: 400;">%</span></div>
+      </div>
+      <div style="height: 9px; border-radius: 5px; background: #17100a; border: 1px solid #33251a; overflow: hidden;">
+        <div style="width: 82%; height: 100%; background: linear-gradient(180deg, #9cc3d6, #5d8ba1);"></div>
+      </div>
+      <div style="font-size: 12.5px; line-height: 1.5; color: #b79b77;">49 carte su 60 sono Goblin o li aiutano.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <div style="font-family: 'Alegreya', Georgia, serif; font-size: 16px; font-weight: 500; color: #d9a63f; flex-grow: 1;">Potenza</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 18px; font-weight: 600; color: #d9a63f;">78<span style="font-size: 11px; font-weight: 400;">/100</span></div>
+      </div>
+      <div style="height: 9px; border-radius: 5px; background: #17100a; border: 1px solid #33251a; overflow: hidden;">
+        <div style="width: 78%; height: 100%; background: linear-gradient(180deg, #f0c163, #c8862a);"></div>
+      </div>
+      <div style="font-size: 12.5px; line-height: 1.5; color: #b79b77;">Regge i mazzi del negozio. Non quelli da torneo.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 18px; border-top: 1px solid #3f2c1b;">
+      <div style="font-size: 14px; line-height: 1.55; color: #ecdcc0; text-wrap: pretty;">Con <strong style="font-weight: 600; color: #f6e9cf;">4 carte fuori tema</strong> la potenza sale a <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #d9a63f; font-weight: 600;">84</span> e il tema scende al <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #86b0c4; font-weight: 600;">75%</span>.</div>
+      <div style="min-height: 48px; border-radius: 6px; background: linear-gradient(180deg, #3a2817, #2b1d11); border: 1px solid #7a5a2c; color: #f0c163; display: flex; align-items: center; justify-content: center; font-family: 'Alegreya', Georgia, serif; font-size: 17px; font-weight: 700;">Vedi le cinque versioni</div>
+    </div>
+
+  </div>
+
+  <div style="margin: 0 22px 20px 22px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9.5px; letter-spacing: 0.2em; color: #a4805a;">COME VINCE</div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #221710; border: 1px solid #35251a; border-radius: 8px;">
+        <div style="font-family: 'Alegreya', Georgia, serif; font-size: 17px; font-weight: 700; color: #d9a63f; width: 30px;">T3</div>
+        <div style="font-size: 14px; line-height: 1.4; flex-grow: 1; color: #ecdcc0;">Tre creature sul tavolo</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #221710; border: 1px solid #35251a; border-radius: 8px;">
+        <div style="font-family: 'Alegreya', Georgia, serif; font-size: 17px; font-weight: 700; color: #d9a63f; width: 30px;">T5</div>
+        <div style="font-size: 14px; line-height: 1.4; flex-grow: 1; color: #ecdcc0;">La partita si chiude, nel 64% dei casi</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin: 0 22px 24px 22px; padding: 20px; background: #251a11; border: 1px solid #3f2c1b; border-radius: 10px; display: flex; flex-direction: column; gap: 16px;">
+    <div style="font-family: 'Alegreya', Georgia, serif; font-size: 18px; font-weight: 700; color: #f6e9cf;">Curva dei costi</div>
+    <div style="display: flex; align-items: flex-end; gap: 10px; height: 100px;">
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 100%; height: 70px; background: linear-gradient(180deg, #e0a844, #a9762a); border-radius: 3px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #a4805a;">1</div></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 100%; height: 84px; background: linear-gradient(180deg, #e0a844, #a9762a); border-radius: 3px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #a4805a;">2</div></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 100%; height: 56px; background: linear-gradient(180deg, #b98a3c, #8a6224); border-radius: 3px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #a4805a;">3</div></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 100%; height: 28px; background: #6d4f22; border-radius: 3px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #a4805a;">4</div></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 100%; height: 14px; background: #3f2c1b; border-radius: 3px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #a4805a;">5</div></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="width: 100%; height: 3px; background: #3f2c1b; border-radius: 3px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #a4805a;">6+</div></div>
+    </div>
+    <div style="font-size: 13px; line-height: 1.55; color: #b79b77; text-wrap: pretty;">Il 61% del mazzo costa due mana o meno: da qui la possibilit&agrave; di giocare due carte nello stesso turno gi&agrave; dal terzo.</div>
+  </div>
+
+  <div style="margin-top: auto; display: flex; gap: 10px; padding: 16px 22px 24px 22px; border-top: 1px solid #2e2015;">
+    <div style="flex-grow: 1; min-height: 50px; border-radius: 6px; border: 1px solid #4a3520; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500; color: #d3bb96;">Modifica</div>
+    <div style="flex-grow: 1.4; min-height: 50px; border-radius: 6px; background: linear-gradient(180deg, #d9a63f, #b0801f); color: #241705; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Alegreya', Georgia, serif; font-size: 17px; font-weight: 700;">
+      <span>Lista della spesa</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

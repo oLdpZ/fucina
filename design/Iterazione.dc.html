@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&family=Spectral:wght@500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; background: #efe4cd; color: #241c14; -webkit-font-smoothing: antialiased; }
+    a { color: #a02c22; text-decoration: none; } a:hover { color: #7d1f18; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 844px; background: #efe4cd; display: flex; flex-direction: column; box-sizing: border-box;">
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 24px 20px 18px 20px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6d5c45" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+    <div style="font-size: 17px; font-weight: 600; font-family: 'Spectral', 'Iowan Old Style', Georgia, serif; letter-spacing: -0.005em; flex-grow: 1;">Il tuo mazzo, a modo tuo</div>
+  </div>
+
+  <div style="padding: 0 20px 18px 20px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 8px;">
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #9a866a; flex-grow: 1;">CARTE CHE NON TOCCO</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">4</div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; background: #fbf6ea; border: 1px solid #c2ad86; border-radius: 18px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a3c2b" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7.5a4 4 0 018 0V11"></path></svg>
+        <span style="font-size: 13px;">Goblin Chieftain</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; background: #fbf6ea; border: 1px solid #c2ad86; border-radius: 18px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a3c2b" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7.5a4 4 0 018 0V11"></path></svg>
+        <span style="font-size: 13px;">Skirk Prospector</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; background: #fbf6ea; border: 1px solid #c2ad86; border-radius: 18px;">
+        <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #9a866a;">+2 altre</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 0 20px 22px 20px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; align-items: baseline; gap: 8px;">
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #9a866a; flex-grow: 1;">CARTE CHE NON VOGLIO</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">2</div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; background: #e7dbc0; border: 1px solid #cdb891; border-radius: 18px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9a866a" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+        <span style="font-size: 13px; color: #6d5c45; text-decoration: line-through;">Reckless Barbarian</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; background: #e7dbc0; border: 1px solid #cdb891; border-radius: 18px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9a866a" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+        <span style="font-size: 13px; color: #6d5c45; text-decoration: line-through;">Burn Down the House</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin: 0 20px 18px 20px; padding: 20px 18px; background: #fbf6ea; border: 1px solid #d8c7a4; border-radius: 4px; display: flex; flex-direction: column; gap: 16px;">
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #9a866a; flex-grow: 1;">CONSIGLIO 3 DI 7</div>
+      <div style="display: flex; gap: 4px;">
+        <div style="width: 14px; height: 3px; border-radius: 2px; background: #c2ad86;"></div>
+        <div style="width: 14px; height: 3px; border-radius: 2px; background: #c2ad86;"></div>
+        <div style="width: 14px; height: 3px; border-radius: 2px; background: #a02c22;"></div>
+        <div style="width: 14px; height: 3px; border-radius: 2px; background: #e2d5b8;"></div>
+        <div style="width: 14px; height: 3px; border-radius: 2px; background: #e2d5b8;"></div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 15px; font-weight: 600; color: #a02c22; width: 26px;">&minus;2</div>
+        <div style="width: 28px; height: 39px; border-radius: 2px; background: #e2d5b8; border: 1px solid #cdb891;"></div>
+        <div style="flex-grow: 1; font-size: 15px;">Goblin Instigator</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 15px; font-weight: 600; color: #1f5f9e; width: 26px;">+2</div>
+        <div style="width: 28px; height: 39px; border-radius: 2px; background: #dde6f4; border: 1px solid #b9cde6;"></div>
+        <div style="flex-grow: 1; font-size: 15px;">Goblin Warchief</div>
+      </div>
+    </div>
+
+    <div style="font-size: 13.5px; line-height: 1.55; color: #4a3c2b; text-wrap: pretty; padding-top: 4px; border-top: 1px solid #e2d5b8;">I due corpi da 1/1 dopo il turno quattro non attaccano pi&ugrave;: restano in mano. Warchief fa costare uno di meno ogni altro Goblin, quindi quei turni li riempi comunque &mdash; ma con creature che contano.</div>
+
+    <div style="display: flex; gap: 16px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px;">
+      <div style="color: #6d5c45;">potenza <span style="color: #241c14;">78</span> <span style="color: #9a866a;">&rarr;</span> <span style="color: #a02c22; font-weight: 600;">81</span></div>
+      <div style="color: #6d5c45;">tema <span style="color: #1f5f9e; font-weight: 600;">invariato</span></div>
+      <div style="color: #6d5c45; margin-left: auto;">+4,20 &euro;</div>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <div style="flex-grow: 1; min-height: 48px; border-radius: 4px; border: 1px solid #c2ad86; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: #4a3c2b;">Salta</div>
+      <div style="flex-grow: 1.6; min-height: 48px; border-radius: 4px; background: #a02c22; color: #fbf6ea; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600;">Accetta</div>
+    </div>
+
+  </div>
+
+  <div style="margin-top: auto; padding: 16px 20px 22px 20px; border-top: 1px solid #e2d5b8; display: flex; flex-direction: column; gap: 10px;">
+    <div style="min-height: 48px; border-radius: 4px; border: 1px solid #c2ad86; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 15px; font-weight: 600; color: #4a3c2b;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4a3c2b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 10-1.6 5.4"></path><path d="M20 5v6h-6"></path></svg>
+      <span>Rigenera il resto</span>
+    </div>
+    <div style="font-size: 12.5px; line-height: 1.5; color: #9a866a; text-align: center; text-wrap: pretty;">L&#39;ultima rigenerazione ha cambiato 4 carte su 60. Le tue restano dove sono.</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

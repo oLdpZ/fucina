@@ -1,0 +1,209 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&family=Spectral:wght@500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; background: #efe4cd; color: #241c14; -webkit-font-smoothing: antialiased; }
+    a { color: #a02c22; text-decoration: none; } a:hover { color: #7d1f18; }
+  </style>
+</helmet>
+<div style="width: 1440px; height: 900px; background: #efe4cd; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
+
+  <div style="display: flex; align-items: center; gap: 20px; padding: 0 32px; height: 68px; border-bottom: 1px solid #d8c7a4; background: #fbf6ea; flex-shrink: 0;">
+    <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; color: #9a866a;">[NOME APP]</div>
+    <div style="width: 1px; height: 22px; background: #d8c7a4;"></div>
+    <div style="font-size: 17px; font-weight: 600; font-family: 'Spectral', 'Iowan Old Style', Georgia, serif; letter-spacing: -0.005em;">Goblin veloci</div>
+    <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #9a866a;">60 carte &middot; rosso &middot; salvato 2 minuti fa</div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+      <div style="height: 40px; padding: 0 18px; border-radius: 4px; border: 1px solid #c2ad86; display: flex; align-items: center; font-size: 14px; font-weight: 500; color: #4a3c2b;">Esporta</div>
+      <div style="height: 40px; padding: 0 18px; border-radius: 4px; background: #a02c22; color: #fbf6ea; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600;">
+        <span>Lista della spesa</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 500; opacity: 0.85;">62,40 &euro;</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 400px minmax(0, 1fr) 360px; gap: 0; flex-grow: 1; min-height: 0;">
+
+    <div style="border-right: 1px solid #d8c7a4; background: #fbf6ea; padding: 24px; display: flex; flex-direction: column; gap: 18px; overflow: hidden;">
+      <div style="display: flex; align-items: baseline; gap: 10px;">
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #9a866a; flex-grow: 1;">CREATURE</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">24</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">4&times;</div>
+          <div style="width: 26px; height: 36px; border-radius: 2px; background: #e2d5b8; border: 1px solid #cdb891;"></div>
+          <div style="flex-grow: 1; font-size: 14px;">Goblin Chieftain</div>
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">3,80</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">4&times;</div>
+          <div style="width: 26px; height: 36px; border-radius: 2px; background: #e2d5b8; border: 1px solid #cdb891;"></div>
+          <div style="flex-grow: 1; font-size: 14px;">Goblin Warchief</div>
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">2,10</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">4&times;</div>
+          <div style="width: 26px; height: 36px; border-radius: 2px; background: #e2d5b8; border: 1px solid #cdb891;"></div>
+          <div style="flex-grow: 1; font-size: 14px;">Skirk Prospector</div>
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">0,40</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">4&times;</div>
+          <div style="width: 26px; height: 36px; border-radius: 2px; background: #e2d5b8; border: 1px solid #cdb891;"></div>
+          <div style="flex-grow: 1; font-size: 14px;">Goblin Instigator</div>
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">0,25</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">4&times;</div>
+          <div style="width: 26px; height: 36px; border-radius: 2px; background: #e2d5b8; border: 1px solid #cdb891;"></div>
+          <div style="flex-grow: 1; font-size: 14px;">Battle Cry Goblin</div>
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">0,90</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">4&times;</div>
+          <div style="width: 26px; height: 36px; border-radius: 2px; background: #e2d5b8; border: 1px solid #cdb891;"></div>
+          <div style="flex-grow: 1; font-size: 14px;">Goblin Trailblazer</div>
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">0,15</div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: baseline; gap: 10px; padding-top: 8px; border-top: 1px solid #e2d5b8;">
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #9a866a; flex-grow: 1;">MAGIE</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">12</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">4&times;</div>
+          <div style="width: 26px; height: 36px; border-radius: 2px; background: #e2d5b8; border: 1px solid #cdb891;"></div>
+          <div style="flex-grow: 1; font-size: 14px;">Krenko&#39;s Command</div>
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">0,30</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">4&times;</div>
+          <div style="width: 26px; height: 36px; border-radius: 2px; background: #dde6f4; border: 1px solid #b9cde6;"></div>
+          <div style="flex-grow: 1; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 14px;">Lightning Strike</span>
+            <span style="width: 5px; height: 5px; border-radius: 50%; background: #1f5f9e;"></span>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">0,60</div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: baseline; gap: 10px; padding-top: 8px; border-top: 1px solid #e2d5b8;">
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #9a866a; flex-grow: 1;">TERRE</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">24</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #6d5c45; width: 24px;">20&times;</div>
+        <div style="flex-grow: 1; font-size: 14px;">Mountain</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #9a866a;">&mdash;</div>
+      </div>
+    </div>
+
+    <div style="padding: 26px 32px; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+        <div style="padding: 20px; background: #fbf6ea; border: 1px solid #d8c7a4; border-radius: 4px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: baseline;">
+            <div style="font-size: 13px; font-weight: 600; color: #1f5f9e; flex-grow: 1;">Fedelt&agrave; al tema</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 20px; font-weight: 600; color: #1f5f9e;">82<span style="font-size: 12px; font-weight: 400;">%</span></div>
+          </div>
+          <div style="height: 8px; border-radius: 4px; background: #e2d5b8; overflow: hidden;"><div style="width: 82%; height: 100%; background: #1f5f9e;"></div></div>
+          <div style="font-size: 12.5px; line-height: 1.45; color: #6d5c45;">49 carte su 60 sono Goblin o li aiutano direttamente.</div>
+        </div>
+        <div style="padding: 20px; background: #fbf6ea; border: 1px solid #d8c7a4; border-radius: 4px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: baseline;">
+            <div style="font-size: 13px; font-weight: 600; color: #a02c22; flex-grow: 1;">Potenza</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 20px; font-weight: 600; color: #a02c22;">78<span style="font-size: 12px; font-weight: 400;">/100</span></div>
+          </div>
+          <div style="height: 8px; border-radius: 4px; background: #e2d5b8; overflow: hidden;"><div style="width: 78%; height: 100%; background: #a02c22;"></div></div>
+          <div style="font-size: 12.5px; line-height: 1.45; color: #6d5c45;">Regge i mazzi del negozio. Perderebbe contro le liste da torneo.</div>
+        </div>
+      </div>
+
+      <div style="padding: 18px 20px; background: #e7dbc0; border-radius: 4px; display: flex; align-items: center; gap: 20px;">
+        <div style="flex-grow: 1; font-size: 14.5px; line-height: 1.5; text-wrap: pretty;">Con <strong style="font-weight: 600;">4 carte fuori tema in pi&ugrave;</strong> la potenza sale a <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #a02c22; font-weight: 600;">84</span> e il tema scende al <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #1f5f9e; font-weight: 600;">75%</span>.</div>
+        <div style="height: 42px; padding: 0 18px; border-radius: 4px; border: 1px solid #a02c22; color: #a02c22; display: flex; align-items: center; font-size: 14px; font-weight: 600; white-space: nowrap;">Vedi le cinque versioni</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; flex-grow: 1; min-height: 0;">
+
+        <div style="padding: 20px; background: #fbf6ea; border: 1px solid #d8c7a4; border-radius: 4px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="font-size: 15px; font-weight: 600; font-family: 'Spectral', 'Iowan Old Style', Georgia, serif; letter-spacing: -0.005em;">Curva dei costi</div>
+          <div style="display: flex; align-items: flex-end; gap: 10px; height: 120px;">
+            <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">10</div><div style="width: 100%; height: 84px; background: #a02c22; border-radius: 2px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #9a866a;">1</div></div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">12</div><div style="width: 100%; height: 100px; background: #a02c22; border-radius: 2px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #9a866a;">2</div></div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">8</div><div style="width: 100%; height: 67px; background: #bd5548; border-radius: 2px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #9a866a;">3</div></div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">4</div><div style="width: 100%; height: 34px; background: #d79a8e; border-radius: 2px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #9a866a;">4</div></div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">2</div><div style="width: 100%; height: 17px; background: #e2d5b8; border-radius: 2px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #9a866a;">5</div></div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;"><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6d5c45;">0</div><div style="width: 100%; height: 3px; background: #e2d5b8; border-radius: 2px;"></div><div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #9a866a;">6+</div></div>
+          </div>
+          <div style="font-size: 13px; line-height: 1.5; color: #4a3c2b; text-wrap: pretty;">Il 61% del mazzo costa due mana o meno: da qui la possibilit&agrave; di giocare due carte nello stesso turno gi&agrave; dal terzo.</div>
+        </div>
+
+        <div style="padding: 20px; background: #fbf6ea; border: 1px solid #d8c7a4; border-radius: 4px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between;">
+            <div style="font-size: 15px; font-weight: 600; font-family: 'Spectral', 'Iowan Old Style', Georgia, serif; letter-spacing: -0.005em;">Le 24 terre</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #9a866a;">20 Mountain &middot; 4 girate</div>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 12px;">
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 40px; font-weight: 600; line-height: 1;">96<span style="font-size: 18px; font-weight: 400;">%</span></div>
+            <div style="font-size: 13.5px; line-height: 1.4; color: #4a3c2b;">di avere due fonti di rosso entro il turno 2</div>
+          </div>
+          <div style="height: 8px; border-radius: 4px; background: #e2d5b8; overflow: hidden;"><div style="width: 96%; height: 100%; background: #2e6b3f;"></div></div>
+          <div style="font-size: 13px; line-height: 1.5; color: #4a3c2b; text-wrap: pretty;">Sotto le 22 fonti questa percentuale crolla sotto il 90% e il piano parte un turno tardi: per questo non ho tolto terre per far entrare altre creature.</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: auto;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9a866a" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8.5v4.5"></path><path d="M12 16h.01"></path></svg>
+            <div style="font-size: 12px; color: #9a866a;">Mano iniziale scartata nel 12% dei casi</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div style="border-left: 1px solid #d8c7a4; background: #fbf6ea; padding: 24px; display: flex; flex-direction: column; gap: 18px; overflow: hidden;">
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #9a866a;">COME VINCE</div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; font-weight: 600; color: #a02c22; width: 26px;">T3</div>
+          <div style="font-size: 14px; line-height: 1.4;">Tre creature sul tavolo</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; font-weight: 600; color: #a02c22; width: 26px;">T5</div>
+          <div style="font-size: 14px; line-height: 1.4;">Chiude, nel 64% delle simulazioni</div>
+        </div>
+      </div>
+
+      <div style="padding: 18px; background: #e7dbc0; border-radius: 4px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 14.5px; font-weight: 600; font-family: 'Spectral', 'Iowan Old Style', Georgia, serif; letter-spacing: -0.005em; text-wrap: pretty;">Perch&eacute; quattro Lightning Strike, se non sono Goblin?</div>
+        <div style="font-size: 13px; line-height: 1.55; color: #4a3c2b; text-wrap: pretty;">Tre dei mazzi che hai segnato al negozio giocano una creatura da 4 punti vita al turno tre. Senza queste quattro carte perdi quel confronto quasi sempre; con esse lo vinci nel 58% delle simulazioni.</div>
+      </div>
+
+      <div style="margin-top: auto; padding: 18px; border: 1px solid #d8c7a4; border-radius: 4px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #9a866a;">CONSIGLIO 3 DI 7</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 14px; font-weight: 600; color: #a02c22;">&minus;2</span><span style="font-size: 14px;">Goblin Instigator</span></div>
+          <div style="display: flex; align-items: center; gap: 10px;"><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 14px; font-weight: 600; color: #1f5f9e;">+2</span><span style="font-size: 14px;">Goblin Warchief</span></div>
+        </div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6d5c45;">potenza 78 <span style="color: #9a866a;">&rarr;</span> <span style="color: #a02c22; font-weight: 600;">81</span></div>
+        <div style="display: flex; gap: 10px;">
+          <div style="flex-grow: 1; height: 40px; border-radius: 4px; border: 1px solid #c2ad86; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: #4a3c2b;">Salta</div>
+          <div style="flex-grow: 1.4; height: 40px; border-radius: 4px; background: #a02c22; color: #fbf6ea; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;">Accetta</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

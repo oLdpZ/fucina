@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E8E8E4;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#1D4ED8}a:hover{color:#16389c}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:rgba(0,0,0,.18)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#1D4ED8;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);margin-top:-12px}
+</style>
+</helmet>
+
+<div style="padding:36px 40px 28px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid rgba(0,0,0,.12)">
+  <div style="font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#1D4ED8">Costruttore di mazzi vincolati · artboard</div>
+  <h1 style="margin:0;font:600 26px/1.15 'IBM Plex Sans',sans-serif;color:#16161A;letter-spacing:-.02em">Uno strumento di ottimizzazione sotto vincolo, travestito da gioco</h1>
+  <p style="margin:4px 0 0;max-width:640px;font:400 13.5px/1.6 'IBM Plex Sans',sans-serif;color:#5D5D68;text-wrap:pretty">Sette schermate mobile (390 px) più le due dense a schermo grande. L'interfaccia sta zitta: un accento blu, tipografia Plex, numeri sempre accompagnati dalla frase che spiega perché contano. App amatoriale, nessun elemento grafico ufficiale.</p>
+</div>
+
+<section style="padding:32px 40px 36px;border-bottom:1px solid rgba(0,0,0,.12)">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 18px">
+    <span style="font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#16161A;color:#fff;border-radius:4px">04</span>
+    <span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#16161A">Il mazzo generato — la schermata che decide il prodotto</span>
+    <span style="font:400 12px/1.2 'IBM Plex Sans',sans-serif;color:#7A7A85">interattiva: cambia versione e scheda</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">4a · mobile 390 · chiaro</div>
+      <div style="width:390px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:16px;overflow:hidden;color:#16161A">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 18px 12px;border-bottom:1px solid rgba(0,0,0,.09)">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="font:600 15px/1.2 'IBM Plex Sans',sans-serif">Solo Goblin</div>
+            <div style="font:400 11.5px/1.2 'IBM Plex Mono',monospace;color:#6B6B76">tetto 40,00 € · mono rosso · 60 carte</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <div style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,0,0,.14);display:grid;place-items:center;font:500 13px 'IBM Plex Sans',sans-serif;color:#4A4A55">⋯</div>
+          </div>
+        </div>
+
+        <div style="padding:18px 18px 14px;display:flex;flex-direction:column;gap:12px;background:#fff;border-bottom:1px solid rgba(0,0,0,.09)">
+          <div style="display:flex;align-items:flex-end;gap:14px">
+            <div style="display:flex;align-items:baseline;gap:3px">
+              <span style="font:600 52px/.85 'IBM Plex Sans',sans-serif;letter-spacing:-.04em;color:#1D4ED8">{{ v.potenza }}</span>
+              <span style="font:500 17px/1 'IBM Plex Mono',monospace;color:#9A9AA4">/100</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px;padding-bottom:4px">
+              <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6B6B76">Potenza stimata</div>
+              <div style="font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:#4A4A55">Vince {{ v.winrate }} delle partite simulate contro i mazzi tipici da negozio.</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;padding:12px;background:#F2F5FE;border-radius:10px">
+            <div style="display:flex;justify-content:space-between;font:500 11.5px/1 'IBM Plex Mono',monospace;color:#1D4ED8">
+              <span>PUREZZA DEL TEMA {{ v.purezza }}%</span><span>{{ v.fuoriLabel }}</span>
+            </div>
+            <div style="font:400 12.5px/1.5 'IBM Plex Sans',sans-serif;color:#2A2A33;text-wrap:pretty">{{ v.trade }}</div>
+            <div style="display:flex;gap:8px;margin-top:2px">
+              <div onClick="{{ openPurity }}" style="flex:1;padding:9px 10px;background:#1D4ED8;color:#fff;border-radius:8px;text-align:center;font:500 12.5px 'IBM Plex Sans',sans-serif;cursor:pointer" style-hover="background:#16389c">Confronta le 5 versioni</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:4px;padding:12px 18px 0">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+            <div onClick="{{ t.go }}" style="padding:7px 11px;border-radius:999px;font:500 12px 'IBM Plex Sans',sans-serif;cursor:pointer;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ isCarte }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:14px 18px 18px;display:flex;flex-direction:column;gap:16px">
+          <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(0,0,0,.09);padding-bottom:5px">
+                <span style="font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#16161A">{{ g.titolo }}</span>
+                <span style="font:400 11.5px/1 'IBM Plex Mono',monospace;color:#7A7A85">{{ g.meta }}</span>
+              </div>
+              <sc-if value="{{ g.nota }}" hint-placeholder-val="{{ false }}">
+                <div style="font:400 12px/1.5 'IBM Plex Sans',sans-serif;color:#6B6B76;text-wrap:pretty">{{ g.nota }}</div>
+              </sc-if>
+              <sc-for list="{{ g.carte }}" as="c" hint-placeholder-count="4">
+                <div onClick="{{ c.peek }}" style="display:flex;align-items:center;gap:10px;padding:6px 8px;margin:0 -8px;border-radius:8px;cursor:pointer" style-hover="background:#fff">
+                  <div style="width:30px;height:42px;border-radius:4px;flex:none;background:repeating-linear-gradient(135deg,#DEDEDA 0 4px,#EAEAE6 4px 8px);border:1px solid rgba(0,0,0,.12);display:grid;place-items:center;font:500 8px 'IBM Plex Mono',monospace;color:#8A8A94">art</div>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                    <div style="font:500 13.5px/1.25 'IBM Plex Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.nome }}</div>
+                    <div style="font:400 11px/1 'IBM Plex Mono',monospace;color:#7A7A85">{{ c.tipo }}</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;flex:none">
+                    <div style="width:22px;height:22px;border-radius:50%;background:#F0E0DA;border:1px solid rgba(0,0,0,.12);display:grid;place-items:center;font:600 10px 'IBM Plex Mono',monospace;color:#8A3A22">{{ c.mana }}</div>
+                    <div style="width:52px;text-align:right;font:500 12px 'IBM Plex Mono',monospace;color:#4A4A55">{{ c.prezzo }}</div>
+                    <div style="width:24px;text-align:right;font:500 12px 'IBM Plex Mono',monospace;color:#9A9AA4">×{{ c.n }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div onClick="{{ toggleAll }}" style="padding:10px;border:1px solid rgba(0,0,0,.14);border-radius:9px;text-align:center;font:500 12.5px 'IBM Plex Sans',sans-serif;color:#1D4ED8;cursor:pointer" style-hover="background:#fff">{{ allLabel }}</div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ isCurva }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase">Curva dei costi</div>
+            <div style="display:flex;align-items:flex-end;gap:8px;height:150px;padding-top:6px">
+              <sc-for list="{{ curva }}" as="b" hint-placeholder-count="5">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end">
+                  <span style="font:500 11px 'IBM Plex Mono',monospace;color:#4A4A55">{{ b.n }}</span>
+                  <div style="width:100%;border-radius:4px 4px 0 0;background:{{ b.col }};height:{{ b.h }}"></div>
+                  <span style="font:400 11px 'IBM Plex Mono',monospace;color:#7A7A85">{{ b.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font:400 12.5px/1.55 'IBM Plex Sans',sans-serif;color:#4A4A55;text-wrap:pretty">Il mazzo si ferma a 3 mana: giochi qualcosa ogni turno dal primo e non hai carte bloccate in mano. La colonna a 4 esiste solo per Krenko, che vince la partita da solo.</div>
+          </div>
+          <div style="height:1px;background:rgba(0,0,0,.09)"></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase">Base di terre · 22</div>
+            <sc-for list="{{ prob }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:5px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.07)">
+                <div style="display:flex;justify-content:space-between;align-items:baseline">
+                  <span style="font:400 13px/1.3 'IBM Plex Sans',sans-serif;color:#2A2A33">{{ p.q }}</span>
+                  <span style="font:600 15px 'IBM Plex Mono',monospace;color:#1D4ED8">{{ p.v }}</span>
+                </div>
+                <div style="height:4px;border-radius:2px;background:rgba(0,0,0,.08);overflow:hidden"><div style="height:100%;background:#1D4ED8;width:{{ p.v }}"></div></div>
+                <div style="font:400 11.5px/1.45 'IBM Plex Sans',sans-serif;color:#7A7A85">{{ p.why }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ isMotivi }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+          <div style="font:400 12.5px/1.55 'IBM Plex Sans',sans-serif;color:#6B6B76">Tre scelte hanno spostato il punteggio più delle altre.</div>
+          <sc-for list="{{ motivi }}" as="m" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:7px;padding:14px;background:#fff;border:1px solid rgba(0,0,0,.09);border-radius:11px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font:500 12px 'IBM Plex Mono',monospace;color:#16161A">{{ m.titolo }}</span>
+                <span style="font:600 12px 'IBM Plex Mono',monospace;color:{{ m.col }}">{{ m.delta }}</span>
+              </div>
+              <div style="font:400 12.5px/1.55 'IBM Plex Sans',sans-serif;color:#4A4A55;text-wrap:pretty">{{ m.testo }}</div>
+              <div style="font:400 11.5px/1 'IBM Plex Mono',monospace;color:#9A9AA4">{{ m.costo }}</div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <div style="display:flex;gap:8px;padding:12px 18px;border-top:1px solid rgba(0,0,0,.10);background:#fff;position:sticky;bottom:0">
+          <div style="flex:1;padding:12px;border-radius:9px;border:1px solid rgba(0,0,0,.16);text-align:center;font:500 13px 'IBM Plex Sans',sans-serif;cursor:pointer">Modifica</div>
+          <div style="flex:1.3;padding:12px;border-radius:9px;background:#1D4ED8;color:#fff;text-align:center;font:500 13px 'IBM Plex Sans',sans-serif;cursor:pointer">Lista della spesa · {{ v.prezzo }}</div>
+        </div>
+        <div style="padding:10px 18px 14px;font:400 10px/1.5 'IBM Plex Sans',sans-serif;color:#9A9AA4;background:#fff">App amatoriale non affiliata né approvata da Wizards of the Coast. Nomi delle carte e prezzi a scopo informativo.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">4b · mobile 390 · scuro</div>
+      <div style="width:390px;background:#101114;border:1px solid rgba(255,255,255,.10);border-radius:16px;overflow:hidden;color:#F2F2F0">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 18px 12px;border-bottom:1px solid rgba(255,255,255,.10)">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="font:600 15px/1.2 'IBM Plex Sans',sans-serif">Solo Goblin</div>
+            <div style="font:400 11.5px/1.2 'IBM Plex Mono',monospace;color:#9A9AA4">tetto 40,00 € · mono rosso · 60 carte</div>
+          </div>
+          <div style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);display:grid;place-items:center;font:500 13px 'IBM Plex Sans',sans-serif;color:#C6C6CC">⋯</div>
+        </div>
+        <div style="padding:18px 18px 14px;display:flex;flex-direction:column;gap:12px;background:#17181C;border-bottom:1px solid rgba(255,255,255,.08)">
+          <div style="display:flex;align-items:flex-end;gap:14px">
+            <div style="display:flex;align-items:baseline;gap:3px">
+              <span style="font:600 52px/.85 'IBM Plex Sans',sans-serif;letter-spacing:-.04em;color:#8FA9FF">78</span>
+              <span style="font:500 17px/1 'IBM Plex Mono',monospace;color:#7B7B85">/100</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px;padding-bottom:4px">
+              <div style="font:500 11px/1 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#9A9AA4">Potenza stimata</div>
+              <div style="font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:#C6C6CC">Vince il 61% delle partite simulate contro i mazzi tipici da negozio.</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;padding:12px;background:#1B2036;border-radius:10px">
+            <div style="display:flex;justify-content:space-between;font:500 11.5px/1 'IBM Plex Mono',monospace;color:#8FA9FF">
+              <span>PUREZZA DEL TEMA 85%</span><span>8 carte fuori tema</span>
+            </div>
+            <div style="font:400 12.5px/1.5 'IBM Plex Sans',sans-serif;color:#E4E4E2;text-wrap:pretty">Il tuo tema puro vale 62. Otto carte fuori tema portano la potenza a 78. Le vuoi?</div>
+            <div style="margin-top:2px;padding:9px 10px;background:#3B5BDB;color:#fff;border-radius:8px;text-align:center;font:500 12.5px 'IBM Plex Sans',sans-serif">Confronta le 5 versioni</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;padding:12px 18px 0">
+          <div style="padding:7px 11px;border-radius:999px;font:500 12px 'IBM Plex Sans',sans-serif;background:#F2F2F0;color:#101114">Le 60 carte</div>
+          <div style="padding:7px 11px;border-radius:999px;font:500 12px 'IBM Plex Sans',sans-serif;border:1px solid rgba(255,255,255,.16);color:#C6C6CC">Curva e terre</div>
+          <div style="padding:7px 11px;border-radius:999px;font:500 12px 'IBM Plex Sans',sans-serif;border:1px solid rgba(255,255,255,.16);color:#C6C6CC">Motivi</div>
+        </div>
+        <div style="padding:14px 18px 18px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(255,255,255,.10);padding-bottom:5px">
+            <span style="font:600 11.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase">Motore del tema</span>
+            <span style="font:400 11.5px/1 'IBM Plex Mono',monospace;color:#9A9AA4">24 carte · 18,40 €</span>
+          </div>
+          <sc-for list="{{ darkCards }}" as="c" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+              <div style="width:30px;height:42px;border-radius:4px;flex:none;background:repeating-linear-gradient(135deg,#23242A 0 4px,#2C2D34 4px 8px);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;font:500 8px 'IBM Plex Mono',monospace;color:#75757F">art</div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                <div style="font:500 13.5px/1.25 'IBM Plex Sans',sans-serif">{{ c.nome }}</div>
+                <div style="font:400 11px/1 'IBM Plex Mono',monospace;color:#9A9AA4">{{ c.tipo }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex:none">
+                <div style="width:22px;height:22px;border-radius:50%;background:#3A2723;border:1px solid rgba(255,255,255,.12);display:grid;place-items:center;font:600 10px 'IBM Plex Mono',monospace;color:#E7A48C">{{ c.mana }}</div>
+                <div style="width:52px;text-align:right;font:500 12px 'IBM Plex Mono',monospace;color:#C6C6CC">{{ c.prezzo }}</div>
+                <div style="width:24px;text-align:right;font:500 12px 'IBM Plex Mono',monospace;color:#75757F">×{{ c.n }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;padding:12px 18px;border-top:1px solid rgba(255,255,255,.10);background:#17181C">
+          <div style="flex:1;padding:12px;border-radius:9px;border:1px solid rgba(255,255,255,.18);text-align:center;font:500 13px 'IBM Plex Sans',sans-serif;color:#F2F2F0">Modifica</div>
+          <div style="flex:1.3;padding:12px;border-radius:9px;background:#3B5BDB;color:#fff;text-align:center;font:500 13px 'IBM Plex Sans',sans-serif">Lista della spesa · 21,83 €</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">4c · schermo grande 1180 · tutto insieme, niente schede</div>
+      <div style="width:1180px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:14px;overflow:hidden;color:#16161A">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(0,0,0,.10);background:#fff">
+          <div style="display:flex;align-items:baseline;gap:14px">
+            <span style="font:600 17px 'IBM Plex Sans',sans-serif">Solo Goblin</span>
+            <span style="font:400 12px 'IBM Plex Mono',monospace;color:#6B6B76">tetto 40,00 € · mono rosso · versione Equilibrio</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div style="padding:9px 14px;border:1px solid rgba(0,0,0,.16);border-radius:8px;font:500 12.5px 'IBM Plex Sans',sans-serif">Modifica</div>
+            <div style="padding:9px 14px;background:#1D4ED8;color:#fff;border-radius:8px;font:500 12.5px 'IBM Plex Sans',sans-serif">Lista della spesa · 21,83 €</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:300px 1fr 320px;gap:0;align-items:start">
+          <div style="padding:24px;display:flex;flex-direction:column;gap:20px;border-right:1px solid rgba(0,0,0,.09)">
+            <div style="display:flex;align-items:baseline;gap:4px">
+              <span style="font:600 64px/.85 'IBM Plex Sans',sans-serif;letter-spacing:-.04em;color:#1D4ED8">78</span>
+              <span style="font:500 18px 'IBM Plex Mono',monospace;color:#9A9AA4">/100</span>
+            </div>
+            <div style="font:400 13px/1.55 'IBM Plex Sans',sans-serif;color:#4A4A55;text-wrap:pretty">Potenza stimata: vince il 61% delle partite simulate contro i mazzi tipici da negozio.</div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:14px;background:#F2F5FE;border-radius:11px">
+              <div style="font:500 11.5px 'IBM Plex Mono',monospace;color:#1D4ED8">PUREZZA 85% · 8 FUORI TEMA</div>
+              <div style="font:400 12.5px/1.5 'IBM Plex Sans',sans-serif;color:#2A2A33">Tema puro 62 → 78 con otto carte fuori tema.</div>
+              <div style="display:flex;gap:3px;margin-top:4px">
+                <sc-for list="{{ versions }}" as="w" hint-placeholder-count="5">
+                  <div onClick="{{ w.go }}" style="flex:1;height:34px;border-radius:6px;display:grid;place-items:center;cursor:pointer;font:600 11px 'IBM Plex Mono',monospace;background:{{ w.bg }};color:{{ w.fg }}">{{ w.potenza }}</div>
+                </sc-for>
+              </div>
+              <div style="font:400 10.5px/1.4 'IBM Plex Mono',monospace;color:#7A7A85">← più fedele al tema · più forte →</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase">Base di terre · 22</div>
+              <sc-for list="{{ prob }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;justify-content:space-between"><span style="font:400 12.5px 'IBM Plex Sans',sans-serif;color:#2A2A33">{{ p.q }}</span><span style="font:600 13px 'IBM Plex Mono',monospace;color:#1D4ED8">{{ p.v }}</span></div>
+                  <div style="height:4px;border-radius:2px;background:rgba(0,0,0,.08)"><div style="height:100%;background:#1D4ED8;width:{{ p.v }}"></div></div>
+                </div>
+              </sc-for>
+              <div style="font:400 11.5px/1.45 'IBM Plex Sans',sans-serif;color:#7A7A85">Con 22 terre e un solo colore la mano parte quasi sempre. Salire a 24 significa più mani senza minacce.</div>
+            </div>
+          </div>
+          <div style="padding:24px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase">Curva dei costi</div>
+              <div style="display:flex;align-items:flex-end;gap:10px;height:110px">
+                <sc-for list="{{ curva }}" as="b" hint-placeholder-count="5">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end">
+                    <span style="font:500 11px 'IBM Plex Mono',monospace;color:#4A4A55">{{ b.n }}</span>
+                    <div style="width:100%;border-radius:4px 4px 0 0;background:{{ b.col }};height:{{ b.h }}"></div>
+                    <span style="font:400 11px 'IBM Plex Mono',monospace;color:#7A7A85">{{ b.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(0,0,0,.09);padding-bottom:5px">
+                    <span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase">{{ g.titolo }}</span>
+                    <span style="font:400 11px 'IBM Plex Mono',monospace;color:#7A7A85">{{ g.meta }}</span>
+                  </div>
+                  <sc-for list="{{ g.carte }}" as="c" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:9px;padding:4px 0">
+                      <div style="width:26px;height:36px;border-radius:3px;flex:none;background:repeating-linear-gradient(135deg,#DEDEDA 0 4px,#EAEAE6 4px 8px);border:1px solid rgba(0,0,0,.12)"></div>
+                      <div style="flex:1;min-width:0;font:500 12.5px/1.3 'IBM Plex Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.nome }}</div>
+                      <div style="font:500 11.5px 'IBM Plex Mono',monospace;color:#4A4A55">{{ c.prezzo }}</div>
+                      <div style="width:22px;text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#9A9AA4">×{{ c.n }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="padding:24px;display:flex;flex-direction:column;gap:12px;border-left:1px solid rgba(0,0,0,.09);background:#fff">
+            <div style="font:600 11.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase">Perché queste scelte</div>
+            <sc-for list="{{ motivi }}" as="m" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,.07)">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font:500 12px 'IBM Plex Mono',monospace">{{ m.titolo }}</span>
+                  <span style="font:600 12px 'IBM Plex Mono',monospace;color:{{ m.col }}">{{ m.delta }}</span>
+                </div>
+                <div style="font:400 12.5px/1.55 'IBM Plex Sans',sans-serif;color:#4A4A55;text-wrap:pretty">{{ m.testo }}</div>
+                <div style="font:400 11px 'IBM Plex Mono',monospace;color:#9A9AA4">{{ m.costo }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:32px 40px 36px;border-bottom:1px solid rgba(0,0,0,.12)">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 18px">
+    <span style="font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#16161A;color:#fff;border-radius:4px">05</span>
+    <span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#16161A">Purezza ↔ potenza — un gesto, non un modulo</span>
+    <span style="font:400 12px/1.2 'IBM Plex Sans',sans-serif;color:#7A7A85">trascina il cursore</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">5a · mobile 390</div>
+      <div style="width:390px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:16px;overflow:hidden">
+        <div style="padding:16px 18px;border-bottom:1px solid rgba(0,0,0,.09);display:flex;flex-direction:column;gap:3px">
+          <div style="font:600 15px 'IBM Plex Sans',sans-serif">Quanto vuoi tradire il tema?</div>
+          <div style="font:400 12px/1.5 'IBM Plex Sans',sans-serif;color:#6B6B76">Cinque versioni dello stesso mazzo. Trascina e guarda cosa cambia.</div>
+        </div>
+        <div style="padding:22px 18px 18px;background:#fff;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6B6B76">PUREZZA</div>
+              <div style="font:600 34px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.03em">{{ v.purezza }}%</div>
+            </div>
+            <div style="font:400 11px 'IBM Plex Mono',monospace;color:#9A9AA4;padding-bottom:6px">{{ v.label }}</div>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              <div style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#1D4ED8">POTENZA</div>
+              <div style="font:600 34px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.03em;color:#1D4ED8">{{ v.potenza }}</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input type="range" min="0" max="4" step="1" value="{{ vi }}" onChange="{{ setVi }}" onInput="{{ setVi }}" style="width:100%;height:26px;cursor:grab">
+            <div style="display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono',monospace;color:#9A9AA4">
+              <span>tema intatto</span><span>massima potenza</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;padding:14px;background:#F2F5FE;border-radius:11px">
+            <div style="font:400 13px/1.55 'IBM Plex Sans',sans-serif;color:#2A2A33;text-wrap:pretty">{{ v.trade }}</div>
+            <div style="display:flex;flex-direction:column;gap:5px;border-top:1px solid rgba(29,78,216,.16);padding-top:9px">
+              <sc-for list="{{ v.diff }}" as="d" hint-placeholder-count="3">
+                <div style="display:flex;justify-content:space-between;font:400 12px 'IBM Plex Mono',monospace;color:#3A3A44"><span>{{ d.k }}</span><span>{{ d.v }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ versions }}" as="w" hint-placeholder-count="5">
+              <div onClick="{{ w.go }}" style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer;border:1px solid {{ w.bd }};background:{{ w.rowBg }}">
+                <div style="width:34px;text-align:center;font:600 15px 'IBM Plex Mono',monospace;color:{{ w.numCol }}">{{ w.potenza }}</div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+                  <div style="font:500 13px 'IBM Plex Sans',sans-serif">{{ w.label }}</div>
+                  <div style="font:400 11px 'IBM Plex Mono',monospace;color:#7A7A85">purezza {{ w.purezza }}% · {{ w.fuoriLabel }}</div>
+                </div>
+                <div style="font:500 12.5px 'IBM Plex Mono',monospace;color:#4A4A55">{{ w.prezzo }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="padding:12px;background:#1D4ED8;color:#fff;border-radius:9px;text-align:center;font:500 13px 'IBM Plex Sans',sans-serif;cursor:pointer">Tieni questa versione</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:32px 40px 36px;border-bottom:1px solid rgba(0,0,0,.12)">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 18px">
+    <span style="font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#16161A;color:#fff;border-radius:4px">01–03</span>
+    <span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#16161A">Apertura, vincoli, avviso di tema troppo stretto</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">1a · galleria dei temi</div>
+      <div style="width:390px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:16px;overflow:hidden">
+        <div style="padding:20px 18px 16px;background:#fff;border-bottom:1px solid rgba(0,0,0,.09);display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="font:600 21px/1.2 'IBM Plex Sans',sans-serif;letter-spacing:-.02em">Da cosa partiamo?</div>
+            <div style="font:400 12.5px/1.5 'IBM Plex Sans',sans-serif;color:#6B6B76">Scegli un'idea, o cerca una carta che ti piace.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid rgba(0,0,0,.16);border-radius:9px;background:#F7F7F5">
+            <span style="font:400 13px 'IBM Plex Mono',monospace;color:#9A9AA4">⌕</span>
+            <span style="font:400 13px 'IBM Plex Sans',sans-serif;color:#9A9AA4">Cerca una carta da cui partire</span>
+          </div>
+        </div>
+        <div style="padding:14px 18px 18px;display:flex;flex-direction:column;gap:8px">
+          <div style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6B6B76">GIOCABILI E POCO VISTI</div>
+          <sc-for list="{{ temi }}" as="t" hint-placeholder-count="8">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid rgba(0,0,0,.09);border-radius:11px;cursor:pointer" style-hover="border-color:#1D4ED8">
+              <div style="width:4px;align-self:stretch;border-radius:2px;background:{{ t.col }}"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+                <div style="font:600 13.5px 'IBM Plex Sans',sans-serif">{{ t.nome }}</div>
+                <div style="font:400 12px/1.45 'IBM Plex Sans',sans-serif;color:#6B6B76;text-wrap:pretty">{{ t.idea }}</div>
+              </div>
+              <div style="font:400 11px 'IBM Plex Mono',monospace;color:#9A9AA4;flex:none">{{ t.da }}</div>
+            </div>
+          </sc-for>
+          <div style="padding:11px;text-align:center;font:500 12.5px 'IBM Plex Sans',sans-serif;color:#1D4ED8;border:1px solid rgba(0,0,0,.14);border-radius:9px">Altri 7 spunti</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">2a · vincoli — chi arriva dalla galleria salta tutto</div>
+      <div style="width:390px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:16px;overflow:hidden">
+        <div style="padding:16px 18px;border-bottom:1px solid rgba(0,0,0,.09);display:flex;align-items:center;gap:12px;background:#fff">
+          <span style="font:400 15px 'IBM Plex Mono',monospace;color:#4A4A55">←</span>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="font:600 15px 'IBM Plex Sans',sans-serif">Solo Goblin</div>
+            <div style="font:400 11.5px 'IBM Plex Mono',monospace;color:#7A7A85">tutto il resto è opzionale</div>
+          </div>
+        </div>
+        <div style="padding:20px 18px;display:flex;flex-direction:column;gap:24px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6B6B76">TETTO DI SPESA</span>
+              <span style="font:600 26px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.02em">40,00 €</span>
+            </div>
+            <div style="height:2px;background:rgba(0,0,0,.14);position:relative;margin:12px 0 4px">
+              <div style="position:absolute;left:0;top:0;height:2px;width:38%;background:#1D4ED8"></div>
+              <div style="position:absolute;left:38%;top:-12px;width:26px;height:26px;margin-left:-13px;border-radius:50%;background:#1D4ED8;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font:400 11px 'IBM Plex Mono',monospace;color:#9A9AA4"><span>15 €</span><span>150 €</span></div>
+            <div style="font:400 12px/1.5 'IBM Plex Sans',sans-serif;color:#6B6B76">Sotto i 30 € i mazzi restano lenti. Da 40 € si comprano le carte che decidono le partite.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6B6B76">COLORI</span>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ colori }}" as="c" hint-placeholder-count="5">
+                <div style="flex:1;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font:600 13px 'IBM Plex Mono',monospace;background:{{ c.bg }};color:{{ c.fg }};border:2px solid {{ c.bd }}">{{ c.l }}</div>
+              </sc-for>
+            </div>
+            <div style="font:400 12px/1.5 'IBM Plex Sans',sans-serif;color:#6B6B76">Il rosso basta: 9 goblin su 10 sono rossi. Aggiungere un colore costa terre e mani imperfette.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6B6B76">ESCLUSIONI</span>
+            <sc-for list="{{ escl }}" as="e" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fff;border:1px solid rgba(0,0,0,.09);border-radius:10px">
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <span style="font:500 13px 'IBM Plex Sans',sans-serif">{{ e.k }}</span>
+                  <span style="font:400 11px 'IBM Plex Mono',monospace;color:#9A9AA4">{{ e.v }}</span>
+                </div>
+                <div style="width:42px;height:24px;border-radius:12px;background:{{ e.trackBg }};position:relative;flex:none">
+                  <div style="position:absolute;top:2px;left:{{ e.knobL }};width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="padding:13px;background:#1D4ED8;color:#fff;border-radius:9px;text-align:center;font:500 13.5px 'IBM Plex Sans',sans-serif">Costruisci il mazzo</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">3a · tema troppo stretto — un consiglio, non un errore</div>
+      <div style="width:390px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:16px;overflow:hidden">
+        <div style="padding:16px 18px;border-bottom:1px solid rgba(0,0,0,.09);display:flex;align-items:center;gap:12px;background:#fff">
+          <span style="font:400 15px 'IBM Plex Mono',monospace;color:#4A4A55">←</span>
+          <div style="font:600 15px 'IBM Plex Sans',sans-serif">Solo Goblin ninja</div>
+        </div>
+        <div style="padding:24px 18px;display:flex;flex-direction:column;gap:22px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 44px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.03em;color:#B45309">11</span>
+              <span style="font:400 13px/1.4 'IBM Plex Sans',sans-serif;color:#4A4A55">carte esistono con questo tema.<br>Un mazzo ne vuole almeno 34.</span>
+            </div>
+            <div style="display:flex;gap:2px;height:26px">
+              <sc-for list="{{ stretto }}" as="s" hint-placeholder-count="34">
+                <div style="flex:1;border-radius:2px;background:{{ s.bg }}"></div>
+              </sc-for>
+            </div>
+            <div style="font:400 12.5px/1.55 'IBM Plex Sans',sans-serif;color:#6B6B76;text-wrap:pretty">Posso costruirlo comunque, ma 23 carte sarebbero riempitivo e il mazzo perderebbe quasi sempre. Meglio allargare di un passo.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6B6B76">TEMI VICINI PRATICABILI</span>
+            <sc-for list="{{ vicini }}" as="n" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:12px;padding:13px;background:#fff;border:1px solid rgba(0,0,0,.09);border-radius:11px;cursor:pointer" style-hover="border-color:#1D4ED8">
+                <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+                  <span style="font:600 13.5px 'IBM Plex Sans',sans-serif">{{ n.nome }}</span>
+                  <span style="font:400 11.5px/1.4 'IBM Plex Sans',sans-serif;color:#6B6B76">{{ n.idea }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none">
+                  <span style="font:600 14px 'IBM Plex Mono',monospace;color:#1D4ED8">{{ n.carte }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#9A9AA4">carte</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="padding:12px;border:1px solid rgba(0,0,0,.16);border-radius:9px;text-align:center;font:500 12.5px 'IBM Plex Sans',sans-serif;color:#4A4A55">Costruiscilo comunque, con i riempitivi</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:32px 40px 36px;border-bottom:1px solid rgba(0,0,0,.12)">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 18px">
+    <span style="font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#16161A;color:#fff;border-radius:4px">06</span>
+    <span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#16161A">Il ciclo iterativo — la parte che deve divertire</span>
+    <span style="font:400 12px/1.2 'IBM Plex Sans',sans-serif;color:#7A7A85">interattiva: blocca, escludi, accetta o rifiuta</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">6a · blocca e rigenera</div>
+      <div style="width:390px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:16px;overflow:hidden">
+        <div style="padding:16px 18px;background:#fff;border-bottom:1px solid rgba(0,0,0,.09);display:flex;flex-direction:column;gap:3px">
+          <div style="font:600 15px 'IBM Plex Sans',sans-serif">Modifica il mazzo</div>
+          <div style="font:400 12px/1.5 'IBM Plex Sans',sans-serif;color:#6B6B76">Tocca il lucchetto per tenere una carta, la ✕ per escluderla. Rigenerando cambia solo il resto.</div>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ iter }}" as="c" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:{{ c.rowBg }};border:1px solid {{ c.rowBd }}">
+              <div style="width:28px;height:39px;border-radius:4px;flex:none;background:repeating-linear-gradient(135deg,#DEDEDA 0 4px,#EAEAE6 4px 8px);border:1px solid rgba(0,0,0,.12);opacity:{{ c.op }}"></div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;opacity:{{ c.op }}">
+                <div style="font:500 13px/1.25 'IBM Plex Sans',sans-serif;text-decoration:{{ c.deco }}">{{ c.nome }}</div>
+                <div style="font:400 10.5px 'IBM Plex Mono',monospace;color:#7A7A85">{{ c.stato }}</div>
+              </div>
+              <div onClick="{{ c.lock }}" style="width:34px;height:34px;flex:none;border-radius:8px;display:grid;place-items:center;cursor:pointer;font:400 14px 'IBM Plex Mono',monospace;background:{{ c.lockBg }};color:{{ c.lockFg }}">{{ c.lockIcon }}</div>
+              <div onClick="{{ c.ban }}" style="width:34px;height:34px;flex:none;border-radius:8px;display:grid;place-items:center;cursor:pointer;font:400 14px 'IBM Plex Mono',monospace;background:{{ c.banBg }};color:{{ c.banFg }}">✕</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:4px 18px 16px;display:flex;flex-direction:column;gap:10px">
+          <div style="font:400 12px/1.5 'IBM Plex Sans',sans-serif;color:#6B6B76;padding:11px 12px;background:#F2F5FE;border-radius:9px">{{ iterStato }}</div>
+          <div style="display:flex;gap:8px">
+            <div onClick="{{ resetIter }}" style="flex:1;padding:12px;border:1px solid rgba(0,0,0,.16);border-radius:9px;text-align:center;font:500 13px 'IBM Plex Sans',sans-serif;cursor:pointer">Azzera</div>
+            <div style="flex:1.3;padding:12px;background:#1D4ED8;color:#fff;border-radius:9px;text-align:center;font:500 13px 'IBM Plex Sans',sans-serif;cursor:pointer">Rigenera il resto</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">6b · consigliami una modifica — una alla volta</div>
+      <div style="width:390px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:16px;overflow:hidden">
+        <div style="padding:16px 18px;background:#fff;border-bottom:1px solid rgba(0,0,0,.09);display:flex;justify-content:space-between;align-items:center">
+          <div style="font:600 15px 'IBM Plex Sans',sans-serif">Consiglio {{ sugI }} di 6</div>
+          <div style="font:400 11.5px 'IBM Plex Mono',monospace;color:#7A7A85">potenza {{ sugPot }}</div>
+        </div>
+        <div style="padding:22px 18px;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px;align-items:center">
+              <div style="width:74px;height:103px;border-radius:6px;background:repeating-linear-gradient(135deg,#DEDEDA 0 4px,#EAEAE6 4px 8px);border:1px solid rgba(0,0,0,.12);display:grid;place-items:center;font:500 9px 'IBM Plex Mono',monospace;color:#8A8A94">art</div>
+              <div style="font:500 12px/1.3 'IBM Plex Sans',sans-serif;text-align:center">{{ sug.out }}</div>
+              <div style="font:400 10.5px 'IBM Plex Mono',monospace;color:#B45309">esce</div>
+            </div>
+            <div style="font:400 20px 'IBM Plex Mono',monospace;color:#9A9AA4">→</div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px;align-items:center">
+              <div style="width:74px;height:103px;border-radius:6px;background:repeating-linear-gradient(135deg,#CBD8F7 0 4px,#DDE6FB 4px 8px);border:1px solid rgba(29,78,216,.3);display:grid;place-items:center;font:500 9px 'IBM Plex Mono',monospace;color:#5A6E9E">art</div>
+              <div style="font:500 12px/1.3 'IBM Plex Sans',sans-serif;text-align:center">{{ sug.in }}</div>
+              <div style="font:400 10.5px 'IBM Plex Mono',monospace;color:#1D4ED8">entra</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;padding:14px;background:#fff;border:1px solid rgba(0,0,0,.09);border-radius:11px">
+            <div style="font:400 13px/1.6 'IBM Plex Sans',sans-serif;color:#2A2A33;text-wrap:pretty">{{ sug.perche }}</div>
+            <div style="display:flex;gap:14px;border-top:1px solid rgba(0,0,0,.07);padding-top:9px">
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font:400 10px 'IBM Plex Mono',monospace;color:#9A9AA4">POTENZA</span><span style="font:600 13px 'IBM Plex Mono',monospace;color:#0F766E">{{ sug.dPot }}</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font:400 10px 'IBM Plex Mono',monospace;color:#9A9AA4">PUREZZA</span><span style="font:600 13px 'IBM Plex Mono',monospace;color:#B45309">{{ sug.dPur }}</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font:400 10px 'IBM Plex Mono',monospace;color:#9A9AA4">SPESA</span><span style="font:600 13px 'IBM Plex Mono',monospace;color:#4A4A55">{{ sug.dEur }}</span></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div onClick="{{ rifiuta }}" style="flex:1;padding:14px;border:1px solid rgba(0,0,0,.16);border-radius:10px;text-align:center;font:500 13px 'IBM Plex Sans',sans-serif;cursor:pointer">No, tengo la mia</div>
+            <div onClick="{{ accetta }}" style="flex:1;padding:14px;background:#1D4ED8;color:#fff;border-radius:10px;text-align:center;font:500 13px 'IBM Plex Sans',sans-serif;cursor:pointer">Accetta</div>
+          </div>
+          <div style="font:400 11.5px/1.4 'IBM Plex Mono',monospace;color:#9A9AA4;text-align:center">{{ sugFeed }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:32px 40px 44px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 18px">
+    <span style="font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#16161A;color:#fff;border-radius:4px">07</span>
+    <span style="font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#16161A">Lista della spesa — prezzi con la data, sempre</span>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">7a · mobile 390</div>
+      <div style="width:390px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:16px;overflow:hidden">
+        <div style="padding:18px;background:#fff;border-bottom:1px solid rgba(0,0,0,.09);display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div style="font:600 16px 'IBM Plex Sans',sans-serif">Da comprare</div>
+            <div style="font:400 11.5px 'IBM Plex Mono',monospace;color:#7A7A85">18 carte · 9 venditori</div>
+          </div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6B6B76">TOTALE</span>
+              <span style="font:600 34px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.03em">21,83 €</span>
+            </div>
+            <div style="text-align:right;display:flex;flex-direction:column;gap:3px">
+              <span style="font:400 11px 'IBM Plex Mono',monospace;color:#9A9AA4">tetto 40,00 €</span>
+              <span style="font:500 12px 'IBM Plex Mono',monospace;color:#0F766E">restano 18,17 €</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;padding:9px 11px;background:#FDF6EC;border:1px solid rgba(180,83,9,.22);border-radius:8px">
+            <span style="font:400 11.5px/1.4 'IBM Plex Sans',sans-serif;color:#8A5A18">Prezzi del 2 settembre 2026, 09:14. Cambiano in un giorno: ricontrolla prima di pagare.</span>
+          </div>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ spesa }}" as="s" hint-placeholder-count="8">
+            <div style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)">
+              <div style="width:18px;height:18px;border-radius:4px;border:1.5px solid {{ s.boxBd }};background:{{ s.boxBg }};flex:none;display:grid;place-items:center;font:600 10px 'IBM Plex Mono',monospace;color:#fff">{{ s.tick }}</div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                <div style="font:500 13px/1.25 'IBM Plex Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ s.fg }}">{{ s.nome }}</div>
+                <div style="font:400 10.5px 'IBM Plex Mono',monospace;color:#9A9AA4">{{ s.nota }}</div>
+              </div>
+              <div style="font:400 11.5px 'IBM Plex Mono',monospace;color:#9A9AA4;flex:none">×{{ s.n }}</div>
+              <div style="width:58px;text-align:right;font:500 12.5px 'IBM Plex Mono',monospace;color:{{ s.fg }};flex:none">{{ s.tot }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:8px 18px 18px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:8px">
+            <div style="flex:1;padding:12px;border:1px solid rgba(0,0,0,.16);border-radius:9px;text-align:center;font:500 12.5px 'IBM Plex Sans',sans-serif">Copia lista testo</div>
+            <div style="flex:1;padding:12px;border:1px solid rgba(0,0,0,.16);border-radius:9px;text-align:center;font:500 12.5px 'IBM Plex Sans',sans-serif">Lista per torneo</div>
+          </div>
+          <div style="font:400 10px/1.5 'IBM Plex Sans',sans-serif;color:#9A9AA4">App amatoriale non affiliata né approvata da Wizards of the Coast. Prezzi indicativi raccolti da venditori terzi.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:#7A7A85">7b · schermo grande 900</div>
+      <div style="width:900px;background:#F7F7F5;border:1px solid rgba(0,0,0,.14);border-radius:14px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:#fff;border-bottom:1px solid rgba(0,0,0,.10)">
+          <div style="display:flex;align-items:baseline;gap:14px">
+            <span style="font:600 17px 'IBM Plex Sans',sans-serif">Da comprare · Solo Goblin</span>
+            <span style="font:400 12px 'IBM Plex Mono',monospace;color:#6B6B76">18 carte · prezzi del 2 settembre 2026, 09:14</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div style="padding:9px 14px;border:1px solid rgba(0,0,0,.16);border-radius:8px;font:500 12.5px 'IBM Plex Sans',sans-serif">Copia lista testo</div>
+            <div style="padding:9px 14px;background:#1D4ED8;color:#fff;border-radius:8px;font:500 12.5px 'IBM Plex Sans',sans-serif">Lista per torneo</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 300px">
+          <div style="padding:20px 24px">
+            <div style="display:grid;grid-template-columns:24px 1fr 90px 60px 80px;gap:0 12px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.14);font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#6B6B76">
+              <span></span><span>CARTA</span><span>VENDITORE</span><span style="text-align:right">Q.TÀ</span><span style="text-align:right">TOTALE</span>
+            </div>
+            <sc-for list="{{ spesa }}" as="s" hint-placeholder-count="8">
+              <div style="display:grid;grid-template-columns:24px 1fr 90px 60px 80px;gap:0 12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.07)">
+                <div style="width:18px;height:18px;border-radius:4px;border:1.5px solid {{ s.boxBd }};background:{{ s.boxBg }};display:grid;place-items:center;font:600 10px 'IBM Plex Mono',monospace;color:#fff">{{ s.tick }}</div>
+                <div style="font:500 13px 'IBM Plex Sans',sans-serif;color:{{ s.fg }}">{{ s.nome }}</div>
+                <div style="font:400 11.5px 'IBM Plex Mono',monospace;color:#7A7A85">{{ s.nota }}</div>
+                <div style="text-align:right;font:400 12px 'IBM Plex Mono',monospace;color:#9A9AA4">×{{ s.n }}</div>
+                <div style="text-align:right;font:500 12.5px 'IBM Plex Mono',monospace;color:{{ s.fg }}">{{ s.tot }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="padding:20px 24px;background:#fff;border-left:1px solid rgba(0,0,0,.09);display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6B6B76">TOTALE</span>
+              <span style="font:600 40px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.03em">21,83 €</span>
+              <span style="font:500 12.5px 'IBM Plex Mono',monospace;color:#0F766E">18,17 € sotto il tetto di 40,00 €</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid rgba(0,0,0,.09)">
+              <sc-for list="{{ riepilogo }}" as="r" hint-placeholder-count="4">
+                <div style="display:flex;justify-content:space-between;font:400 12.5px 'IBM Plex Mono',monospace;color:#4A4A55"><span>{{ r.k }}</span><span>{{ r.v }}</span></div>
+              </sc-for>
+            </div>
+            <div style="font:400 11.5px/1.5 'IBM Plex Sans',sans-serif;color:#6B6B76;padding:12px;background:#FDF6EC;border:1px solid rgba(180,83,9,.22);border-radius:9px">Le due carte più care sono il 34% della spesa. Se le togli il mazzo scende a 71 di potenza e a 21,30 €.</div>
+            <div style="font:400 10px/1.5 'IBM Plex Sans',sans-serif;color:#9A9AA4;margin-top:auto">App amatoriale non affiliata né approvata da Wizards of the Coast.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = { vi: 2, tab: 'carte', all: false, locks: {}, bans: {}, sugI: 1, feed: '', versions: null };
+
+  V = [
+    { label: 'Tema intatto', purezza: 100, potenza: 62, fuori: 0, prezzo: '18,90 €', winrate: 'il 44%',
+      trade: 'Zero carte fuori tema. Perdi contro chi gioca creature grandi: non hai nulla per rimuoverle.',
+      diff: [{k:'carte fuori tema',v:'0'},{k:'spesa',v:'18,90 €'},{k:'partite vinte (simulate)',v:'44%'}] },
+    { label: 'Quasi puro', purezza: 93, potenza: 70, fuori: 4, prezzo: '20,40 €', winrate: 'il 52%',
+      trade: 'Quattro Torch the Tower. Non sono goblin, ma sono la differenza fra perdere e vincere contro una creatura da 4.',
+      diff: [{k:'carte fuori tema',v:'4'},{k:'spesa',v:'20,40 €'},{k:'partite vinte (simulate)',v:'52%'}] },
+    { label: 'Equilibrio', purezza: 85, potenza: 78, fuori: 8, prezzo: '21,83 €', winrate: 'il 61%',
+      trade: 'Il tuo tema puro vale 62. Otto carte fuori tema portano la potenza a 78. Le vuoi?',
+      diff: [{k:'carte fuori tema',v:'8'},{k:'spesa',v:'21,83 €'},{k:'partite vinte (simulate)',v:'61%'}] },
+    { label: 'Spinto', purezza: 72, potenza: 85, fuori: 14, prezzo: '27,60 €', winrate: 'il 67%',
+      trade: 'Quattordici carte fuori tema. Il mazzo è più forte, ma a tavola non si riconosce più come mazzo di goblin.',
+      diff: [{k:'carte fuori tema',v:'14'},{k:'spesa',v:'27,60 €'},{k:'partite vinte (simulate)',v:'67%'}] },
+    { label: 'Massima potenza', purezza: 58, potenza: 91, fuori: 22, prezzo: '36,50 €', winrate: 'il 72%',
+      trade: 'Ventidue carte fuori tema: resta un mazzo rosso aggressivo con dentro dei goblin. Il tema è un accessorio.',
+      diff: [{k:'carte fuori tema',v:'22'},{k:'spesa',v:'36,50 €'},{k:'partite vinte (simulate)',v:'72%'}] }
+  ];
+
+  GROUPS = [
+    { titolo: 'Motore del tema', meta: '24 carte · 16,20 €', nota: 'I goblin che si moltiplicano fra loro: ognuno di questi rende migliori gli altri.',
+      carte: [
+        { nome: 'Fanatical Firebrand', tipo: 'Creatura — Goblin Pirata', mana: '1', prezzo: '0,06 €', n: 4 },
+        { nome: 'Goblin Tomb Raider', tipo: 'Creatura — Goblin Pirata', mana: '1', prezzo: '0,25 €', n: 4 },
+        { nome: 'Reckless Lackey', tipo: 'Creatura — Goblin Pirata', mana: '1', prezzo: '0,21 €', n: 4 },
+        { nome: 'Howlsquad Heavy', tipo: 'Creatura — Goblin Mercenario', mana: '3', prezzo: '1,49 €', n: 3 },
+        { nome: 'Dropkick Bomber', tipo: 'Creatura — Goblin Guerriero', mana: '3', prezzo: '1,61 €', n: 3 },
+        { nome: 'Krenko, Mob Boss', tipo: 'Creatura — Goblin leggendario', mana: '4', prezzo: '1,21 €', n: 2 }
+      ] },
+    { titolo: 'Fuori tema · 8', meta: '8 carte · 3,72 €', nota: 'Le carte che non c\u2019entrano con i goblin ma spostano il punteggio da 62 a 78.',
+      carte: [
+        { nome: 'Torch the Tower', tipo: 'Istantaneo — rimozione', mana: '1', prezzo: '0,46 €', n: 4 },
+        { nome: 'Fire Magic', tipo: 'Istantaneo — rimozione', mana: '1', prezzo: '0,70 €', n: 2 },
+        { nome: 'Sear', tipo: 'Istantaneo — rimozione', mana: '2', prezzo: '0,24 €', n: 2 }
+      ] },
+    { titolo: 'Supporto in tema', meta: '6 carte · 0,81 €', nota: '',
+      carte: [
+        { nome: 'Greasewrench Goblin', tipo: 'Creatura — Goblin Artefice', mana: '1', prezzo: '0,14 €', n: 3 },
+        { nome: 'Volley Veteran', tipo: 'Creatura — Goblin Guerriero', mana: '4', prezzo: '0,13 €', n: 3 }
+      ] },
+    { titolo: 'Terre · 22', meta: '22 carte · 1,10 €', nota: '',
+      carte: [
+        { nome: 'Mountain', tipo: 'Terra base', mana: '—', prezzo: '0,05 €', n: 22 }
+      ] }
+  ];
+
+  CURVA = [
+    { n: 12, label: '1', h: '75%', col: '#1D4ED8' },
+    { n: 16, label: '2', h: '100%', col: '#1D4ED8' },
+    { n: 8, label: '3', h: '50%', col: '#1D4ED8' },
+    { n: 2, label: '4', h: '13%', col: '#A9BEEE' },
+    { n: 22, label: 'terre', h: '62%', col: '#C9C9C3' }
+  ];
+
+  PROB = [
+    { q: 'Una terra nella mano iniziale', v: '96%', why: 'Sette carte, 22 terre: quasi mai una mano senza terre.' },
+    { q: 'Due terre al turno 2', v: '84%', why: 'Basta per Goblin Tomb Raider, la carta che apre il gioco.' },
+    { q: 'Tre terre al turno 3', v: '71%', why: 'Il turno in cui entra Howlsquad Heavy e la squadra diventa pericolosa.' }
+  ];
+
+  MOTIVI = [
+    { titolo: 'Krenko ×2, non ×4', delta: '+4', col: '#0F766E', costo: 'costo 3,60 €',
+      testo: 'Krenko vince la partita se hai già dei goblin in campo, non da solo. Con quattro copie ti resta in mano nelle partite in cui ne avresti bisogno.' },
+    { titolo: 'Torch the Tower ×4, fuori tema', delta: '+9', col: '#0F766E', costo: 'costo 4,40 €',
+      testo: 'Senza rimozione perdi contro qualsiasi creatura da 4 di difesa: i tuoi goblin non passano più. Sono quattro carte che non sono goblin, e sono il salto più grande di potenza per euro.' },
+    { titolo: '22 terre, non 24', delta: '+3', col: '#0F766E', costo: 'costo 0,00 €',
+      testo: 'La curva si ferma a 3 mana. Due terre in più significano due mani su dieci senza minacce da giocare.' }
+  ];
+
+  TEMI = [
+    { nome: 'Solo Goblin', idea: 'Molte creature piccole che si potenziano fra loro.', da: 'da 26 €', col: '#C2410C' },
+    { nome: 'Vincere guadagnando punti vita', idea: 'Ogni cura è un danno all\u2019avversario.', da: 'da 31 €', col: '#B39A5B' },
+    { nome: 'Solo artefatti', idea: 'Nessuna carta colorata: il mazzo funziona con qualunque terra.', da: 'da 34 €', col: '#8A8A94' },
+    { nome: 'Nessuna creatura', idea: 'Vinci con incantesimi che fanno il lavoro al posto tuo.', da: 'da 29 €', col: '#4A6FA5' },
+    { nome: 'Riempire il cimitero', idea: 'Scartare è il piano, non un incidente.', da: 'da 33 €', col: '#45414A' },
+    { nome: 'Una sola creatura enorme', idea: 'Difendi, guadagna tempo, chiudi in due colpi.', da: 'da 37 €', col: '#5E8C61' },
+    { nome: 'Rubare le creature altrui', idea: 'La minaccia migliore in tavola è la sua.', da: 'da 30 €', col: '#4A6FA5' },
+    { nome: 'Solo carte da 1 mana', idea: 'Svuoti la mano al turno 3 e non ti fermi.', da: 'da 22 €', col: '#C2410C' }
+  ];
+
+  COLORI = [
+    { l: 'B', bg: '#F3EEDD', fg: '#7A6A3A', bd: 'transparent' },
+    { l: 'U', bg: '#E4EEF7', fg: '#3C5C7A', bd: 'transparent' },
+    { l: 'N', bg: '#E6E4E7', fg: '#45414A', bd: 'transparent' },
+    { l: 'R', bg: '#C2410C', fg: '#fff', bd: '#1D4ED8' },
+    { l: 'V', bg: '#E6EFE6', fg: '#4A6B4D', bd: 'transparent' }
+  ];
+
+  ESCL = [
+    { k: 'Niente carte sopra 2 €', v: 'esclude 9 carte, potenza −6', on: false },
+    { k: 'Senza rimozioni', v: 'il tema resta puro, potenza −9', on: false },
+    { k: 'Solo carte ristampate di recente', v: 'più facili da trovare al negozio', on: true }
+  ];
+
+  VICINI = [
+    { nome: 'Solo Goblin', idea: 'Il tema che avevi in mente, senza il vincolo ninja.', carte: 214 },
+    { nome: 'Creature furtive che non si possono bloccare', idea: 'Lo stesso effetto dei ninja, senza il tipo di creatura.', carte: 96 },
+    { nome: 'Goblin e ladri', idea: 'Tiene dentro i tuoi 11 ninja e aggiunge chi ruba carte.', carte: 61 }
+  ];
+
+  ITER = [
+    { nome: 'Krenko, Mob Boss', base: 'nel mazzo · ×2' },
+    { nome: 'Howlsquad Heavy', base: 'nel mazzo · ×3' },
+    { nome: 'Dropkick Bomber', base: 'nel mazzo · ×3 · 1,61 € l\u2019una' },
+    { nome: 'Torch the Tower', base: 'fuori tema · ×4' },
+    { nome: 'Sear', base: 'fuori tema · ×2' },
+    { nome: 'Mountain', base: 'terra · ×22' }
+  ];
+
+  SUG = [
+    { out: 'Sear ×2', in: 'Torch the Tower ×2',
+      perche: 'Sear costa due mana, e la tua curva si ferma a tre: ogni turno speso a rimuovere è un turno in cui non attacchi. Torch the Tower fa lo stesso lavoro a un mana, e quando non serve rimuovere lo tiri in faccia all\u2019avversario.',
+      dPot: '+3', dPur: '0%', dEur: '+0,44 €' },
+    { out: 'Volley Veteran ×3', in: 'Goblin Maskmaker ×3',
+      perche: 'Volley Veteran costa quattro mana e arriva al turno in cui la partita è già decisa. Maskmaker costa uno, resta in tema, e riempie il turno 1 nelle mani in cui adesso non fai nulla.',
+      dPot: '+2', dPur: '0%', dEur: '−0,27 €' }
+  ];
+
+  SPESA = [
+    { nome: 'Dropkick Bomber', nota: 'preso', n: 3, tot: '4,83 €', ok: true },
+    { nome: 'Howlsquad Heavy', nota: 'preso', n: 3, tot: '4,47 €', ok: true },
+    { nome: 'Krenko, Mob Boss', nota: 'MagicHouse', n: 2, tot: '2,42 €' },
+    { nome: 'Torch the Tower', nota: 'MagicHouse', n: 4, tot: '1,84 €' },
+    { nome: 'Fire Magic', nota: 'Cartaimperia', n: 2, tot: '1,40 €' },
+    { nome: 'Mountain', nota: 'sfusi negozio', n: 22, tot: '1,10 €' },
+    { nome: 'Goblin Tomb Raider', nota: 'sfusi negozio', n: 4, tot: '1,00 €' },
+    { nome: 'Reckless Lackey', nota: 'sfusi negozio', n: 4, tot: '0,84 €' },
+    { nome: 'Sear', nota: 'sfusi negozio', n: 2, tot: '0,48 €' }
+  ];
+
+  RIEP = [
+    { k: 'carte già possedute', v: '6 · 9,30 €' },
+    { k: 'da ordinare online', v: '12 · 11,43 €' },
+    { k: 'terre base', v: 'gratis al negozio' },
+    { k: 'spedizioni stimate', v: '2 × 1,50 €' }
+  ];
+
+  renderVals() {
+    const vi = this.state.vi, v = this.V[vi], tab = this.state.tab;
+    const groups = this.state.all ? this.GROUPS : this.GROUPS.slice(0, 2);
+    const tabs = [['carte', 'Le 60 carte'], ['curva', 'Curva e terre'], ['motivi', 'Motivi']].map(([k, label]) => ({
+      label, go: () => this.setState({ tab: k }),
+      bg: tab === k ? '#16161A' : 'transparent', fg: tab === k ? '#fff' : '#4A4A55',
+      bd: tab === k ? '#16161A' : 'rgba(0,0,0,.16)'
+    }));
+    const locks = this.state.locks, bans = this.state.bans;
+    const nLock = Object.keys(locks).filter(k => locks[k]).length;
+    const nBan = Object.keys(bans).filter(k => bans[k]).length;
+    const sug = this.SUG[Math.min(this.state.sugI - 1, this.SUG.length - 1)];
+    return {
+      v: { ...v, fuoriLabel: v.fuori === 0 ? 'nessuna fuori tema' : v.fuori + ' carte fuori tema' }, vi,
+      setVi: e => this.setState({ vi: +e.target.value }),
+      openPurity: () => this.setState({ vi: 2 }),
+      tabs, isCarte: tab === 'carte', isCurva: tab === 'curva', isMotivi: tab === 'motivi',
+      groups, curva: this.CURVA, prob: this.PROB, motivi: this.MOTIVI,
+      temi: this.TEMI, colori: this.COLORI, vicini: this.VICINI, riepilogo: this.RIEP,
+      allLabel: this.state.all ? 'Mostra solo le sezioni principali' : 'Mostra tutte le 60 carte',
+      toggleAll: () => this.setState({ all: !this.state.all }),
+      escl: this.ESCL.map(e => ({ ...e, trackBg: e.on ? '#1D4ED8' : 'rgba(0,0,0,.18)', knobL: e.on ? '20px' : '2px' })),
+      stretto: Array.from({ length: 34 }, (_, i) => ({ bg: i < 11 ? '#B45309' : 'rgba(0,0,0,.10)' })),
+      versions: this.V.map((w, i) => ({
+        ...w, fuoriLabel: w.fuori === 0 ? 'nessuna fuori tema' : w.fuori + ' carte fuori tema',
+        go: () => this.setState({ vi: i }),
+        bg: i === vi ? '#1D4ED8' : '#DFE6FA', fg: i === vi ? '#fff' : '#3A4E8C',
+        rowBg: i === vi ? '#F2F5FE' : '#fff', bd: i === vi ? '#1D4ED8' : 'rgba(0,0,0,.09)',
+        numCol: i === vi ? '#1D4ED8' : '#9A9AA4'
+      })),
+      darkCards: this.GROUPS[0].carte.slice(0, 4),
+      iter: this.ITER.map((c, i) => {
+        const L = !!locks[i], B = !!bans[i];
+        return {
+          nome: c.nome, stato: B ? 'esclusa · verrà sostituita' : L ? 'bloccata · resta nel mazzo' : c.base,
+          op: B ? '.45' : '1', deco: B ? 'line-through' : 'none',
+          rowBg: L ? '#F2F5FE' : '#fff', rowBd: L ? '#1D4ED8' : 'rgba(0,0,0,.09)',
+          lockIcon: L ? '▮' : '▯', lockBg: L ? '#1D4ED8' : 'rgba(0,0,0,.05)', lockFg: L ? '#fff' : '#6B6B76',
+          banBg: B ? '#B45309' : 'rgba(0,0,0,.05)', banFg: B ? '#fff' : '#6B6B76',
+          lock: () => this.setState({ locks: { ...locks, [i]: !L }, bans: { ...bans, [i]: false } }),
+          ban: () => this.setState({ bans: { ...bans, [i]: !B }, locks: { ...locks, [i]: false } })
+        };
+      }),
+      iterStato: nLock + nBan === 0
+        ? 'Nessun vincolo: rigenerando cambierebbero al massimo 6 carte.'
+        : nLock + ' carte bloccate, ' + nBan + ' escluse. Rigenerando cambiano solo ' + Math.max(1, 6 - nLock) + ' carte: il mazzo resta il tuo.',
+      sug, sugI: this.state.sugI, sugPot: 78 + (this.state.sugI - 1) * 3,
+      sugFeed: this.state.feed || 'Ne restano 5 da valutare. Uno alla volta, senza fretta.',
+      accetta: () => this.setState({ sugI: Math.min(this.state.sugI + 1, 6), feed: 'Accettato. Potenza ' + (78 + this.state.sugI * 3) + ', spesa aggiornata.' }),
+      rifiuta: () => this.setState({ sugI: Math.min(this.state.sugI + 1, 6), feed: 'Rifiutato. Non te lo propongo più.' })
+    };
+  }
+}
+</script>
+</body>
+</html>

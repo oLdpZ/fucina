@@ -1,0 +1,219 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Le schermate"
+    },
+    {
+      "id": "page-2",
+      "name": "Schermo grande e tema scuro"
+    },
+    {
+      "id": "page-3",
+      "name": "Tre direzioni calde"
+    },
+    {
+      "id": "page-4",
+      "name": "Importato da Claude Design"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Home.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-1",
+      "title": "1 · Galleria dei temi"
+    },
+    {
+      "file": "Vincoli.dc.html",
+      "x": 470,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-1",
+      "title": "2 · Budget e limiti"
+    },
+    {
+      "file": "AvvisoTema.dc.html",
+      "x": 940,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-1",
+      "title": "3 · Tema troppo stretto"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 1410,
+      "y": 0,
+      "w": 390,
+      "h": 1560,
+      "page": "page-1",
+      "title": "4 · Il mazzo generato"
+    },
+    {
+      "file": "Catalogo.dc.html",
+      "x": 1880,
+      "y": 0,
+      "w": 390,
+      "h": 1060,
+      "page": "page-1",
+      "title": "4b · Il mazzo come carte"
+    },
+    {
+      "file": "Frontiera.dc.html",
+      "x": 2350,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-1",
+      "title": "5 · Purezza contro potenza"
+    },
+    {
+      "file": "Iterazione.dc.html",
+      "x": 2820,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-1",
+      "title": "6 · Blocca, escludi, rigenera"
+    },
+    {
+      "file": "Spesa.dc.html",
+      "x": 3290,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-1",
+      "title": "7 · Lista della spesa"
+    },
+    {
+      "file": "MazzoDesktop.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "page-2",
+      "title": "Il mazzo su schermo grande"
+    },
+    {
+      "file": "SpesaDesktop.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "page": "page-2",
+      "title": "La spesa su schermo grande"
+    },
+    {
+      "file": "MazzoScuro.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "page": "page-2",
+      "title": "Tema scuro"
+    },
+    {
+      "file": "Taverna.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 980,
+      "page": "page-3",
+      "title": "Taverna"
+    },
+    {
+      "file": "Grimorio.dc.html",
+      "x": 470,
+      "y": 0,
+      "w": 390,
+      "h": 980,
+      "page": "page-3",
+      "title": "Grimorio"
+    },
+    {
+      "file": "Braci.dc.html",
+      "x": 940,
+      "y": 0,
+      "w": 390,
+      "h": 980,
+      "page": "page-3",
+      "title": "Braci"
+    },
+    {
+      "file": "Mazzi.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1360,
+      "h": 7600,
+      "page": "page-4",
+      "title": "Mazzi — Artboard"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "flusso",
+      "x": 0,
+      "y": -230,
+      "w": 860,
+      "page": "page-1",
+      "text": "Il percorso completo, da sinistra a destra.\nPergamena e inchiostro, e i cinque colori di Magic come sistema: rosso per la potenza, blu per la fedeltà al tema, e le identità vere nel selettore dei colori."
+    },
+    {
+      "id": "piega",
+      "x": 1410,
+      "y": -230,
+      "w": 400,
+      "page": "page-1",
+      "text": "Schermata a scorrimento, mostrata per intero.\nLa riga tratteggiata è la piega: sotto quel punto bisogna scorrere."
+    },
+    {
+      "id": "carte-finte",
+      "x": 1880,
+      "y": -230,
+      "w": 400,
+      "page": "page-1",
+      "text": "Lo stesso mazzo visto come carte anziché come elenco.\nLe illustrazioni sono riquadri di colore segnaposto: nell'app arrivano da Scryfall. Anche i nomi sono illustrativi, non una lista Standard verificata."
+    },
+    {
+      "id": "dir-taverna",
+      "x": 0,
+      "y": -250,
+      "w": 390,
+      "page": "page-3",
+      "text": "TAVERNA — legno scuro, ottone, luce di candela. Accogliente, da serata fra amici.\nCosto: l'ottone su tutto rischia di sembrare un gioco per cellulare; va tenuto a dieta."
+    },
+    {
+      "id": "dir-grimorio",
+      "x": 470,
+      "y": -250,
+      "w": 390,
+      "page": "page-3",
+      "text": "GRIMORIO — quasi nero, oro, tipografia da libro antico, composizione centrata.\nÈ la più solenne e la più bella da guardare. Costo: la meno leggibile in fretta al tavolo, ed è quella che invecchia peggio se aggiungiamo schermate fitte."
+    },
+    {
+      "id": "dir-braci",
+      "x": 940,
+      "y": -250,
+      "w": 390,
+      "page": "page-3",
+      "text": "BRACI — carbone e arancio incandescente, caratteri grossi e netti, niente ornamenti.\nLa più leggibile e la più moderna. Costo: sembra un'app sportiva più che un gioco di carte fantasy."
+    },
+    {
+      "id": "importato",
+      "x": 0,
+      "y": -260,
+      "w": 520,
+      "page": "page-4",
+      "text": "Importato dal progetto Claude Design \"Magic card design improvement\".\nÈ interattivo: le linguette e il selettore delle cinque versioni funzionano davvero."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-4"
+  }
+}
