@@ -3,6 +3,7 @@
  * variabili di `tema.css`.
  */
 @import "./tema.css";
+@import "./catalogo.css";
 
 *,
 *::before,
@@ -183,15 +184,6 @@ ul {
   .guscio {
     padding-inline: calc(var(--passo) * 10);
     gap: calc(var(--passo) * 9);
-  }
-
-  /* Sullo schermo grande lo spazio in più diventa una seconda colonna, non
-     margine bianco (Q20). */
-  .principale {
-    display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    align-items: start;
-    column-gap: calc(var(--passo) * 10);
   }
 
   .apertura {

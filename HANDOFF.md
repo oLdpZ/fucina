@@ -12,10 +12,13 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
 La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
-`.scratch/fondamenta-e-motore/`. **I ticket 01, 02 e 03 sono implementati**: l'app
-si apre, si installa, funziona senza rete e mostra le note legali; il pool delle
-carte esiste, costruito dai dati veri di Scryfall; e ogni carta del pool porta i
-suoi tag di sinergia. Il prossimo è il ticket 04, catalogo, ricerca e filtri.
+`.scratch/fondamenta-e-motore/`. **I ticket 01, 02, 03 e 04 sono implementati**:
+l'app si apre, si installa, funziona senza rete e mostra le note legali; il pool
+delle carte esiste, costruito dai dati veri di Scryfall; ogni carta porta i suoi
+tag di sinergia; e l'app ora **serve a qualcosa** — si cercano le carte per nome
+anche sbagliando a scriverlo, si filtrano per colore, tipo, sottotipo, costo e
+parola nel testo, si vede l'immagine di ognuna e quante ne restano. Il prossimo è
+il ticket 05, aggiornamento dati in sottofondo.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -53,9 +56,9 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 04
-   (`.scratch/fondamenta-e-motore/issues/04-catalogo-ricerca-e-filtri.md`), e
-   così via un ticket alla volta.
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 05
+   (`.scratch/fondamenta-e-motore/issues/05-aggiornamento-dati-in-sottofondo.md`),
+   e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
 **sosta e prova reale** → galleria e budget → ciclo iterativo → meta → sideboard.
@@ -86,6 +89,17 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   accelerazione di mana 309, conta le creature 66, spazza via 63. 1.943 carte non
   hanno nessun tag, ed è giusto. Le regole preferiscono tacere che sbagliare: i
   buchi si tappano una riga alla volta in `strumenti/correzioni-tag.txt`.
+- Il catalogo sul pool vero: **4.886 carte**, 2.780 creature, 586 istantanei,
+  561 stregonerie, 624 artefatti, 452 incantesimi, 292 terre, 21 planeswalker.
+  I sottotipi di creatura più numerosi: Human 782, Warrior 182, Soldier 159,
+  Wizard 149. Filtrando rosso più creature restano 495 carte.
+- **`Goblin Chieftain` non è in Standard**, e nemmeno nessun'altra carta col
+  «Chieftain» nel nome: era il nome d'esempio dei mockup. Nessun nome di carta
+  va scritto nel codice come esempio — ruotano.
+- Le immagini di Scryfall arrivano con `Access-Control-Allow-Origin: *`. Serve:
+  un `<img>` verso un altro dominio riceve una risposta **opaca**, che in cache
+  sarebbe indistinguibile da un 404, e il service worker richiede quindi la
+  stessa immagine in modalità normale per poterla controllare prima di tenerla.
 - **In Standard ci sono 95 Goblin giocabili**, non quattordici come diceva il
   mockup iniziale. Il pool vero lo conferma. Conseguenza: l'esempio della schermata "tema troppo stretto"
   va ritarato su un vincolo davvero stretto, e quale sia lo si scoprirà solo
@@ -98,6 +112,14 @@ PROGETTO.md              documento d'intesa, le 32 decisioni
 index.html               guscio della pagina
 src/identita.ts          il nome dell'app: il solo punto in cui cambiarlo
 src/dati/pool.ts         la forma del pool: solo tipi, nessun peso a runtime
+src/dati/carica-pool.ts  la lettura del pool e la data dei dati, in italiano
+src/catalogo/filtri.ts   `cerca(carte, filtri)`: la cucitura del catalogo
+src/catalogo/ricerca.ts  la ricerca per nome che perdona i refusi
+src/catalogo/vocabolario.ts tipi e sottotipi ricavati dal pool, mai scritti
+src/catalogo/pool-finto.ts il pool finto condiviso dai test
+src/componenti/          le schermate: Catalogo, PannelloFiltri, GrigliaCarte,
+                         SchedaCarta, CostoDiMana, NoteLegali
+src/stili/catalogo.css   lo stile del catalogo, tutto a variabili del tema
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano

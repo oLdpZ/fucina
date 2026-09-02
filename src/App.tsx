@@ -1,17 +1,41 @@
+import { useEffect, useState } from "preact/hooks";
+
+import { Catalogo } from "./componenti/Catalogo.js";
 import { NoteLegali } from "./componenti/NoteLegali.js";
-import {
-  AMBITO_APP,
-  NOME_APP,
-  NOME_APP_DA_DECIDERE,
-  PROMESSA_APP,
-} from "./identita.js";
+import { caricaPool, dataInItaliano } from "./dati/carica-pool.js";
+import type { Pool } from "./dati/pool.js";
+import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 
 /**
- * La prima schermata. Per ora l'app sa dire soltanto cos'è: è la fetta più
- * sottile che attraversa compilazione, tipi, test, service worker e stili
- * (ticket 01). Le carte arrivano col ticket 02.
+ * La schermata dell'app: il catalogo delle carte legali in Standard cartaceo
+ * (ticket 04).
+ *
+ * Il pool sta nel pacchetto e il service worker lo tiene in cache, quindi
+ * questa schermata si apre anche senza rete (storia 15); solo le immagini
+ * arrivano da Scryfall, e mancano finché non si è viste almeno una volta.
+ *
+ * In fondo, sempre, la data dei dati che si stanno guardando (storia 17):
+ * presa dal pool e mai dall'orologio, perché è dei dati che parla.
  */
 export function App() {
+  const [pool, setPool] = useState<Pool | null>(null);
+  const [guasto, setGuasto] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    caricaPool().then(
+      (letto) => {
+        if (vivo) setPool(letto);
+      },
+      (errore: unknown) => {
+        if (vivo) setGuasto(errore instanceof Error ? errore.message : String(errore));
+      },
+    );
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
   return (
     <div class="guscio">
       <header class="testata">
@@ -20,29 +44,31 @@ export function App() {
       </header>
 
       <main class="principale">
-        <section class="apertura">
-          <h1>{PROMESSA_APP}</h1>
-          <p>
-            Scegli un&rsquo;idea che ti diverte — un mazzo di Goblin, un mazzo
-            che ricicla il cimitero, solo carte grosse. Al resto — quali carte
-            esistono, quali sono le più forti, quante terre servono — ci pensa
-            l&rsquo;app, e ti dice perché.
-          </p>
-        </section>
-
-        {NOME_APP_DA_DECIDERE ? (
+        {guasto !== null ? (
           <section class="avviso">
             <p>
-              <strong>Lavori in corso.</strong> Il nome dell&rsquo;app e il suo
-              aspetto non sono ancora stati scelti: quello che vedi in alto è un
-              segnaposto. L&rsquo;app funziona già senza rete e si installa sul
-              telefono.
+              <strong>Le carte non si caricano.</strong> {guasto} Prova a chiudere e riaprire
+              l&rsquo;app: se il guasto resta, va rifatta l&rsquo;installazione.
             </p>
           </section>
-        ) : null}
+        ) : pool === null ? (
+          <p class="attesa">Carico le carte…</p>
+        ) : (
+          <Catalogo pool={pool} />
+        )}
       </main>
 
-      <NoteLegali />
+      <footer class="piede">
+        {pool !== null ? (
+          <p class="data-dati">
+            Carte e prezzi del {dataInItaliano(pool.generatoIl)}.
+            {NOME_APP_DA_DECIDERE
+              ? " Il nome dell’app e il suo aspetto non sono ancora stati scelti."
+              : ""}
+          </p>
+        ) : null}
+        <NoteLegali />
+      </footer>
     </div>
   );
 }

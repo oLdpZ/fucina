@@ -1,0 +1,663 @@
+/*
+ * Il catalogo: ricerca, filtri, griglia delle carte, carta aperta (ticket 04).
+ *
+ * Nessun colore letterale — solo le variabili di `tema.css`, così la direzione
+ * visiva resta una costante da cambiare e non una riscrittura.
+ *
+ * Prima il telefono, con una mano sola: il conteggio e il bottone dei filtri
+ * stanno in basso, dove arriva il pollice, e il pannello dei filtri si apre dal
+ * basso. Da 48rem in su la stessa roba diventa due colonne, e lo spazio in più
+ * diventa filtri sempre aperti invece che margine (Q20).
+ */
+
+/* --- attesa e piede della pagina --- */
+
+.attesa {
+  color: var(--inchiostro-tenue);
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-piccolo);
+}
+
+.piede {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 4);
+}
+
+.data-dati {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  line-height: 1.5;
+  color: var(--inchiostro-debole);
+  text-wrap: pretty;
+}
+
+/* --- campi di testo --- */
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 1.5);
+}
+
+.etichetta-campo {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+.campo input {
+  min-height: 44px;
+  padding: 0 calc(var(--passo) * 3);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  color: var(--inchiostro);
+  font-family: var(--carattere-testo);
+  /* 16px esatti: sotto questa misura iOS ingrandisce la pagina da solo appena
+     si tocca il campo, e il catalogo esce dallo schermo. */
+  font-size: 1rem;
+}
+
+.campo input::placeholder {
+  color: var(--inchiostro-debole);
+}
+
+/* --- la schermata --- */
+
+.catalogo {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 5);
+}
+
+.barra-ricerca {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  padding-block: calc(var(--passo) * 2) calc(var(--passo) * 3);
+  background: var(--fondo);
+}
+
+.conteggio {
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+}
+
+.conteggio strong {
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+  color: var(--accento);
+}
+
+/* --- la griglia delle carte --- */
+
+.griglia {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: calc(var(--passo) * 2.5);
+}
+
+.cella {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.cella:hover,
+.cella:focus-visible {
+  border-color: var(--accento);
+}
+
+.ritratto {
+  display: block;
+  aspect-ratio: 146 / 204;
+  background: var(--superficie-alta);
+}
+
+.ritratto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Senza rete e senza cache l'immagine non arriva: al suo posto il nome, che
+   basta per riconoscere la carta. L'app al negozio non si ferma per questo. */
+.ritratto-assente {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--passo) * 2);
+  padding: calc(var(--passo) * 2);
+}
+
+.nome-di-riserva {
+  font-family: var(--carattere-titolo);
+  font-size: var(--testo-piccolo);
+  line-height: 1.2;
+  text-align: center;
+  color: var(--inchiostro-tenue);
+}
+
+.didascalia {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: calc(var(--passo) * 1.5) calc(var(--passo) * 2) calc(var(--passo) * 2);
+  border-top: 1px solid var(--bordo);
+}
+
+.nome-carta {
+  font-family: var(--carattere-titolo);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  color: var(--inchiostro);
+}
+
+.riga-dati {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+}
+
+.ancora,
+.niente-trovato {
+  padding-block: calc(var(--passo) * 4);
+  color: var(--inchiostro-tenue);
+  font-size: var(--testo-piccolo);
+  text-wrap: pretty;
+}
+
+.ancora {
+  text-align: center;
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+}
+
+/* --- i simboli di mana --- */
+
+.costo {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.mana {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding-inline: 2px;
+  border-radius: 999px;
+  background: var(--mana-C);
+  color: var(--mana-inchiostro);
+  font-family: var(--carattere-dati);
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.mana[data-mana="W"] {
+  background: var(--mana-W);
+}
+.mana[data-mana="U"] {
+  background: var(--mana-U);
+}
+.mana[data-mana="B"] {
+  background: var(--mana-B);
+}
+.mana[data-mana="R"] {
+  background: var(--mana-R);
+}
+.mana[data-mana="G"] {
+  background: var(--mana-G);
+}
+
+/* --- i filtri --- */
+
+.filtri {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 5);
+}
+
+.gruppo-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2.5);
+}
+
+.gruppo-filtro h2 {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+.nota-filtro {
+  font-size: var(--testo-piccolo);
+  line-height: 1.45;
+  color: var(--inchiostro-tenue);
+  text-wrap: pretty;
+}
+
+.pastiglie-colore {
+  display: flex;
+  gap: calc(var(--passo) * 2);
+}
+
+.pastiglia-colore {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--bordo);
+  background: var(--mana-C);
+  color: var(--mana-inchiostro);
+  font-family: var(--carattere-dati);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pastiglia-colore[data-mana="W"] {
+  background: var(--mana-W);
+}
+.pastiglia-colore[data-mana="U"] {
+  background: var(--mana-U);
+}
+.pastiglia-colore[data-mana="B"] {
+  background: var(--mana-B);
+}
+.pastiglia-colore[data-mana="R"] {
+  background: var(--mana-R);
+}
+.pastiglia-colore[data-mana="G"] {
+  background: var(--mana-G);
+}
+
+/* Un colore scelto si vede da lontano, non solo da chi sa cosa cercare. */
+.pastiglia-colore[aria-pressed="true"] {
+  border-color: var(--accento);
+  box-shadow: 0 0 0 2px var(--accento);
+}
+
+.pastiglia-colore[aria-pressed="false"] {
+  opacity: 0.55;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--passo) * 2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--passo) * 1.5);
+  min-height: 38px;
+  padding-inline: calc(var(--passo) * 3.5);
+  border-radius: 19px;
+  border: 1px solid var(--bordo);
+  background: var(--superficie);
+  color: var(--inchiostro);
+  font-family: var(--carattere-testo);
+  font-size: var(--testo-piccolo);
+  cursor: pointer;
+}
+
+.chip-costo {
+  min-width: 44px;
+  justify-content: center;
+  font-family: var(--carattere-dati);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--accento);
+  border-color: var(--accento);
+  color: var(--superficie);
+}
+
+.chip-conto {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  opacity: 0.7;
+}
+
+.filtri-testata {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--passo) * 3);
+}
+
+.conteggio-filtri {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+.azioni-filtri {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 2);
+}
+
+.azzera {
+  min-height: 38px;
+  padding-inline: calc(var(--passo) * 3);
+  border: 1px solid var(--bordo);
+  border-radius: 19px;
+  background: transparent;
+  color: var(--accento);
+  font-family: var(--carattere-testo);
+  font-size: var(--testo-piccolo);
+  cursor: pointer;
+}
+
+.chiudi {
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: none;
+  color: var(--inchiostro-tenue);
+  font-size: 1.125rem;
+  cursor: pointer;
+}
+
+/* --- sul telefono: i filtri si aprono dal basso --- */
+
+.colonna-filtri {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 4);
+  max-height: 82dvh;
+  overflow-y: auto;
+  padding: calc(var(--passo) * 5) calc(var(--passo) * 5)
+    max(calc(var(--passo) * 5), env(safe-area-inset-bottom));
+  background: var(--superficie);
+  border-top: 1px solid var(--bordo);
+  border-radius: calc(var(--raggio) * 4) calc(var(--raggio) * 4) 0 0;
+}
+
+.colonna-filtri[data-aperto="false"] {
+  display: none;
+}
+
+.velo-filtri {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--inchiostro) 45%, transparent);
+}
+
+.vedi-carte {
+  position: sticky;
+  bottom: 0;
+  min-height: 50px;
+  border: none;
+  border-radius: var(--raggio);
+  background: var(--accento);
+  color: var(--superficie);
+  font-family: var(--carattere-titolo);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.barra-inferiore {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 3) calc(var(--passo) * 5)
+    max(calc(var(--passo) * 3), env(safe-area-inset-bottom));
+  background: var(--fondo);
+  border-top: 1px solid var(--bordo);
+}
+
+.conteggio-basso {
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+}
+
+.conteggio-basso strong {
+  font-size: var(--titolo-scheda);
+  color: var(--accento);
+}
+
+.apri-filtri {
+  min-height: 44px;
+  padding-inline: calc(var(--passo) * 5);
+  border: none;
+  border-radius: var(--raggio);
+  background: var(--accento);
+  color: var(--superficie);
+  font-family: var(--carattere-testo);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* La barra in basso non deve coprire l'ultima riga di carte. */
+.guscio:has(.catalogo) {
+  padding-bottom: calc(var(--passo) * 22);
+}
+
+/* --- la carta aperta --- */
+
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: color-mix(in srgb, var(--inchiostro) 55%, transparent);
+}
+
+.scheda {
+  width: min(100%, 34rem);
+  max-height: 92dvh;
+  overflow-y: auto;
+  padding: 0 calc(var(--passo) * 5) calc(var(--passo) * 6);
+  background: var(--superficie);
+  border-radius: calc(var(--raggio) * 4) calc(var(--raggio) * 4) 0 0;
+}
+
+.scheda-testata {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--passo) * 3);
+  padding-block: calc(var(--passo) * 4) calc(var(--passo) * 3);
+  background: var(--superficie);
+}
+
+.scheda-testata h2 {
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.scheda-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 4);
+}
+
+.ritratto-grande {
+  display: block;
+  width: min(100%, 16rem);
+  height: auto;
+  margin-inline: auto;
+  border-radius: calc(var(--raggio) * 2);
+  background: var(--superficie-alta);
+}
+
+.scheda-testo {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+}
+
+.scheda-testo .regola {
+  color: var(--inchiostro);
+  text-wrap: pretty;
+}
+
+.faccia {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 1.5);
+  padding-bottom: calc(var(--passo) * 3);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.faccia h3 {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--testo-normale);
+  font-weight: 600;
+}
+
+.forza {
+  font-family: var(--carattere-dati);
+  color: var(--inchiostro-tenue);
+}
+
+.tag {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--passo) * 1.5);
+}
+
+.tag li {
+  padding: 2px calc(var(--passo) * 2);
+  border: 1px solid var(--bordo);
+  border-radius: 999px;
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  letter-spacing: 0.06em;
+  color: var(--inchiostro-tenue);
+}
+
+.prezzo {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+}
+
+/* --- dallo schermo grande in su: due colonne, filtri sempre aperti --- */
+
+@media (min-width: 48rem) {
+  .solo-telefono {
+    display: none;
+  }
+
+  .guscio:has(.catalogo) {
+    padding-bottom: calc(var(--passo) * 10);
+  }
+
+  .catalogo {
+    display: grid;
+    grid-template-columns: 17rem minmax(0, 1fr);
+    align-items: start;
+    column-gap: calc(var(--passo) * 10);
+  }
+
+  .colonna-filtri {
+    position: sticky;
+    top: calc(var(--passo) * 4);
+    inset-inline: auto;
+    bottom: auto;
+    z-index: 1;
+    max-height: calc(100dvh - var(--passo) * 8);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  /* Sullo schermo grande il pannello è sempre lì, aperto o no che sia il
+     bottone del telefono. */
+  .colonna-filtri[data-aperto="false"] {
+    display: flex;
+  }
+
+  .colonna-risultati {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--passo) * 4);
+  }
+
+  .griglia {
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  }
+
+  .velo {
+    align-items: center;
+    padding: calc(var(--passo) * 6);
+  }
+
+  .scheda {
+    border-radius: calc(var(--raggio) * 2);
+  }
+
+  .scheda-corpo {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: calc(var(--passo) * 5);
+  }
+
+  .ritratto-grande {
+    width: 14rem;
+    flex: none;
+    margin-inline: 0;
+  }
+}

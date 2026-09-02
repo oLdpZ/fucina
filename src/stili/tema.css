@@ -46,6 +46,19 @@
   --accento-vivo: #7d1f18;
   --accento-secondario: #b8912f;
 
+  /* --- i cinque colori di Magic, per i bottoni del filtro e i costi di mana ---
+     Sono gli unici colori che non appartengono alla direzione visiva ma al
+     gioco: un giocatore riconosce la pastiglia bianca del bianco e quella rossa
+     del rosso in qualunque tema. Restano qui perché i colori stanno tutti in un
+     file solo, e cambiano solo quanto basta fra fondo chiaro e fondo scuro. */
+  --mana-W: #f5eddb;
+  --mana-U: #c3ddf2;
+  --mana-B: #cdc4c8;
+  --mana-R: #f3c3ae;
+  --mana-G: #c3ddc6;
+  --mana-C: #ded3bb;
+  --mana-inchiostro: #241c14;
+
   color-scheme: light;
 }
 
@@ -99,4 +112,17 @@
   --carattere-titolo: var(--carattere-testo);
 
   color-scheme: dark;
+}
+
+/* Sul fondo scuro le pastiglie dei colori vanno smorzate, o bucano la pagina. */
+:root[data-direzione="taverna"],
+:root[data-direzione="grimorio"],
+:root[data-direzione="braci"] {
+  --mana-W: #d9d0b8;
+  --mana-U: #7ba3c9;
+  --mana-B: #8d8189;
+  --mana-R: #c9765a;
+  --mana-G: #7aa87f;
+  --mana-C: #9a9184;
+  --mana-inchiostro: #16110d;
 }
