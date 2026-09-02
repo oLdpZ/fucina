@@ -1,0 +1,106 @@
+# Progetto — Costruttore di mazzi Standard fuori meta
+
+Documento d'intesa. Redatto il 2026-09-02 al termine della sessione di analisi.
+Nessun codice scritto prima dell'approvazione.
+
+---
+
+## 1. In una frase
+
+Un'app web installabile sul telefono che, dato un tema scelto dall'utente e un tetto
+di spesa in euro, costruisce il mazzo Standard **più forte possibile dentro quel
+vincolo**, spiega ogni scelta a parole, dice quanto costa in potenza l'originalità
+richiesta, e produce la lista della spesa per comprare le carte.
+
+Non è un altro Moxfield. Il fulcro è l'**ottimizzazione sotto vincolo**: la fantasia
+la mette l'utente, la letalità la mette il motore.
+
+## 2. Decisioni prese
+
+| # | Decisione | Scelta |
+|---|---|---|
+| Q1 | Formato | Standard, formato unico |
+| Q2 | Supporto | Carta fisica |
+| Q3 | Significato di "fuori meta" | Vincolo tematico auto-imposto, ottimizzato al massimo |
+| Q4 | Misura dell'efficacia | Euristiche + simulazione statistica (goldfish). Nessun motore di regole |
+| Q5 | Destinazione | Strumento per un amico, non un prodotto commerciale |
+| Q6 | Tecnologia | A discrezione dello sviluppatore |
+| Q7 | Utente | Giocatore poco esperto: ogni scelta va motivata a parole |
+| Q8 | Espressione del tema | Filtri strutturati + carta-seme + vincoli negativi |
+| Q9 | Budget | Tetto di spesa in euro. Nessuna collezione registrata |
+| Q10 | Meta | L'app conosce 5-8 mazzi di riferimento e ci si confronta |
+| Q11 | Sideboard | Fase successiva, non nel primo rilascio |
+| Q12 | Output | Lista + numeri + motivazioni, con ciclo iterativo blocca/escludi |
+| Q13 | Modello delle sinergie | Tag generati una volta sola e salvati su file, correggibili a mano, più regole meccaniche deterministiche. **Mai** sinergie dedotte dalle decklist vincenti (riporterebbero al meta) |
+| Q14 | Punteggio | Vincolo morbido con prezzo esplicito + frontiera di 4-5 mazzi da purissimo a più forte. Ricerca locale a scambi singoli |
+| Q15 | Base di terre | Generata dall'app, con probabilità reali mostrate |
+| Q16 | Intelligenza artificiale a runtime | **Nessuna.** Nessuna chiave API, nessun costo, comportamento deterministico. Cade la descrizione a parole libere del tema |
+| Q17 | Consegna | App web installabile (PWA), raggiungibile da un link |
+| Q18 | Rigenerazione | Minima distanza dal mazzo attuale + modalità "consigliami una modifica" |
+| Q19 | Calcoli | Interamente nel browser. Nessun server, nessun costo ricorrente |
+| Q20 | Dispositivo | Pensata per telefono, usabile bene anche su schermo grande |
+| Q21 | Ingresso | Galleria di temi all'apertura, ricerca carta-seme, filtri per raffinare |
+| Q22 | Salvataggio | Sul dispositivo + esportazione/importazione per scambiarsi i mazzi |
+| Q23 | Esportazione | Lista della spesa con prezzi e totale + lista formattata per torneo |
+| Q24 | Lingua carte | **Solo inglese**, con immagine della carta sempre visibile |
+| Q25 | Livello di gioco | Serata al negozio (FNM) — il meta di riferimento è quello locale |
+| Q26 | Tema ingiocabile | Avviso preventivo prima di generare + allargamento dichiarato del tema |
+| Q27 | Manutenzione | Comando di aggiornamento semi-automatico. L'app deve **degradare bene** se abbandonata |
+| Q28 | Ordine | Sosta e prova reale dopo la tappa 2 |
+| Q29 | Freschezza dati | Ibrido: dati inclusi nell'app, aggiornamento in sottofondo se c'è rete |
+| Q31 | Meta | Compilato a mano, incollando le liste viste al negozio |
+| Q32 | Modello economico | Gratuita, senza scopo di lucro, con le note legali richieste |
+
+## 3. Fatti verificati (2026-09-02)
+
+- **Standard**: 18 set legali, da *Wilds of Eldraine* a *The Hobbit* (14/08/2026).
+  Nessuna rotazione nel 2026; la prossima è attesa con il primo set del 2027
+  (indicativamente febbraio, **data non confermata da Wizards**). Conseguenza di
+  progetto: la legalità si legge sempre dai dati, mai da una data scritta nel codice.
+- **Carte bandite**: 13. Ultimo aggiornamento 10/08/2026.
+  **Prossimo annuncio: 12/10/2026** — servirà un aggiornamento dei dati.
+- **Dati carte**: Scryfall, gratuito e senza chiave. Un'app hobbistica non
+  commerciale rientra esplicitamente nei termini d'uso. Archivio filtrabile a
+  Standard cartaceo: poche migliaia di carte, dimensione adatta al browser.
+- **Prezzi in euro**: già presenti nei dati Scryfall, di origine Cardmarket,
+  aggiornati una volta al giorno. **L'API di Cardmarket è chiusa a nuove
+  richieste, ma non ci serve.** I prezzi mostrati riporteranno sempre la data.
+- **Il vuoto di mercato**: esistono simulatori open source, ma **nessun
+  ottimizzatore di mazzi mantenuto e con licenza pulita**. Ciò che costruiamo non
+  esiste già.
+- **Fonti di decklist**: quelle che coprono i tornei ufficiali di Standard
+  cartaceo (melee.gg, MTGGoldfish, siti Wizards) **vietano lo scraping**. Fonti
+  legittime esistono (Topdeck.gg con attribuzione, archivio fbettega) ma
+  descrivono il meta online, non quello del negozio. Da qui la scelta Q31.
+
+## 4. Percorso di realizzazione
+
+1. **Fondamenta** — Pool carte Standard cartaceo, filtri, ricerca, immagini,
+   base di terre generata con le probabilità reali di avere i colori giusti al
+   turno giusto. Già utile da solo.
+2. **Motore** — Ricerca locale a scambi singoli, punteggio, simulazione
+   statistica delle mani, spiegazioni a parole. **← sosta e prova reale**
+3. Galleria dei temi, tetto di spesa, lista della spesa.
+4. Ciclo iterativo blocca/escludi/rigenera.
+5. Confronto col meta locale.
+6. Sideboard con guida agli scambi per avversario.
+
+Il rischio serio dell'intero progetto è **uno solo**: che il motore non abbia buon
+gusto nel costruire mazzi. È il motivo della sosta dopo la tappa 2 — si scopre
+guardando le liste che produce, e si scopre presto.
+
+## 5. Note legali da includere nell'app
+
+- Politica sui contenuti dei fan di Wizards of the Coast
+- © Wizards of the Coast per le carte
+- "Non prodotto né approvato da Wizards of the Coast"
+- "Scryfall non produce né approva questa applicazione"
+- Prezzi a titolo informativo, con data di aggiornamento
+
+Tutte valide **a condizione che l'app resti gratuita**: nessuna pubblicità,
+nessun abbonamento, nessun link d'acquisto remunerato.
+
+## 6. Rimasto in sospeso
+
+- **Nome dell'app** e indirizzo web.
+- Nessuna scadenza dichiarata.
