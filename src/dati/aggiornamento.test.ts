@@ -1,7 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { POOL_FINTO } from "../catalogo/pool-finto.js";
-import { cercaAggiornamento, piuFresco, scegliPool } from "./aggiornamento.js";
+import {
+  TETTO_DEPOSITO,
+  cercaAggiornamento,
+  piuFresco,
+  poolDaAprire,
+  scegliPool,
+} from "./aggiornamento.js";
 import type { Pool } from "./pool.js";
 
 /**
@@ -112,5 +118,54 @@ describe("il controllo di freschezza", () => {
       carte: [],
     }));
     expect(esito.tipo).toBe("non-riuscito");
+  });
+});
+
+describe("l'apertura dell'app", () => {
+  it("parte dai dati sul dispositivo quando sono i più freschi", async () => {
+    const aperto = await poolDaAprire(
+      async () => VECCHIO,
+      async () => NUOVO,
+    );
+    expect(aperto.generatoIl).toBe(NUOVO.generatoIl);
+  });
+
+  it("un deposito che non risponde mai non impedisce all'app di aprirsi", async () => {
+    // Non è un caso di scuola: su alcuni browser `indexedDB.open()` resta muto
+    // per sempre in contesti ristretti. Aspettarlo vorrebbe dire una schermata
+    // «Carico le carte…» che non finisce, con i dati inclusi già pronti a un
+    // passo di distanza.
+    vi.useFakeTimers();
+    try {
+      const apertura = poolDaAprire(
+        async () => VECCHIO,
+        () => new Promise<null>(() => {}),
+      );
+      await vi.advanceTimersByTimeAsync(TETTO_DEPOSITO + 1);
+      await expect(apertura).resolves.toEqual(VECCHIO);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("un deposito che si rompe non impedisce all'app di aprirsi", async () => {
+    const aperto = await poolDaAprire(
+      async () => VECCHIO,
+      async () => {
+        throw new Error("deposito negato");
+      },
+    );
+    expect(aperto).toEqual(VECCHIO);
+  });
+
+  it("senza dati da nessuna delle due parti si dice il guasto del file incluso", async () => {
+    await expect(
+      poolDaAprire(
+        async () => {
+          throw new Error("Il file del pool delle carte non si legge.");
+        },
+        async () => null,
+      ),
+    ).rejects.toThrow(/non si legge/);
   });
 });

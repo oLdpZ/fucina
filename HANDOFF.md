@@ -109,7 +109,9 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   Il service worker riconosce quella richiesta proprio dal `no-cache` e la lascia
   passare: se rispondesse dalla sua cache, direbbe «non è cambiato» per sempre.
 - Con il server spento l'app si apre lo stesso, mostra le 4.886 carte del pool
-  tenuto in IndexedDB e la sua data, e non scrive un solo errore in console.
+  tenuto in IndexedDB e la sua data, e non mostra nessuna schermata di guasto.
+  In console il browser scrive comunque la sua riga sulla richiesta di rete
+  fallita: è del browser, non dell'app, e non si può zittire da codice.
 - **In Standard ci sono 95 Goblin giocabili**, non quattordici come diceva il
   mockup iniziale. Il pool vero lo conferma. Conseguenza: l'esempio della schermata "tema troppo stretto"
   va ritarato su un vincolo davvero stretto, e quale sia lo si scoprirà solo
@@ -124,7 +126,8 @@ src/identita.ts          il nome dell'app: il solo punto in cui cambiarlo
 src/dati/pool.ts         la forma del pool: solo tipi, nessun peso a runtime
 src/dati/carica-pool.ts  la lettura del pool e la data dei dati, in italiano
 src/dati/aggiornamento.ts quale pool si apre e cosa si fa di quel che arriva
-src/dati/deposito.ts     IndexedDB: il pool fresco tenuto sul dispositivo
+src/dati/deposito.ts     IndexedDB: il pool fresco tenuto sul dispositivo,
+                         e nessuna funzione che possa fallire rumorosamente
 src/catalogo/filtri.ts   `cerca(carte, filtri)`: la cucitura del catalogo
 src/catalogo/ricerca.ts  la ricerca per nome che perdona i refusi
 src/catalogo/vocabolario.ts tipi e sottotipi ricavati dal pool, mai scritti

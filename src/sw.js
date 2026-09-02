@@ -17,8 +17,8 @@
  *   in blocco: sarebbe ridistribuire dati altrui.
  * - ogni altra richiesta verso altri domini qui non viene toccata;
  * - il controllo di freschezza dei dati (ticket 05) chiede espressamente al
- *   server se il pool è cambiato, e passa liscio: è l'unica richiesta nostra
- *   che non deve essere risposta dalla cache.
+ *   server se il pool è cambiato, e passa liscio: è l'unica richiesta che non
+ *   deve essere risposta dalla cache, e si riconosce dall'indirizzo.
  */
 
 const VERSIONE = "__VERSIONE__";
@@ -46,6 +46,13 @@ const IMMAGINI_TENUTE = 1200;
  * immagine di qualunque altro dominio non va né richiesta due volte né tenuta.
  */
 const DOMINIO_IMMAGINI = "scryfall.io";
+
+/**
+ * L'indirizzo esatto del pool, l'unico file per cui l'app chiede al server se è
+ * cambiato. Si ricava dall'ambito del service worker, così vale anche quando
+ * l'app sta in una sottocartella.
+ */
+const POOL = new URL("dati/pool.json", self.registration.scope).href;
 
 /** Una potatura per volta: sessanta immagini in arrivo insieme sono la norma. */
 let potaturaInCorso = null;
@@ -80,19 +87,19 @@ self.addEventListener("fetch", (evento) => {
   const richiesta = evento.request;
   if (richiesta.method !== "GET") return;
 
-  // Il controllo di freschezza del pool (`carica-pool.ts`) chiede al server, in
-  // parole povere, «è cambiato?». Rispondergli dalla cache vorrebbe dire
-  // rispondere «no» per sempre, e l'app non si aggiornerebbe mai: passa liscio.
-  // Solo le richieste di dati, mai una navigazione — una pagina ricaricata a
-  // mano senza rete deve continuare ad aprirsi dalla cache.
-  if (
-    richiesta.mode !== "navigate" &&
-    (richiesta.cache === "no-cache" || richiesta.cache === "no-store")
-  ) {
-    return;
-  }
-
   const indirizzo = new URL(richiesta.url);
+
+  // Il controllo di freschezza (`carica-pool.ts`) chiede al server, in parole
+  // povere, «è cambiato?». Rispondergli dalla cache vorrebbe dire rispondere
+  // «no» per sempre, e l'app non si aggiornerebbe mai: quella richiesta passa
+  // liscia.
+  //
+  // Il varco è per **quell'indirizzo**, non per quel modo di chiedere: il modo
+  // `no-cache` non è nostro, lo mettono anche i browser per conto loro — Firefox
+  // su un ricaricamento normale, gli strumenti di sviluppo con la cache
+  // disattivata — e su qualunque risorsa. Un varco largo così farebbe uscire
+  // dalla cache anche i file dell'app, e senza rete l'app non si aprirebbe più.
+  if (indirizzo.href === POOL && daControllo(richiesta)) return;
   if (indirizzo.origin !== self.location.origin) {
     // Solo le immagini delle carte: qualunque altra cosa passa liscia.
     if (richiesta.destination === "image" && daScryfall(indirizzo)) {
@@ -138,6 +145,11 @@ async function rispondi(chiave, richiesta, evento, aggiornaInSottofondo) {
  * con un errore e basta: la griglia mostra il nome della carta al suo posto,
  * e l'app va avanti.
  */
+/** Se la richiesta chiede espressamente al server, invece di accontentarsi. */
+function daControllo(richiesta) {
+  return richiesta.cache === "no-cache" || richiesta.cache === "no-store";
+}
+
 function daScryfall(indirizzo) {
   return indirizzo.hostname === DOMINIO_IMMAGINI || indirizzo.hostname.endsWith(`.${DOMINIO_IMMAGINI}`);
 }

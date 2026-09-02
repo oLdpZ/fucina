@@ -37,11 +37,22 @@ function apri(): Promise<IDBDatabase | null> {
       const deposito = richiesta.result;
       if (!deposito.objectStoreNames.contains(SCAFFALE)) deposito.createObjectStore(SCAFFALE);
     };
-    richiesta.onsuccess = () => risolvi(richiesta.result);
+    // Chi ha già rinunciato non torna indietro, ma il deposito che arriva dopo
+    // va chiuso lo stesso: una connessione lasciata aperta e dimenticata
+    // bloccherebbe ogni cambio di versione futuro, da qualunque scheda.
+    let ceduto = false;
+
+    richiesta.onsuccess = () => {
+      if (ceduto) return richiesta.result.close();
+      risolvi(richiesta.result);
+    };
     richiesta.onerror = () => risolvi(null);
     // Un'altra scheda che tiene aperta una versione vecchia bloccherebbe per
     // sempre: meglio rinunciare e usare i dati inclusi.
-    richiesta.onblocked = () => risolvi(null);
+    richiesta.onblocked = () => {
+      ceduto = true;
+      risolvi(null);
+    };
   });
 }
 

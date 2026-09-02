@@ -85,19 +85,40 @@ export async function cercaAggiornamento(
 }
 
 /**
+ * Quanto si aspetta il deposito del dispositivo prima di aprire l'app coi soli
+ * dati inclusi.
+ *
+ * Serve perché `indexedDB.open()` può restare muto per sempre: non risponde né
+ * sì né no, in contesti che certi browser trattano come ristretti. Senza un
+ * tetto, l'attesa di una risposta che non arriva diventa una schermata «Carico
+ * le carte…» che non finisce mai, con i dati inclusi già pronti a un passo.
+ *
+ * Tre secondi: leggere quattro megabyte dal deposito ne prende qualche decimo
+ * anche su un telefono lento, e chi ci arriva sopra non sta rispondendo.
+ */
+export const TETTO_DEPOSITO = 3000;
+
+/**
  * Il pool da cui l'app parte all'apertura: quello incluso, o quello più fresco
  * scaricato in una sessione passata.
  *
- * Non aspetta mai la rete. Se il deposito del dispositivo non risponde — modo
- * privato, spazio finito, permessi negati — si aprono i dati inclusi. Se sono i
- * dati inclusi a non leggersi, si apre la copia sul dispositivo. Solo quando
- * mancano tutt'e due si parla di guasto, e si dice quello del file incluso, che
- * è il guasto che il manutentore può riparare.
+ * Non aspetta mai la rete, e non aspetta il deposito oltre il tetto. Se il
+ * deposito non risponde — modo privato, spazio finito, permessi negati, o
+ * silenzio — si aprono i dati inclusi. Se sono i dati inclusi a non leggersi,
+ * si apre la copia sul dispositivo. Solo quando mancano tutt'e due si parla di
+ * guasto, e si dice quello del file incluso, che è il guasto che il manutentore
+ * può riparare.
+ *
+ * Le due letture entrano da fuori perché i casi che contano — il deposito muto,
+ * il file incluso rotto — si possano provare senza un browser.
  */
-export async function poolDaAprire(): Promise<Pool> {
+export async function poolDaAprire(
+  leggiIncluso: () => Promise<Pool> = caricaPool,
+  leggiConservato: () => Promise<Pool | null> = leggiPoolConservato,
+): Promise<Pool> {
   const [incluso, conservato] = await Promise.all([
-    caricaPool().catch((errore: unknown) => errore as Error),
-    leggiPoolConservato(),
+    (async () => leggiIncluso())().catch((errore: unknown) => errore as Error),
+    entroIlTetto(leggiConservato),
   ]);
 
   const scelta = scegliPool(incluso instanceof Error ? null : incluso, conservato);
@@ -121,8 +142,23 @@ export async function aggiornaInSottofondo(inUso: Pool): Promise<Esito> {
   }
 
   const esito = await cercaAggiornamento(inUso, scaricaPool);
-  // Lo spazio esaurito non annulla l'aggiornamento: i dati freschi valgono per
-  // questa sessione anche se non si riesce a tenerli per la prossima.
-  if (esito.tipo === "preso") await conservaPool(esito.pool);
+  // Le carte fresche si mostrano subito e si mettono da parte con comodo:
+  // copiare quattro megabyte nel deposito impegna il filo dell'interfaccia, e
+  // aspettarlo qui vorrebbe dire un'app ferma proprio mentre si aggiorna. Lo
+  // spazio esaurito, poi, non annulla niente: i dati freschi valgono per questa
+  // sessione anche se non si riesce a tenerli per la prossima.
+  if (esito.tipo === "preso") void conservaPool(esito.pool);
   return esito;
+}
+
+/**
+ * Aspetta il deposito, ma non all'infinito: scaduto il tetto si va avanti come
+ * se non ci fosse niente conservato. Un deposito che si rompe vale un deposito
+ * vuoto — non è un guasto dell'app.
+ */
+function entroIlTetto(leggi: () => Promise<Pool | null>): Promise<Pool | null> {
+  return Promise.race([
+    (async () => leggi())().catch(() => null),
+    new Promise<null>((risolvi) => setTimeout(() => risolvi(null), TETTO_DEPOSITO)),
+  ]);
 }
