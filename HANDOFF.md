@@ -12,10 +12,10 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
 La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
-`.scratch/fondamenta-e-motore/`. **I ticket 01 e 02 sono implementati**: l'app
-si apre, si installa, funziona senza rete e mostra le note legali; e il pool
-delle carte esiste, costruito dai dati veri di Scryfall. Il prossimo è il
-ticket 03, i tag di sinergia.
+`.scratch/fondamenta-e-motore/`. **I ticket 01, 02 e 03 sono implementati**: l'app
+si apre, si installa, funziona senza rete e mostra le note legali; il pool delle
+carte esiste, costruito dai dati veri di Scryfall; e ogni carta del pool porta i
+suoi tag di sinergia. Il prossimo è il ticket 04, catalogo, ricerca e filtri.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -53,9 +53,9 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 03
-   (`.scratch/fondamenta-e-motore/issues/03-tag-di-sinergia.md`), e così via un
-   ticket alla volta.
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 04
+   (`.scratch/fondamenta-e-motore/issues/04-catalogo-ricerca-e-filtri.md`), e
+   così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
 **sosta e prova reale** → galleria e budget → ciclo iterativo → meta → sideboard.
@@ -81,6 +81,11 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   cartaceo, ricavate da 17.494 stampe. Le 13 bandite non ci sono. Sono 292
   terre, di cui 195 entrano girate e 48 solo a una condizione; 239 carte hanno
   più di una faccia; 3 carte non hanno ancora un prezzo in euro.
+- I tag di sinergia sul pool vero: produce pedine 762, pesca 758, si cura del
+  cimitero 703, rimozione mirata 604, guadagna punti vita 501, sacrifica 433,
+  accelerazione di mana 309, conta le creature 66, spazza via 63. 1.943 carte non
+  hanno nessun tag, ed è giusto. Le regole preferiscono tacere che sbagliare: i
+  buchi si tappano una riga alla volta in `strumenti/correzioni-tag.txt`.
 - **In Standard ci sono 95 Goblin giocabili**, non quattordici come diceva il
   mockup iniziale. Il pool vero lo conferma. Conseguenza: l'esempio della schermata "tema troppo stretto"
   va ritarato su un vincolo davvero stretto, e quale sia lo si scoprirà solo
@@ -95,6 +100,8 @@ src/identita.ts          il nome dell'app: il solo punto in cui cambiarlo
 src/dati/pool.ts         la forma del pool: solo tipi, nessun peso a runtime
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
+strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano
+strumenti/correzioni-tag.txt le correzioni a mano: file dell'uomo, mai riscritto
 strumenti/aggiorna-pool.ts il comando `npm run dati`: scarica, filtra, racconta
 src/stili/tema.css       colori e caratteri: le quattro direzioni, in un file
 src/stili/direzione.ts   quale direzione è attiva

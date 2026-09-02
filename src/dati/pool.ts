@@ -14,6 +14,27 @@
 export type Colore = "W" | "U" | "B" | "R" | "G";
 export type ColoreMana = Colore | "C";
 
+/**
+ * I tag di sinergia: le nove cose che una carta **fa** e che il motore sa far
+ * lavorare insieme (`PROGETTO.md` Q13).
+ *
+ * Sono un elenco chiuso e scritto qui una volta sola: il motore ci ragiona
+ * sopra, l'interfaccia li mostra, e la preparazione dati li calcola. Vengono da
+ * due sorgenti e mai una terza — regole meccaniche lette dal testo e dai tipi,
+ * e un file di correzioni a mano. **Mai** dedotti dalle decklist vincenti:
+ * riporterebbero al meta, cioè all'opposto dello scopo dell'app.
+ */
+export type Tag =
+  | "produce-pedine"
+  | "sacrifica"
+  | "guadagna-punti-vita"
+  | "rimozione-mirata"
+  | "spazza-via"
+  | "pesca"
+  | "accelerazione-di-mana"
+  | "conta-le-creature"
+  | "si-cura-del-cimitero";
+
 /** Gli indirizzi delle immagini: una per l'elenco, una per la carta aperta. */
 export type Immagine = {
   piccola: string;
@@ -91,6 +112,11 @@ export type Carta = {
    */
   legalitaStandard: string;
   prezzo: Prezzo;
+  /**
+   * I tag di sinergia, in ordine dichiarato e senza ripetizioni: regole
+   * meccaniche più correzioni a mano, come vuole Q13.
+   */
+  tag: Tag[];
   /** Le facce, annidate, quando la carta ne ha più di una. Altrimenti `null`. */
   facce: Faccia[] | null;
   /** Presente solo se la carta è una terra. */

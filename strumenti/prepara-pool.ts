@@ -1,4 +1,5 @@
 import type { Carta, Colore, ColoreMana, Faccia, Immagine, Pool, Terra } from "../src/dati/pool.ts";
+import { applicaCorrezioni, tagMeccanici, type Correzione } from "./tag-di-sinergia.ts";
 
 /**
  * Da archivio Scryfall a pool: la trasformazione, e nient'altro.
@@ -52,10 +53,14 @@ export type CartaScryfall = {
  * L'esito della preparazione. Oltre al pool porta i **nomi banditi**: non
  * entrano nel file dell'app, ma servono al diario per distinguere una carta
  * bandita da una semplicemente ruotata fuori.
+ *
+ * E porta i nomi delle **correzioni orfane**: le righe del file dei tag scritte
+ * a mano che non trovano più la loro carta. Vanno dette a schermo, mai ingoiate.
  */
 export type Preparazione = {
   pool: Pool;
   bandite: string[];
+  correzioniOrfane: string[];
 };
 
 export type Diario = {
@@ -113,10 +118,13 @@ function nataDaUnUnione(grezza: CartaScryfall): boolean {
  * `aggiornatoIl` è la data che Scryfall dichiara per l'archivio scaricato.
  * Entra come argomento e non viene letta da un orologio, perché la stessa
  * preparazione sugli stessi dati deve dare lo stesso file.
+ *
+ * Anche le `correzioni` ai tag entrano da qui già lette: il file lo apre chi
+ * chiama, così questa funzione resta pura e verificabile a tavolino.
  */
 export function preparaPool(
   datiGrezzi: CartaScryfall[],
-  opzioni: { aggiornatoIl: string },
+  opzioni: { aggiornatoIl: string; correzioni?: Correzione[] },
 ): Preparazione {
   const perNome = new Map<string, CartaScryfall[]>();
   for (const grezza of datiGrezzi) {
@@ -146,7 +154,15 @@ export function preparaPool(
   carte.sort((a, b) => confrontaTesti(a.nome, b.nome));
   bandite.sort(confrontaTesti);
 
-  return { pool: { generatoIl: opzioni.aggiornatoIl, carte }, bandite };
+  // Prima le regole meccaniche, poi le correzioni a mano sopra di esse: è
+  // l'ordine deciso in Q13, ed è quel che rende le correzioni l'ultima parola.
+  const corrette = applicaCorrezioni(carte, opzioni.correzioni ?? []);
+
+  return {
+    pool: { generatoIl: opzioni.aggiornatoIl, carte: corrette.carte },
+    bandite,
+    correzioniOrfane: corrette.orfane,
+  };
 }
 
 /**
@@ -192,7 +208,7 @@ function riduci(nome: string, grezza: CartaScryfall, aggiornatoIl: string): Cart
 
   const immagine = leggiImmagine(grezza.image_uris) ?? davanti?.immagine ?? null;
 
-  return {
+  const carta: Carta = {
     id: grezza.id ?? "",
     nome,
     // Il costo che conta per curva e terre è quello della faccia giocabile per
@@ -222,9 +238,14 @@ function riduci(nome: string, grezza: CartaScryfall, aggiornatoIl: string): Cart
     rarita: grezza.rarity ?? "",
     legalitaStandard: grezza.legalities?.["standard"] ?? "",
     prezzo: { euro: prezzoInEuro(grezza), aggiornatoIl },
+    tag: [],
     facce: facce.length > 0 ? facce : null,
     terra: tipi.includes("Land") ? leggiTerra(grezza, testo) : null,
   };
+
+  // I tag si leggono dalla carta già ridotta, non dai dati grezzi: le regole
+  // guardano il testo di tutte le facce e i tipi, che è quel che c'è qui.
+  return { ...carta, tag: tagMeccanici(carta) };
 }
 
 /**

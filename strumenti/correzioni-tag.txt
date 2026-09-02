@@ -1,0 +1,28 @@
+# Correzioni a mano ai tag di sinergia
+#
+# Questo file è dell'uomo, non del programma: `npm run dati` lo legge e non lo
+# riscrive mai, quindi quel che scrivi qui sopravvive a ogni aggiornamento dei
+# dati. È la seconda delle due sorgenti dei tag (PROGETTO.md Q13); la prima
+# sono le regole meccaniche in `strumenti/tag-di-sinergia.ts`, e le correzioni
+# scritte qui si applicano dopo e vincono su di esse.
+#
+# Come si scrive una riga:
+#
+#     Nome inglese della carta: +tag-da-aggiungere, -tag-da-togliere
+#
+# Il nome è quello inglese, scritto come lo stampa Scryfall. Le righe che
+# iniziano con # sono commenti: usali per dire *perché* hai corretto, che fra
+# sei mesi non te lo ricordi.
+#
+# I nove tag che esistono:
+#
+#     produce-pedine          sacrifica              guadagna-punti-vita
+#     rimozione-mirata        spazza-via             pesca
+#     accelerazione-di-mana   conta-le-creature      si-cura-del-cimitero
+#
+# Se una riga nomina una carta che nel pool non c'è più, `npm run dati` te lo
+# dice a schermo: quasi sempre vuol dire che la carta è ruotata fuori di
+# Standard, e che la riga si può cancellare.
+#
+# Per ora non c'è nessuna correzione: le prime arriveranno guardando i tag sulle
+# carte vere, alla sosta e prova reale.

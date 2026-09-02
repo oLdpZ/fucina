@@ -127,12 +127,94 @@ describe("preparazione del pool", () => {
         "prezzo",
         "rarita",
         "sottotipi",
+        "tag",
         "terra",
         "testo",
         "tipi",
         "valoreDiMana",
       ].sort(),
     );
+  });
+});
+
+describe("tag di sinergia", () => {
+  const tag = (nome: string) => carta(preparazione().pool, nome).tag;
+
+  it("legge dai testi noti i tag che quei testi dicono", () => {
+    expect(tag("Fixture Goblin")).toEqual(["produce-pedine"]);
+    expect(tag("Fixture Pauper")).toEqual(["guadagna-punti-vita"]);
+    expect(tag("Fixture Verdict")).toEqual(["spazza-via"]);
+    expect(tag("Fixture Bolt")).toEqual(["rimozione-mirata"]);
+    expect(tag("Fixture Altar")).toEqual(["sacrifica", "pesca", "si-cura-del-cimitero"]);
+    expect(tag("Fixture Druid")).toEqual(["accelerazione-di-mana", "conta-le-creature"]);
+  });
+
+  it("non chiama accelerazione di mana una terra, che il mana lo produce per mestiere", () => {
+    expect(tag("Fixture Anchorage")).toEqual([]);
+  });
+
+  it("non legge il testo fra parentesi, che è un promemoria delle regole e non un effetto", () => {
+    // Il promemoria del Tesoro parla di sacrificare e di aggiungere mana: se lo
+    // si legge, ogni controincantesimo diventa una carta che sacrifica.
+    expect(tag("Fixture Refusal")).toEqual(["produce-pedine", "accelerazione-di-mana"]);
+  });
+
+  it("non chiama rimozione un danno all'avversario, che non toglie di mezzo niente", () => {
+    expect(tag("Fixture Bluffs")).toEqual([]);
+  });
+
+  it("non chiama spazza-via chi esilia solo le proprie pedine", () => {
+    expect(tag("Fixture Nightmare")).toEqual([]);
+  });
+
+  it("dà gli stessi tag alla stessa carta a ogni giro", () => {
+    const primo = preparaPool(FRAMMENTO, { aggiornatoIl: QUANDO });
+    const secondo = preparaPool([...FRAMMENTO].reverse(), { aggiornatoIl: QUANDO });
+
+    expect(secondo.pool.carte.map((c) => c.tag)).toEqual(primo.pool.carte.map((c) => c.tag));
+  });
+
+  it("lascia vincere le correzioni a mano sulle regole meccaniche", () => {
+    const { pool } = preparaPool(FRAMMENTO, {
+      aggiornatoIl: QUANDO,
+      correzioni: [
+        { nome: "Fixture Goblin", aggiunge: ["conta-le-creature"], toglie: ["produce-pedine"] },
+      ],
+    });
+
+    expect(carta(pool, "Fixture Goblin").tag).toEqual(["conta-le-creature"]);
+  });
+
+  it("segnala la correzione che non trova più la sua carta, invece di ingoiarla", () => {
+    // È così che il manutentore scopre che una carta è ruotata fuori.
+    const esito = preparaPool(FRAMMENTO, {
+      aggiornatoIl: QUANDO,
+      correzioni: [{ nome: "Fixture Ruotata Fuori", aggiunge: ["pesca"], toglie: [] }],
+    });
+
+    expect(esito.correzioniOrfane).toEqual(["Fixture Ruotata Fuori"]);
+  });
+
+  it("non segnala niente quando ogni correzione trova la sua carta", () => {
+    const esito = preparaPool(FRAMMENTO, {
+      aggiornatoIl: QUANDO,
+      correzioni: [{ nome: "Fixture Goblin", aggiunge: ["pesca"], toglie: [] }],
+    });
+
+    expect(esito.correzioniOrfane).toEqual([]);
+  });
+
+  it("non perde le correzioni quando la preparazione si rilancia", () => {
+    // Le correzioni stanno in un file che la preparazione legge e non riscrive
+    // mai: rifarla due volte deve dare due volte lo stesso pool corretto.
+    const giro = () =>
+      preparaPool(FRAMMENTO, {
+        aggiornatoIl: QUANDO,
+        correzioni: [{ nome: "Fixture Goblin", aggiunge: ["pesca"], toglie: ["produce-pedine"] }],
+      });
+
+    expect(carta(giro().pool, "Fixture Goblin").tag).toEqual(["pesca"]);
+    expect(JSON.stringify(giro())).toBe(JSON.stringify(giro()));
   });
 });
 

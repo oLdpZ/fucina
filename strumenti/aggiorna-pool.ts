@@ -13,6 +13,7 @@ import {
   raccontaDiario,
   type CartaScryfall,
 } from "./prepara-pool.ts";
+import { leggiCorrezioni, raccontaCorrezioni } from "./tag-di-sinergia.ts";
 
 /**
  * Il comando unico di aggiornamento dei dati (user story 60).
@@ -48,6 +49,13 @@ const INTESTAZIONI = {
 const qui = (percorso: string) => fileURLToPath(new URL(percorso, import.meta.url));
 const POOL = qui("../public/dati/pool.json");
 
+/**
+ * Le correzioni a mano ai tag di sinergia: il file che il manutentore scrive e
+ * questo comando non riscrive mai. È lì che le correzioni sopravvivono a un
+ * aggiornamento dei dati.
+ */
+const CORREZIONI = qui("./correzioni-tag.txt");
+
 type Descrittore = {
   updated_at: string;
   jsonl_download_uri: string;
@@ -64,8 +72,31 @@ async function principale(): Promise<void> {
 
   console.log(`Trovate ${grezze.length} stampe legali o bandite in Standard cartaceo.`);
 
-  const preparazione = preparaPool(grezze, { aggiornatoIl });
+  const lettura = leggiCorrezioni(existsSync(CORREZIONI) ? readFileSync(CORREZIONI, "utf8") : "");
+  const preparazione = preparaPool(grezze, { aggiornatoIl, correzioni: lettura.correzioni });
   const precedente = poolPrecedente();
+
+  if (lettura.correzioni.length > 0) {
+    console.log(
+      `Applicate ${lettura.correzioni.length} correzioni a mano dei tag da ` +
+        `${percorsoLeggibile(CORREZIONI)}.`,
+    );
+  }
+
+  // Quel che non ha funzionato nel file scritto a mano si dice **prima** di
+  // scrivere il pool e non dopo il diario, che è lungo: una riga con un errore
+  // di battitura vuol dire una correzione che non c'è, e il manutentore la deve
+  // vedere subito (user story 62). Per lo stesso motivo il comando esce con un
+  // codice di errore: se un giorno girerà dentro uno script, deve accorgersene.
+  const guaiDeiTag = raccontaCorrezioni({
+    problemi: lettura.problemi,
+    orfane: preparazione.correzioniOrfane,
+  });
+  if (guaiDeiTag !== "") {
+    console.log("");
+    console.log(guaiDeiTag);
+    process.exitCode = 1;
+  }
 
   scriviPool(preparazione.pool);
 
