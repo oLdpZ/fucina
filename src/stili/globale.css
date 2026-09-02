@@ -1,0 +1,220 @@
+/*
+ * Fondo comune: azzeramenti e forme di base. Nessun colore letterale — solo le
+ * variabili di `tema.css`.
+ */
+@import "./tema.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* La barra del telefono cambia altezza mentre si scorre: il fondo va anche lì. */
+  background: var(--fondo);
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--fondo);
+  color: var(--inchiostro);
+  font-family: var(--carattere-testo);
+  font-size: var(--testo-normale);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--accento);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accento) 35%, transparent);
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--accento-vivo);
+  border-bottom-color: currentColor;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accento);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+p,
+ul {
+  margin: 0;
+}
+
+/* --- il guscio: una colonna sul telefono, più aria sullo schermo grande --- */
+
+.guscio {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 7);
+  width: min(100%, var(--larghezza-massima));
+  margin-inline: auto;
+  padding: calc(var(--passo) * 7) calc(var(--passo) * 5)
+    calc(var(--passo) * 10);
+  padding-top: max(calc(var(--passo) * 7), env(safe-area-inset-top));
+}
+
+.testata {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--passo) * 3);
+  flex-wrap: wrap;
+}
+
+.marchio {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+.ambito {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--inchiostro-tenue);
+}
+
+.principale {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 6);
+}
+
+.apertura {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  max-width: var(--larghezza-colonna);
+}
+
+.apertura h1 {
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-pagina);
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  text-wrap: pretty;
+}
+
+.apertura p {
+  color: var(--inchiostro-tenue);
+  text-wrap: pretty;
+}
+
+.avviso {
+  display: flex;
+  gap: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  max-width: var(--larghezza-colonna);
+}
+
+.avviso::before {
+  content: "";
+  width: 3px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--accento-secondario);
+}
+
+.avviso p {
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+  text-wrap: pretty;
+}
+
+.avviso strong {
+  color: var(--inchiostro);
+  font-weight: 600;
+}
+
+/* --- note legali --- */
+
+.note-legali {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 3);
+  padding-top: calc(var(--passo) * 5);
+  border-top: 1px solid var(--bordo);
+}
+
+.note-legali h2 {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+.note-legali ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: calc(var(--passo) * 3);
+}
+
+.note-legali li {
+  font-size: var(--testo-piccolo);
+  line-height: 1.45;
+  color: var(--inchiostro-tenue);
+  text-wrap: pretty;
+}
+
+@media (min-width: 48rem) {
+  .guscio {
+    padding-inline: calc(var(--passo) * 10);
+    gap: calc(var(--passo) * 9);
+  }
+
+  /* Sullo schermo grande lo spazio in più diventa una seconda colonna, non
+     margine bianco (Q20). */
+  .principale {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+    column-gap: calc(var(--passo) * 10);
+  }
+
+  .apertura {
+    max-width: none;
+  }
+
+  .apertura h1 {
+    font-size: calc(var(--titolo-pagina) * 1.35);
+  }
+
+  .avviso {
+    max-width: none;
+  }
+
+  .note-legali ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: calc(var(--passo) * 10);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

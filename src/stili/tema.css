@@ -1,0 +1,102 @@
+/*
+ * Il tema, in un punto solo.
+ *
+ * La direzione visiva non è ancora scelta (`PROGETTO.md` §6): sono disegnate
+ * quattro strade — chiaro-e-blu/pergamena, Taverna, Grimorio, Braci — e stanno
+ * qui tutte e quattro come insiemi di valori. Sceglierne una è cambiare la
+ * costante in `src/stili/direzione.ts`, mai riscrivere un componente: nessun
+ * altro file del progetto contiene un colore, e un test lo verifica.
+ *
+ * Nessun carattere tipografico scaricato da terzi: la specifica vieta chiamate
+ * di rete verso terzi durante l'uso (e i caratteri di Google romperebbero l'app
+ * al negozio, senza rete). Si usano le pile di caratteri già installate, scelte
+ * per assomigliare a quelle dei mockup.
+ */
+
+:root {
+  /* --- misure, uguali per tutte le direzioni --- */
+  --passo: 4px;
+  --raggio: 4px;
+  --larghezza-colonna: 30rem; /* la colonna leggibile del telefono */
+  --larghezza-massima: 68rem; /* oltre, si usa lo spazio in più (Q20) */
+
+  --dati-minuscolo: 0.6875rem;
+  --testo-piccolo: 0.84375rem;
+  --testo-normale: 0.9375rem;
+  --titolo-scheda: 1rem;
+  --titolo-pagina: 1.875rem;
+
+  /* --- caratteri --- */
+  --carattere-titolo: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+    "Times New Roman", serif;
+  --carattere-testo: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --carattere-dati: ui-monospace, "SFMono-Regular", "Cascadia Mono",
+    "Segoe UI Mono", Consolas, "Liberation Mono", monospace;
+
+  /* --- colori: direzione «pergamena», quella dei primi mockup --- */
+  --fondo: #efe4cd;
+  --superficie: #fbf6ea;
+  --superficie-alta: #f5ecd9;
+  --bordo: #d8c7a4;
+  --inchiostro: #241c14;
+  --inchiostro-tenue: #6d5c45;
+  --inchiostro-debole: #9a866a;
+  --accento: #a02c22;
+  --accento-vivo: #7d1f18;
+  --accento-secondario: #b8912f;
+
+  color-scheme: light;
+}
+
+/* --- Taverna: legno scuro, ottone, luce di candela --- */
+:root[data-direzione="taverna"] {
+  --fondo: #1b130d;
+  --superficie: #251a11;
+  --superficie-alta: #2e2015;
+  --bordo: #3f2c1b;
+  --inchiostro: #f6e9cf;
+  --inchiostro-tenue: #b79b77;
+  --inchiostro-debole: #a4805a;
+  --accento: #d9a63f;
+  --accento-vivo: #f0c163;
+  --accento-secondario: #86b0c4;
+  --carattere-titolo: "Palatino Linotype", Palatino, "Iowan Old Style", Georgia,
+    serif;
+
+  color-scheme: dark;
+}
+
+/* --- Grimorio: quasi nero, oro, tipografia da libro antico --- */
+:root[data-direzione="grimorio"] {
+  --fondo: #120e0f;
+  --superficie: #241c18;
+  --superficie-alta: #2a2018;
+  --bordo: #4a3626;
+  --inchiostro: #f0e6d2;
+  --inchiostro-tenue: #a8977c;
+  --inchiostro-debole: #8a6a44;
+  --accento: #c9a45e;
+  --accento-vivo: #d3a463;
+  --accento-secondario: #7e9cb0;
+  --carattere-titolo: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+
+  color-scheme: dark;
+}
+
+/* --- Braci: carbone e arancio, caratteri grossi, nessun ornamento --- */
+:root[data-direzione="braci"] {
+  --fondo: #17120f;
+  --superficie: #1f1815;
+  --superficie-alta: #2c2320;
+  --bordo: #3a2e28;
+  --inchiostro: #f5ece2;
+  --inchiostro-tenue: #c9b6a8;
+  --inchiostro-debole: #9c8577;
+  --accento: #ff6a3d;
+  --accento-vivo: #c4512f;
+  --accento-secondario: #4ea3c9;
+  --carattere-titolo: var(--carattere-testo);
+
+  color-scheme: dark;
+}

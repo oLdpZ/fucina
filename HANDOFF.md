@@ -11,8 +11,13 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 `PROGETTO.md`. La configurazione delle skill di sviluppo è fatta. Il design
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
-**Non è ancora stata scritta una riga di codice dell'applicazione.** È voluto:
-il prossimo passo è la specifica.
+La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
+`.scratch/fondamenta-e-motore/`. **Il ticket 01 (scheletro PWA e note legali) è
+implementato**: l'app si apre, si installa, funziona senza rete e mostra le note
+legali. Il prossimo è il ticket 02, la preparazione dei dati da Scryfall.
+
+Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
+`npm test` per i test, `npm run tipi` per il solo controllo dei tipi.
 
 ## Cosa costruiamo, in una frase
 
@@ -46,10 +51,9 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/mattpocock-skills:to-spec` — trasforma `PROGETTO.md` in specifica.
-2. `/mattpocock-skills:to-tickets` — spezza la specifica in ticket sotto
-   `.scratch/<funzionalità>/issues/`. **Stessa finestra di contesto** del punto 1.
-3. `/clear`, poi `/mattpocock-skills:implement` un ticket alla volta.
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 02
+   (`.scratch/fondamenta-e-motore/issues/02-preparazione-dati-pool.md`), e così
+   via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
 **sosta e prova reale** → galleria e budget → ciclo iterativo → meta → sideboard.
@@ -80,6 +84,12 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
 
 ```
 PROGETTO.md              documento d'intesa, le 32 decisioni
+index.html               guscio della pagina
+src/identita.ts          il nome dell'app: il solo punto in cui cambiarlo
+src/stili/tema.css       colori e caratteri: le quattro direzioni, in un file
+src/stili/direzione.ts   quale direzione è attiva
+src/sw.js                service worker (elenco risorse scritto dalla build)
+strumenti/               manifest e icone, generati a ogni compilazione
 CLAUDE.md                contesto + vincoli non negoziabili + config skill
 HANDOFF.md               questo file
 docs/agents/             dove vivono ticket, etichette, documenti di dominio
