@@ -1,0 +1,314 @@
+[
+  {
+    "_nota": "Carta con piu stampe a prezzi diversi: vince la piu economica fra quelle di carta.",
+    "object": "card", "id": "aaaa0001-cara", "lang": "en", "layout": "normal",
+    "name": "Fixture Goblin", "released_at": "2025-09-26",
+    "set": "fx1", "collector_number": "101",
+    "mana_cost": "{1}{R}", "cmc": 2,
+    "type_line": "Creature — Goblin Warrior",
+    "oracle_text": "Haste\nWhenever this creature attacks, create a 1/1 red Goblin creature token.",
+    "power": "2", "toughness": "1",
+    "colors": ["R"], "color_identity": ["R"],
+    "legalities": { "standard": "legal", "modern": "legal" },
+    "games": ["paper", "mtgo"], "digital": false, "rarity": "rare",
+    "prices": { "usd": "0.90", "eur": "0.85", "eur_foil": "2.00" },
+    "image_uris": { "small": "https://immagini/goblin-cara-piccola.jpg", "normal": "https://immagini/goblin-cara-normale.jpg" }
+  },
+  {
+    "object": "card", "id": "aaaa0002-economica", "lang": "en", "layout": "normal",
+    "name": "Fixture Goblin", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "7",
+    "mana_cost": "{1}{R}", "cmc": 2,
+    "type_line": "Creature — Goblin Warrior",
+    "oracle_text": "Haste\nWhenever this creature attacks, create a 1/1 red Goblin creature token.",
+    "power": "2", "toughness": "1",
+    "colors": ["R"], "color_identity": ["R"],
+    "legalities": { "standard": "legal", "modern": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "uncommon",
+    "prices": { "usd": "0.12", "eur": "0.09", "eur_foil": "0.40" },
+    "image_uris": { "small": "https://immagini/goblin-economica-piccola.jpg", "normal": "https://immagini/goblin-economica-normale.jpg" }
+  },
+  {
+    "_nota": "Stampa solo digitale della stessa carta: costa meno di tutte, e non deve mai essere scelta.",
+    "object": "card", "id": "aaaa0003-digitale", "lang": "en", "layout": "normal",
+    "name": "Fixture Goblin", "released_at": "2026-03-01",
+    "set": "fxa", "collector_number": "3",
+    "mana_cost": "{1}{R}", "cmc": 2,
+    "type_line": "Creature — Goblin Warrior",
+    "oracle_text": "Haste\nWhenever this creature attacks, create a 1/1 red Goblin creature token.",
+    "power": "2", "toughness": "1",
+    "colors": ["R"], "color_identity": ["R"],
+    "legalities": { "standard": "legal" },
+    "games": ["arena"], "digital": true, "rarity": "uncommon",
+    "prices": { "usd": null, "eur": "0.01" },
+    "image_uris": { "small": "https://immagini/goblin-digitale-piccola.jpg", "normal": "https://immagini/goblin-digitale-normale.jpg" }
+  },
+  {
+    "_nota": "Carta bandita: fuori dal pool, ma il diario deve saperla nominare.",
+    "object": "card", "id": "bbbb0001", "lang": "en", "layout": "normal",
+    "name": "Fixture Cutter", "released_at": "2025-04-11",
+    "set": "fx1", "collector_number": "12",
+    "mana_cost": "{1}{R}", "cmc": 2,
+    "type_line": "Artifact — Equipment",
+    "oracle_text": "Equipped creature gets +1/+1 and has trample and haste.\nEquip {1}{R}",
+    "colors": [], "color_identity": ["R"],
+    "legalities": { "standard": "banned", "modern": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": "5.09", "eur": "7.41" },
+    "image_uris": { "small": "https://immagini/cutter-piccola.jpg", "normal": "https://immagini/cutter-normale.jpg" }
+  },
+  {
+    "_nota": "Carta non legale in Standard: non entra e non compare nel diario.",
+    "object": "card", "id": "cccc0001", "lang": "en", "layout": "normal",
+    "name": "Fixture Relic", "released_at": "2011-01-20",
+    "set": "old", "collector_number": "50",
+    "mana_cost": "{2}", "cmc": 2,
+    "type_line": "Artifact",
+    "oracle_text": "{T}: Add {C}.",
+    "colors": [], "color_identity": [],
+    "legalities": { "standard": "not_legal", "modern": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "mythic",
+    "prices": { "usd": "40.00", "eur": "38.00" },
+    "image_uris": { "small": "https://immagini/relic-piccola.jpg", "normal": "https://immagini/relic-normale.jpg" }
+  },
+  {
+    "_nota": "Terra che entra girata sempre.",
+    "object": "card", "id": "dddd0001", "lang": "en", "layout": "normal",
+    "name": "Fixture Anchorage", "released_at": "2025-09-26",
+    "set": "fx1", "collector_number": "250",
+    "mana_cost": "", "cmc": 0,
+    "type_line": "Land",
+    "oracle_text": "This land enters tapped.\n{T}: Add {W} or {U}.",
+    "colors": [], "color_identity": ["U", "W"],
+    "produced_mana": ["U", "W"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": "0.90", "eur": "0.97" },
+    "image_uris": { "small": "https://immagini/anchorage-piccola.jpg", "normal": "https://immagini/anchorage-normale.jpg" }
+  },
+  {
+    "_nota": "Terra che entra girata solo a una condizione: la condizione va conservata.",
+    "object": "card", "id": "dddd0002", "lang": "en", "layout": "normal",
+    "name": "Fixture Campground", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "251",
+    "mana_cost": "", "cmc": 0,
+    "type_line": "Land",
+    "oracle_text": "This land enters tapped unless you control a basic land.\n{T}: Add {W} or {U}.",
+    "colors": [], "color_identity": ["U", "W"],
+    "produced_mana": ["U", "W"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": "1.50", "eur": "1.20" },
+    "image_uris": { "small": "https://immagini/campground-piccola.jpg", "normal": "https://immagini/campground-normale.jpg" }
+  },
+  {
+    "_nota": "Terra che NON entra girata: il suo testo nomina pero una pedina che torna girata, ed e la trappola classica del riconoscimento a parole.",
+    "object": "card", "id": "dddd0003", "lang": "en", "layout": "normal",
+    "name": "Fixture Verge", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "252",
+    "mana_cost": "", "cmc": 0,
+    "type_line": "Land",
+    "oracle_text": "{T}: Add {G}.\n{T}: Add {W}. Activate only if you control a Forest or a Plains.\nWhen it dies or is exiled, return it to the battlefield tapped.",
+    "colors": [], "color_identity": ["G", "W"],
+    "produced_mana": ["G", "W"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": "8.23", "eur": "5.49" },
+    "image_uris": { "small": "https://immagini/verge-piccola.jpg", "normal": "https://immagini/verge-normale.jpg" }
+  },
+  {
+    "_nota": "Carta a due facce: nessun costo di mana e nessuna immagine al livello della carta, tutto sulle facce.",
+    "object": "card", "id": "eeee0001", "lang": "en", "layout": "transform",
+    "name": "Fixture Wanderer // Fixture Revenant", "released_at": "2025-09-26",
+    "set": "fx1", "collector_number": "88",
+    "cmc": 3,
+    "type_line": "Creature — Human Scout // Creature — Zombie Scout",
+    "colors": ["G"], "color_identity": ["B", "G"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "mythic",
+    "prices": { "usd": "3.00", "eur": "2.50" },
+    "card_faces": [
+      {
+        "object": "card_face", "name": "Fixture Wanderer",
+        "mana_cost": "{2}{G}", "type_line": "Creature — Human Scout",
+        "oracle_text": "When this creature dies, transform it.",
+        "power": "3", "toughness": "2",
+        "image_uris": { "small": "https://immagini/wanderer-piccola.jpg", "normal": "https://immagini/wanderer-normale.jpg" }
+      },
+      {
+        "object": "card_face", "name": "Fixture Revenant",
+        "mana_cost": "", "type_line": "Creature — Zombie Scout",
+        "oracle_text": "Menace\nWhen this creature enters, mill two cards.",
+        "power": "4", "toughness": "3",
+        "image_uris": { "small": "https://immagini/revenant-piccola.jpg", "normal": "https://immagini/revenant-normale.jpg" }
+      }
+    ]
+  },
+  {
+    "_nota": "Stampa fronte-retro della stessa identica carta: Scryfall le dà un nome raddoppiato, e senza accorgersene il pool si ritrova due voci per la stessa carta.",
+    "object": "card", "id": "gggg0001", "lang": "en", "layout": "reversible_card",
+    "name": "Fixture Anchorage // Fixture Anchorage", "released_at": "2026-03-01",
+    "set": "fxs", "collector_number": "1",
+    "cmc": 0,
+    "type_line": "Land // Land",
+    "colors": [], "color_identity": ["U", "W"],
+    "produced_mana": ["U", "W"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": "0.10", "eur": "0.05" },
+    "card_faces": [
+      {
+        "object": "card_face", "name": "Fixture Anchorage",
+        "mana_cost": "", "type_line": "Land",
+        "oracle_text": "This land enters tapped.\n{T}: Add {W} or {U}.",
+        "image_uris": { "small": "https://immagini/anchorage-retro-piccola.jpg", "normal": "https://immagini/anchorage-retro-normale.jpg" }
+      },
+      {
+        "object": "card_face", "name": "Fixture Anchorage",
+        "mana_cost": "", "type_line": "Land",
+        "oracle_text": "This land enters tapped.\n{T}: Add {W} or {U}.",
+        "image_uris": { "small": "https://immagini/anchorage-retro-piccola.jpg", "normal": "https://immagini/anchorage-retro-normale.jpg" }
+      }
+    ]
+  },
+  {
+    "_nota": "Carta con un'avventura: Scryfall mette al livello della carta i due costi attaccati, e quello non è il costo di nulla.",
+    "object": "card", "id": "hhhh0001", "lang": "en", "layout": "adventure",
+    "name": "Fixture Rogue // Fixture Errand", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "44",
+    "mana_cost": "{1}{B} // {B}", "cmc": 2,
+    "type_line": "Creature — Human Rogue // Sorcery — Adventure",
+    "colors": ["B"], "color_identity": ["B"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "uncommon",
+    "prices": { "usd": "0.50", "eur": "0.40" },
+    "image_uris": { "small": "https://immagini/rogue-piccola.jpg", "normal": "https://immagini/rogue-normale.jpg" },
+    "card_faces": [
+      {
+        "object": "card_face", "name": "Fixture Rogue",
+        "mana_cost": "{1}{B}", "type_line": "Creature — Human Rogue",
+        "oracle_text": "Menace",
+        "power": "2", "toughness": "2"
+      },
+      {
+        "object": "card_face", "name": "Fixture Errand",
+        "mana_cost": "{B}", "type_line": "Sorcery — Adventure",
+        "oracle_text": "Target creature gets -2/-2 until end of turn."
+      }
+    ]
+  },
+  {
+    "_nota": "Carta divisa: Scryfall dichiara come valore di mana la somma delle due metà, e quella somma non è il costo di nessuna delle due.",
+    "object": "card", "id": "iiii0001", "lang": "en", "layout": "split",
+    "name": "Fixture Stanza // Fixture Salone", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "60",
+    "mana_cost": "{U} // {4}{U}", "cmc": 6,
+    "type_line": "Enchantment — Room // Enchantment — Room",
+    "colors": ["U"], "color_identity": ["U"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "uncommon",
+    "prices": { "usd": "0.30", "eur": "0.25" },
+    "image_uris": { "small": "https://immagini/stanza-piccola.jpg", "normal": "https://immagini/stanza-normale.jpg" },
+    "card_faces": [
+      {
+        "object": "card_face", "name": "Fixture Stanza",
+        "mana_cost": "{U}", "type_line": "Enchantment — Room",
+        "oracle_text": "When you unlock this door, draw a card."
+      },
+      {
+        "object": "card_face", "name": "Fixture Salone",
+        "mana_cost": "{4}{U}", "type_line": "Enchantment — Room",
+        "oracle_text": "When you unlock this door, draw three cards."
+      }
+    ]
+  },
+  {
+    "_nota": "Costi ibridi e costo variabile: {2/W} vale due, {G/U} vale uno, {X} vale zero.",
+    "object": "card", "id": "iiii0002", "lang": "en", "layout": "transform",
+    "name": "Fixture Ibrido // Fixture Riflesso", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "61",
+    "cmc": 3,
+    "type_line": "Creature — Spirit // Creature — Spirit",
+    "colors": ["G", "U", "W"], "color_identity": ["G", "U", "W"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": "1.00", "eur": "0.80" },
+    "card_faces": [
+      {
+        "object": "card_face", "name": "Fixture Ibrido",
+        "mana_cost": "{X}{2/W}{G/U}", "type_line": "Creature — Spirit",
+        "oracle_text": "Flying",
+        "power": "1", "toughness": "1",
+        "image_uris": { "small": "https://immagini/ibrido-piccola.jpg", "normal": "https://immagini/ibrido-normale.jpg" }
+      },
+      {
+        "object": "card_face", "name": "Fixture Riflesso",
+        "mana_cost": "", "type_line": "Creature — Spirit",
+        "oracle_text": "Flying, vigilance",
+        "power": "3", "toughness": "3",
+        "image_uris": { "small": "https://immagini/riflesso-piccola.jpg", "normal": "https://immagini/riflesso-normale.jpg" }
+      }
+    ]
+  },
+  {
+    "_nota": "Terra che entra girata solo se non paghi: la condizione non è scritta con «unless», ed è il ciclo di terre più importante che ci sia.",
+    "object": "card", "id": "dddd0004", "lang": "en", "layout": "normal",
+    "name": "Fixture Crypt", "released_at": "2025-09-26",
+    "set": "fx1", "collector_number": "253",
+    "mana_cost": "", "cmc": 0,
+    "type_line": "Land — Swamp Mountain",
+    "oracle_text": "({T}: Add {B} or {R}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
+    "colors": [], "color_identity": ["B", "R"],
+    "produced_mana": ["B", "R"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": "12.00", "eur": "10.50" },
+    "image_uris": { "small": "https://immagini/crypt-piccola.jpg", "normal": "https://immagini/crypt-normale.jpg" }
+  },
+  {
+    "_nota": "Risultato di un'unione: i dati la dichiarano legale, ma non si mette in un mazzo — arriva in gioco solo unendo le due carte che la compongono.",
+    "object": "card", "id": "ffff0001", "lang": "en", "layout": "meld",
+    "name": "Fixture Colossus", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "300",
+    "mana_cost": "", "cmc": 7,
+    "type_line": "Legendary Creature — Beast Avatar",
+    "oracle_text": "Trample, haste",
+    "power": "9", "toughness": "9",
+    "colors": ["R"], "color_identity": ["R"],
+    "all_parts": [
+      { "component": "meld_part", "name": "Fixture Goblin" },
+      { "component": "meld_result", "name": "Fixture Colossus" }
+    ],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": null, "eur": null },
+    "image_uris": { "small": "https://immagini/colossus-piccola.jpg", "normale": "https://immagini/colossus-normale.jpg" }
+  },
+  {
+    "_nota": "Carta senza prezzo, in due stampe: la preparazione non deve cadere, e la scelta deve restare la stessa a ogni giro.",
+    "object": "card", "id": "zzzz-vecchia", "lang": "en", "layout": "normal",
+    "name": "Fixture Pauper", "released_at": "2025-09-26",
+    "set": "fx1", "collector_number": "5",
+    "mana_cost": "{W}", "cmc": 1,
+    "type_line": "Enchantment",
+    "oracle_text": "You gain 1 life at the beginning of your end step.",
+    "colors": ["W"], "color_identity": ["W"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "common",
+    "prices": { "usd": null, "eur": null },
+    "image_uris": { "small": "https://immagini/pauper-vecchia-piccola.jpg", "normal": "https://immagini/pauper-vecchia-normale.jpg" }
+  },
+  {
+    "object": "card", "id": "aaaa-nuova", "lang": "en", "layout": "normal",
+    "name": "Fixture Pauper", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "9",
+    "mana_cost": "{W}", "cmc": 1,
+    "type_line": "Enchantment",
+    "oracle_text": "You gain 1 life at the beginning of your end step.",
+    "colors": ["W"], "color_identity": ["W"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "common",
+    "prices": { "usd": null, "eur": null },
+    "image_uris": { "small": "https://immagini/pauper-nuova-piccola.jpg", "normal": "https://immagini/pauper-nuova-normale.jpg" }
+  }
+]

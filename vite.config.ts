@@ -17,6 +17,9 @@ const colori = coloriDelTema(qui("./src/stili/tema.css"), DIREZIONE_VISIVA) as R
 
 type Risorsa = { nome: string; tipo: string; contenuto: Buffer | string };
 
+/** Il pool delle carte, scritto da `npm run dati` e copiato da `public/`. */
+const POOL_INCLUSO = "dati/pool.json";
+
 /**
  * Manifest, icone e service worker.
  *
@@ -105,6 +108,9 @@ function pwa(): Plugin {
           "./",
           ...Object.keys(bundle),
           ...risorse.map((risorsa) => risorsa.nome),
+          // Il pool sta in `public/`, che Vite copia fuori dal bundle: senza
+          // nominarlo qui l'app resterebbe senza carte al primo uso senza rete.
+          POOL_INCLUSO,
         ]),
       ]
         // Le icone grandi non servono all'apertura: le scarica il sistema.
@@ -114,7 +120,16 @@ function pwa(): Plugin {
 
       // La versione della cache cambia quando cambia una qualunque risorsa:
       // così il service worker vecchio non serve un guscio misto.
-      const impronta = somma(daMettereInCache.join("|") + JSON.stringify(Object.keys(bundle)));
+      //
+      // Il pool entra nell'impronta col suo contenuto e non col suo nome, che
+      // non cambia mai: un aggiornamento dei bandi tocca solo quel file, e
+      // senza questo l'app installata continuerebbe a servire il pool vecchio
+      // per sempre — cioè carte bandite, in silenzio.
+      const impronta = somma(
+        daMettereInCache.join("|") +
+          JSON.stringify(Object.keys(bundle)) +
+          somma(readFileSync(qui(`./public/${POOL_INCLUSO}`), "utf8")),
+      );
 
       const sorgente = readFileSync(qui("./src/sw.js"), "utf8")
         .replace("__VERSIONE__", impronta)
@@ -151,6 +166,8 @@ export default defineConfig({
   plugins: [pwa()],
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    // Due programmi, due posti: l'app sotto `src/`, gli strumenti del
+    // manutentore sotto `strumenti/`. I test seguono il codice che provano.
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "strumenti/**/*.test.ts"],
   },
 });

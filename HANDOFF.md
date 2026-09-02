@@ -12,12 +12,14 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
 La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
-`.scratch/fondamenta-e-motore/`. **Il ticket 01 (scheletro PWA e note legali) è
-implementato**: l'app si apre, si installa, funziona senza rete e mostra le note
-legali. Il prossimo è il ticket 02, la preparazione dei dati da Scryfall.
+`.scratch/fondamenta-e-motore/`. **I ticket 01 e 02 sono implementati**: l'app
+si apre, si installa, funziona senza rete e mostra le note legali; e il pool
+delle carte esiste, costruito dai dati veri di Scryfall. Il prossimo è il
+ticket 03, i tag di sinergia.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
-`npm test` per i test, `npm run tipi` per il solo controllo dei tipi.
+`npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
+`npm run dati` per riscaricare le carte da Scryfall e riscrivere il pool.
 
 ## Cosa costruiamo, in una frase
 
@@ -51,9 +53,9 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 02
-   (`.scratch/fondamenta-e-motore/issues/02-preparazione-dati-pool.md`), e così
-   via un ticket alla volta.
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 03
+   (`.scratch/fondamenta-e-motore/issues/03-tag-di-sinergia.md`), e così via un
+   ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
 **sosta e prova reale** → galleria e budget → ciclo iterativo → meta → sideboard.
@@ -75,8 +77,12 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   presa è **file del meta compilato a mano** (Q31).
 - Non esiste alcun ottimizzatore di mazzi open source mantenuto e con licenza
   pulita. Quello che costruiamo non esiste già.
+- Il pool costruito il 2026-09-02 conta **4.886 carte** legali in Standard
+  cartaceo, ricavate da 17.494 stampe. Le 13 bandite non ci sono. Sono 292
+  terre, di cui 195 entrano girate e 48 solo a una condizione; 239 carte hanno
+  più di una faccia; 3 carte non hanno ancora un prezzo in euro.
 - **In Standard ci sono 95 Goblin giocabili**, non quattordici come diceva il
-  mockup iniziale. Conseguenza: l'esempio della schermata "tema troppo stretto"
+  mockup iniziale. Il pool vero lo conferma. Conseguenza: l'esempio della schermata "tema troppo stretto"
   va ritarato su un vincolo davvero stretto, e quale sia lo si scoprirà solo
   facendo girare il motore sui dati veri.
 
@@ -86,6 +92,10 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
 PROGETTO.md              documento d'intesa, le 32 decisioni
 index.html               guscio della pagina
 src/identita.ts          il nome dell'app: il solo punto in cui cambiarlo
+src/dati/pool.ts         la forma del pool: solo tipi, nessun peso a runtime
+public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
+strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
+strumenti/aggiorna-pool.ts il comando `npm run dati`: scarica, filtra, racconta
 src/stili/tema.css       colori e caratteri: le quattro direzioni, in un file
 src/stili/direzione.ts   quale direzione è attiva
 src/sw.js                service worker (elenco risorse scritto dalla build)

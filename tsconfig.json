@@ -22,7 +22,12 @@
     "noEmit": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "allowJs": false
+    "allowJs": false,
+
+    // Gli strumenti del manutentore li lancia Node direttamente (`node
+    // strumenti/aggiorna-pool.ts`), senza compilazione e senza dipendenze: e
+    // Node risolve i moduli TypeScript solo se l'estensione è scritta.
+    "allowImportingTsExtensions": true
   },
   "include": ["src", "strumenti", "vite.config.ts"]
 }

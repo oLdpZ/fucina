@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:guarda": "vitest",
-    "tipi": "tsc --noEmit"
+    "tipi": "tsc --noEmit",
+    "dati": "node strumenti/aggiorna-pool.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
   },
   "dependencies": {
     "preact": "^10.27.2"
