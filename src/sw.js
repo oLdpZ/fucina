@@ -15,7 +15,10 @@
  *   nel pacchetto: si tengono da parte man mano che si vedono, in una cache
  *   loro, così la seconda volta ci sono anche senza rete. Non si scaricano mai
  *   in blocco: sarebbe ridistribuire dati altrui.
- * - ogni altra richiesta verso altri domini qui non viene toccata.
+ * - ogni altra richiesta verso altri domini qui non viene toccata;
+ * - il controllo di freschezza dei dati (ticket 05) chiede espressamente al
+ *   server se il pool è cambiato, e passa liscio: è l'unica richiesta nostra
+ *   che non deve essere risposta dalla cache.
  */
 
 const VERSIONE = "__VERSIONE__";
@@ -76,6 +79,18 @@ self.addEventListener("activate", (evento) => {
 self.addEventListener("fetch", (evento) => {
   const richiesta = evento.request;
   if (richiesta.method !== "GET") return;
+
+  // Il controllo di freschezza del pool (`carica-pool.ts`) chiede al server, in
+  // parole povere, «è cambiato?». Rispondergli dalla cache vorrebbe dire
+  // rispondere «no» per sempre, e l'app non si aggiornerebbe mai: passa liscio.
+  // Solo le richieste di dati, mai una navigazione — una pagina ricaricata a
+  // mano senza rete deve continuare ad aprirsi dalla cache.
+  if (
+    richiesta.mode !== "navigate" &&
+    (richiesta.cache === "no-cache" || richiesta.cache === "no-store")
+  ) {
+    return;
+  }
 
   const indirizzo = new URL(richiesta.url);
   if (indirizzo.origin !== self.location.origin) {

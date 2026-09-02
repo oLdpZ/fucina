@@ -64,6 +64,27 @@ export async function caricaPool(): Promise<Pool> {
 }
 
 /**
+ * Chiede alla rete il file del pool, per vedere se ne esiste uno più fresco
+ * (storia 18).
+ *
+ * `no-cache` e non `no-store`: si vuole che il server dica se il file è
+ * cambiato, non che i quattro megabyte riscendano a ogni apertura dell'app. Se
+ * non è cambiato la risposta arriva vuota e il corpo lo mette il browser, che
+ * ce l'ha già. È anche il segnale con cui il service worker riconosce questa
+ * richiesta e la lascia passare invece di rispondere dalla sua cache: chiedere
+ * a sé stessi se si è aggiornati non direbbe mai di no.
+ *
+ * È l'unica richiesta di rete che l'app fa oltre alle immagini delle carte.
+ */
+export async function scaricaPool(): Promise<unknown> {
+  const risposta = await fetch(PERCORSO_POOL, { cache: "no-cache" });
+  if (!risposta.ok) {
+    throw new Error(`Il pool delle carte non è raggiungibile (${risposta.status}).`);
+  }
+  return risposta.json();
+}
+
+/**
  * La data dei dati, come si direbbe a voce (storia 17).
  *
  * Si legge sempre nel fuso di Greenwich, quello in cui la data è scritta: letta

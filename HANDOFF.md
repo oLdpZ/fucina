@@ -1,4 +1,4 @@
-# Ripresa del lavoro — stato al 2 settembre 2026
+# Ripresa del lavoro — stato al 3 settembre 2026
 
 Documento di passaggio: aprendo un nuovo terminale, leggi questo per primo,
 poi `PROGETTO.md`.
@@ -12,13 +12,15 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
 La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
-`.scratch/fondamenta-e-motore/`. **I ticket 01, 02, 03 e 04 sono implementati**:
+`.scratch/fondamenta-e-motore/`. **I ticket 01, 02, 03, 04 e 05 sono implementati**:
 l'app si apre, si installa, funziona senza rete e mostra le note legali; il pool
 delle carte esiste, costruito dai dati veri di Scryfall; ogni carta porta i suoi
 tag di sinergia; e l'app ora **serve a qualcosa** — si cercano le carte per nome
 anche sbagliando a scriverlo, si filtrano per colore, tipo, sottotipo, costo e
-parola nel testo, si vede l'immagine di ognuna e quante ne restano. Il prossimo è
-il ticket 05, aggiornamento dati in sottofondo.
+parola nel testo, si vede l'immagine di ognuna e quante ne restano. E i dati si
+aggiornano da soli: l'app parte sempre da quelli che ha, e in sottofondo chiede
+al server se ne esistono di più freschi. Il prossimo è il ticket 06, base di
+terre e probabilità.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -56,8 +58,8 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 05
-   (`.scratch/fondamenta-e-motore/issues/05-aggiornamento-dati-in-sottofondo.md`),
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 06
+   (`.scratch/fondamenta-e-motore/issues/06-base-di-terre-e-probabilita.md`),
    e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
@@ -100,6 +102,14 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   un `<img>` verso un altro dominio riceve una risposta **opaca**, che in cache
   sarebbe indistinguibile da un 404, e il service worker richiede quindi la
   stessa immagine in modalità normale per poterla controllare prima di tenerla.
+- Il controllo di freschezza (ticket 05) costa **circa 300 byte** quando non c'è
+  niente di nuovo, non i 4,2 MB del pool: la richiesta parte con `cache:
+  "no-cache"`, il server risponde 304 e il corpo lo mette il browser. Verificato
+  su `vite preview`, che manda ETag e Last-Modified come li manda GitHub Pages.
+  Il service worker riconosce quella richiesta proprio dal `no-cache` e la lascia
+  passare: se rispondesse dalla sua cache, direbbe «non è cambiato» per sempre.
+- Con il server spento l'app si apre lo stesso, mostra le 4.886 carte del pool
+  tenuto in IndexedDB e la sua data, e non scrive un solo errore in console.
 - **In Standard ci sono 95 Goblin giocabili**, non quattordici come diceva il
   mockup iniziale. Il pool vero lo conferma. Conseguenza: l'esempio della schermata "tema troppo stretto"
   va ritarato su un vincolo davvero stretto, e quale sia lo si scoprirà solo
@@ -113,6 +123,8 @@ index.html               guscio della pagina
 src/identita.ts          il nome dell'app: il solo punto in cui cambiarlo
 src/dati/pool.ts         la forma del pool: solo tipi, nessun peso a runtime
 src/dati/carica-pool.ts  la lettura del pool e la data dei dati, in italiano
+src/dati/aggiornamento.ts quale pool si apre e cosa si fa di quel che arriva
+src/dati/deposito.ts     IndexedDB: il pool fresco tenuto sul dispositivo
 src/catalogo/filtri.ts   `cerca(carte, filtri)`: la cucitura del catalogo
 src/catalogo/ricerca.ts  la ricerca per nome che perdona i refusi
 src/catalogo/vocabolario.ts tipi e sottotipi ricavati dal pool, mai scritti
