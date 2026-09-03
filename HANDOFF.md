@@ -170,13 +170,19 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   Accettando il primo allargamento proposto — le carte che fanno pedine Dragon —
   diventano 41 e il tema torna comodo. Un sottotipo che non esiste dà zero carte
   e verdetto «impossibile», senza cadere.
-- Il verdetto sul tema costa **circa 3 ms** sul pool vero, allargamenti
-  compresi: si rifà a ogni tocco mentre l'utente costruisce il tema, ed è per
-  questo che l'avviso arriva prima di generare e non dopo.
-- I posti non-terra da riempire sono **40** (sessanta carte meno il minimo di
-  terre): è il conto che decide se un tema è *impossibile*, e non è una
-  taratura. La soglia di *stretto* — quaranta carte distinte — invece lo è, e
-  sta in `src/tema/taratura.ts` da ritarare alla sosta.
+- Il verdetto sul tema costa **circa 3 ms** sul pool vero quando il tema è
+  ampio, e **una decina** quando ci sono anche gli allargamenti da proporre —
+  ognuno è un passaggio in più sul pool. La primissima valutazione ne costa
+  una sessantina, perché è lì che si costruiscono una volta sola le parole dei
+  testi. Si rifà comunque a ogni tocco, ed è per questo che l'avviso arriva
+  prima di generare e non dopo.
+- I posti non-terra da riempire sono **33** (sessanta carte meno il *massimo*
+  delle terre): è il conto che decide se un tema è *impossibile*, e non è una
+  taratura. Si prende il massimo perché è il caso più favorevole al tema —
+  più terre, meno posti da riempire con le sue carte — e dire «impossibile» a
+  un tema che ce l'avrebbe fatta sarebbe un errore dell'app. La soglia di
+  *stretto* — quaranta carte distinte — invece è una taratura, sta in
+  `src/tema/taratura.ts` ed è da ritarare alla sosta.
 
 ## Mappa dei file
 

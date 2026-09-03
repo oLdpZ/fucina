@@ -20,15 +20,31 @@ import type { Carta, Colore, Tag } from "../dati/pool.js";
  * Un tipo che non è qui (ne escono di nuovi: `Battle`, `Kindred`) non sparisce:
  * viene in fondo, col suo nome inglese.
  */
-const TIPI_NOTI: readonly { tipo: string; etichetta: string; singolare: string }[] = [
-  { tipo: "Creature", etichetta: "Creature", singolare: "Creatura" },
-  { tipo: "Planeswalker", etichetta: "Planeswalker", singolare: "Planeswalker" },
-  { tipo: "Instant", etichetta: "Istantanei", singolare: "Istantaneo" },
-  { tipo: "Sorcery", etichetta: "Stregonerie", singolare: "Stregoneria" },
-  { tipo: "Artifact", etichetta: "Artefatti", singolare: "Artefatto" },
-  { tipo: "Enchantment", etichetta: "Incantesimi", singolare: "Incantesimo" },
-  { tipo: "Battle", etichetta: "Battaglie", singolare: "Battaglia" },
-  { tipo: "Land", etichetta: "Terre", singolare: "Terra" },
+const TIPI_NOTI: readonly {
+  tipo: string;
+  etichetta: string;
+  singolare: string;
+  /** «tutte le creature», «tutti gli artefatti»: l'italiano non perdona. */
+  tutti: string;
+}[] = [
+  { tipo: "Creature", etichetta: "Creature", singolare: "Creatura", tutti: "tutte le creature" },
+  {
+    tipo: "Planeswalker",
+    etichetta: "Planeswalker",
+    singolare: "Planeswalker",
+    tutti: "tutti i planeswalker",
+  },
+  { tipo: "Instant", etichetta: "Istantanei", singolare: "Istantaneo", tutti: "tutti gli istantanei" },
+  { tipo: "Sorcery", etichetta: "Stregonerie", singolare: "Stregoneria", tutti: "tutte le stregonerie" },
+  { tipo: "Artifact", etichetta: "Artefatti", singolare: "Artefatto", tutti: "tutti gli artefatti" },
+  {
+    tipo: "Enchantment",
+    etichetta: "Incantesimi",
+    singolare: "Incantesimo",
+    tutti: "tutti gli incantesimi",
+  },
+  { tipo: "Battle", etichetta: "Battaglie", singolare: "Battaglia", tutti: "tutte le battaglie" },
+  { tipo: "Land", etichetta: "Terre", singolare: "Terra", tutti: "tutte le terre" },
 ];
 
 /**
@@ -90,6 +106,19 @@ export function azioneDelTag(tag: Tag): string {
 /** Come si chiama un tipo di carta al plurale: «Creature», «Istantanei». */
 export function etichettaTipo(tipo: string): string {
   return TIPI_NOTI.find((noto) => noto.tipo === tipo)?.etichetta ?? tipo;
+}
+
+/**
+ * Come si dice «tutte le carte di questo tipo» dentro una frase.
+ *
+ * L'articolo cambia col genere e con la lettera che segue — le creature, i
+ * planeswalker, gli artefatti — e l'unico modo di non sbagliarlo è scriverlo a
+ * mano accanto al nome, qui, dove i nomi italiani stanno già. Un tipo che non
+ * è ancora in elenco prende una forma che regge comunque.
+ */
+export function tuttiDelTipo(tipo: string): string {
+  const noto = TIPI_NOTI.find((cercato) => cercato.tipo === tipo);
+  return noto === undefined ? `tutte le carte di tipo ${tipo}` : noto.tutti;
 }
 
 export type VoceTipo = { tipo: string; etichetta: string; quante: number };

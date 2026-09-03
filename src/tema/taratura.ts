@@ -13,17 +13,19 @@
  * cambiarlo.
  */
 
-import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
+import { DIMENSIONE_MAZZO, TERRE_MASSIME } from "../mazzo/taratura.js";
 
 /**
  * Quanti posti deve riempire il tema: le carte del mazzo meno le terre.
  *
- * Si prende il **minimo** delle terre che l'app consiglia, cioè il caso più
- * favorevole al tema: un mazzo con meno terre lascia più posti alle magie, e
- * dichiarare impossibile un tema che con venti terre ce l'avrebbe fatta
- * sarebbe un errore dell'app.
+ * Si prende il **massimo** delle terre che l'app consiglia, perché è il caso
+ * più favorevole al tema: più terre ci sono, meno posti restano da riempire
+ * con le sue carte. Dire «impossibile» a un tema che con ventisette terre ce
+ * l'avrebbe fatta sarebbe un errore dell'app, non una regola del gioco — e
+ * qui, dove il verdetto è un conto e non una taratura, un errore del genere
+ * non ha nemmeno la scusa della soglia da ritarare.
  */
-export const POSTI_NON_TERRA = DIMENSIONE_MAZZO - TERRE_MINIME;
+export const POSTI_NON_TERRA = DIMENSIONE_MAZZO - TERRE_MASSIME;
 
 /**
  * Quante carte distinte servono perché il tema stia comodo.
@@ -33,9 +35,9 @@ export const POSTI_NON_TERRA = DIMENSIONE_MAZZO - TERRE_MINIME;
  * frontiera è corta e i quattro mazzi si somigliano tutti, perché sono quasi
  * le stesse carte in ordine diverso.
  *
- * Quaranta è il numero dei posti non-terra: chiedere che le carte candidate
- * siano almeno tante quanti i posti da riempire è il modo più semplice di dire
- * «c'è da scegliere». **Da ritarare alla sosta**, guardando quanto si
- * somigliano davvero i mazzi che escono.
+ * Quaranta è più dei posti da riempire, di parecchio: è il modo più semplice
+ * di dire che alla ricerca devono restare carte da scartare, non solo carte da
+ * mettere. **Da ritarare alla sosta**, guardando quanto si somigliano davvero i
+ * mazzi che escono.
  */
 export const CARTE_DISTINTE_COMODE = 40;

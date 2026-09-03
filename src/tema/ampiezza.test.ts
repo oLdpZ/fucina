@@ -169,6 +169,51 @@ describe("gli allargamenti si propongono uno per uno, e nessuno si applica da so
     expect(accetta(accetta(GOBLIN, primo), primo).allargamenti).toHaveLength(1);
   });
 
+  it("le frasi si leggono in italiano, articoli compresi", () => {
+    // «tutte le artefatti» e «di colore senza colore» sono usciti davvero.
+    for (const allargamento of proposti) {
+      expect(allargamento.descrizione).not.toMatch(/tutte le (artefatti|istantanei|incantesimi)/);
+      expect(allargamento.descrizione).not.toContain("di colore senza colore");
+    }
+  });
+
+  it("un tema tutto incolore si dice «senza colore», non «di colore niente»", () => {
+    const modello = POOL_FINTO.find((c) => c.nome === "Ancient Colossus") as Carta;
+    const altreIncolori: Carta[] = [1, 2].map((numero) => ({
+      ...modello,
+      id: `finta-costrutto-${numero}`,
+      nome: `Costrutto Numero ${numero}`,
+      sottotipi: ["Construct"],
+    }));
+    const incolore: Tema = {
+      ...TEMA_VUOTO,
+      inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Golem"] },
+    };
+    const perColore = valutaTema([...TUTTE, ...altreIncolori], incolore).allargamenti.find(
+      (a) => a.criterio.tipo === "colori-e-tipo",
+    );
+    expect(perColore?.descrizione).toContain("senza colore");
+    expect(perColore?.descrizione).not.toContain("di colore senza");
+  });
+
+  it("una carta-seme che è anche una terra non fa sparire le proposte", () => {
+    // Il conto delle carte aggiunte e quello delle carte già dentro devono
+    // guardare lo stesso tema: se il seme sopravvive a un conto e non all'altro,
+    // la differenza va sotto zero e proposte buone spariscono in silenzio.
+    const modello = POOL_FINTO.find((c) => c.nome === "Goblin Chieftain") as Carta;
+    const terraCreatura: Carta = {
+      ...modello,
+      id: "finta-grotta",
+      nome: "Goblin Grotto",
+      tipi: ["Land", "Creature"],
+      sottotipi: ["Goblin"],
+      terra: { coloriProdotti: ["R"], entraGirata: false, condizione: null },
+    };
+    const conSeme: Tema = { ...TEMA_VUOTO, seme: "Goblin Grotto" };
+    const proposte = valutaTema([...TUTTE, terraCreatura], conSeme).allargamenti;
+    expect(proposte.some((a) => a.criterio.tipo === "produce-pedine-del-sottotipo")).toBe(true);
+  });
+
   it("un tema ormai ampio non ha più bisogno di proposte", () => {
     expect(valutaTema(poolDiGoblin(CARTE_DISTINTE_COMODE), GOBLIN).allargamenti).toEqual([]);
   });

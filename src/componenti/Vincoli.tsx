@@ -28,6 +28,7 @@ import {
   type VoceTipo,
 } from "../catalogo/vocabolario.js";
 import type { Carta, Colore, Pool, Tag } from "../dati/pool.js";
+import { frasePerCriterio } from "../tema/allargamenti.js";
 import { valutaTema } from "../tema/ampiezza.js";
 import {
   accetta,
@@ -149,12 +150,20 @@ export function Vincoli({
         <section class="gruppo-vincolo allargati">
           <h2>Il tema che hai allargato</h2>
           <p class="nota-filtro">
-            Sta scritto qui perché tu lo sappia: non è più solo quello che avevi chiesto.
+            {dichiarato
+              ? "Sta scritto qui perché tu lo sappia: non è più solo quello che avevi chiesto."
+              : "Per ora non allargano niente: un allargamento si aggiunge a un tema, e un tema non l’hai ancora dichiarato."}
           </p>
           <ul class="elenco-allargamenti">
             {tema.allargamenti.map((allargamento) => (
               <li key={allargamento.descrizione} class="allargamento accettato">
-                <p class="frase-allargamento">{allargamento.descrizione}</p>
+                {/* La frase si riscrive adesso, senza il numero che aveva al
+                    momento in cui è stata accettata: quel numero era vero
+                    allora, e col tema cambiato non lo sarebbe più. Il numero
+                    vero è uno solo, ed è il conteggio là in cima. */}
+                <p class="frase-allargamento">
+                  Prendo anche {frasePerCriterio(allargamento.criterio)}.
+                </p>
                 <button
                   type="button"
                   class="azzera"

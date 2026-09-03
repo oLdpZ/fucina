@@ -2,10 +2,12 @@
  * «Questo tema sta in piedi?» — la risposta che arriva **prima di generare**
  * (ticket 08, Q26).
  *
- * È un conto sul solo numero di carte disponibili, e costa quanto un passaggio
- * sul pool: si può rifare a ogni tocco mentre l'utente costruisce il tema, e
- * dire subito che quella strada non porta a un mazzo. Aspettare venti secondi
- * di ricerca per ricevere un mazzo scadente non aiuta nessuno.
+ * È un conto sul solo numero di carte disponibili: un passaggio sul pool per
+ * il verdetto, e uno per ognuna delle strade proposte. Sul pool vero sono
+ * pochi millisecondi — una decina quando ci sono anche le proposte — e si può
+ * quindi rifare a ogni tocco mentre l'utente costruisce il tema, dicendogli
+ * subito che quella strada non porta a un mazzo. Aspettare venti secondi di
+ * ricerca per ricevere un mazzo scadente non aiuta nessuno.
  *
  * I tre esiti:
  *

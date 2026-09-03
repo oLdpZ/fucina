@@ -14,17 +14,16 @@
  */
 
 import {
-  ORDINE_DEI_COLORI,
   NOMI_DEI_COLORI,
+  ORDINE_DEI_COLORI,
   azioneDelTag,
-  etichettaTipo,
   tipoPrincipaleInglese,
+  tuttiDelTipo,
 } from "../catalogo/vocabolario.js";
 import type { Carta, Colore, Tag } from "../dati/pool.js";
 import {
   accetta,
   carteDelTema,
-  risolviTema,
   type Allargamento,
   type CriterioAllargamento,
   type Tema,
@@ -35,14 +34,36 @@ function carte(quante: number): string {
   return quante === 1 ? "1 carta" : `${quante} carte`;
 }
 
-/** «rosso», «nero e rosso», «bianco, blu e nero»: un elenco che si legge. */
-function elencoDiColori(colori: readonly Colore[]): string {
+/** «di colore rosso», «di colore nero e rosso», «senza colore». */
+function clausolaDiColore(colori: readonly Colore[]): string {
   const nomi = ORDINE_DEI_COLORI.filter((colore) => colori.includes(colore)).map(
     (colore) => NOMI_DEI_COLORI[colore],
   );
   if (nomi.length === 0) return "senza colore";
-  if (nomi.length === 1) return nomi[0] as string;
-  return `${nomi.slice(0, -1).join(", ")} e ${nomi[nomi.length - 1] as string}`;
+  if (nomi.length === 1) return `di colore ${nomi[0] as string}`;
+  return `di colore ${nomi.slice(0, -1).join(", ")} e ${nomi[nomi.length - 1] as string}`;
+}
+
+/**
+ * Che cosa un allargamento prende, detto in italiano e **senza numeri**.
+ *
+ * Sta separata dalla proposta perché serve due volte: dentro la proposta, dove
+ * il numero c'è, e accanto a un allargamento già accettato, dove il numero non
+ * ci deve essere. Un conteggio congelato al momento in cui si è accettato
+ * smetterebbe di corrispondere a qualcosa appena il tema cambia ancora, e una
+ * frase con dentro un numero che non torna è peggio di una frase senza numeri.
+ */
+export function frasePerCriterio(criterio: CriterioAllargamento): string {
+  switch (criterio.tipo) {
+    case "produce-pedine-del-sottotipo":
+      return `le carte che producono pedine ${criterio.sottotipo} pur non essendolo`;
+    case "nomina-il-sottotipo":
+      return `le carte che nominano ${criterio.sottotipo} nel loro testo`;
+    case "tag-affine":
+      return `le carte che ${azioneDelTag(criterio.tag)}`;
+    case "colori-e-tipo":
+      return `${tuttiDelTipo(criterio.tipoDiCarta)} ${clausolaDiColore(criterio.colori)}`;
+  }
 }
 
 /**
@@ -51,15 +72,21 @@ function elencoDiColori(colori: readonly Colore[]): string {
  * Si conta passando dal tema allargato, non dal criterio da solo: così le
  * esclusioni continuano a vincere anche qui, e il numero nella frase è
  * esattamente il numero di carte che l'utente si troverebbe dentro.
+ *
+ * Il seme arriva già risolto, e non si ricerca qui: cercarlo fra le sole
+ * non-terre darebbe un tema diverso da quello con cui si è contato `giaNelTema`
+ * — un seme che fosse una terra sparirebbe per strada — e la differenza fra i
+ * due conti non sarebbe più quel che l'allargamento aggiunge.
  */
 function quanteAggiunge(
   nonTerre: readonly Carta[],
   tema: Tema,
+  seme: Carta | null,
   criterio: CriterioAllargamento,
   giaNelTema: number,
 ): number {
   const provvisorio: Allargamento = { criterio, descrizione: "", carteAggiunte: 0 };
-  const allargato = risolviTema(accetta(tema, provvisorio), nonTerre);
+  const allargato = { tema: accetta(tema, provvisorio), seme };
   return carteDelTema(nonTerre, allargato).length - giaNelTema;
 }
 
@@ -86,7 +113,7 @@ function sottotipiDelTema(tema: Tema, seme: Carta | null): string[] {
  * dare le stesse proposte, e l'ordine in cui il pool è capitato non è una
  * ragione per cambiarle.
  */
-function tagPiuFrequente(nelTema: readonly Carta[], gia: readonly Tag[]): [Tag, number] | null {
+function tagPiuFrequente(nelTema: readonly Carta[], gia: readonly Tag[]): Tag | null {
   const conteggio = new Map<Tag, number>();
   for (const carta of nelTema) {
     for (const tag of new Set(carta.tag)) {
@@ -98,7 +125,7 @@ function tagPiuFrequente(nelTema: readonly Carta[], gia: readonly Tag[]): [Tag, 
   const ordinati = [...conteggio.entries()].sort(
     (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "it"),
   );
-  return ordinati[0] ?? null;
+  return ordinati[0]?.[0] ?? null;
 }
 
 /** I colori toccati dalle carte già nel tema: è il colore del mazzo che verrà. */
@@ -144,49 +171,30 @@ export function proponiAllargamenti(
   seme: Carta | null,
   nelTema: readonly Carta[],
 ): Allargamento[] {
-  const criteri: { criterio: CriterioAllargamento; frase: (quante: number) => string }[] = [];
+  const criteri: CriterioAllargamento[] = [];
 
   for (const sottotipo of sottotipiDelTema(tema, seme)) {
-    criteri.push({
-      criterio: { tipo: "produce-pedine-del-sottotipo", sottotipo },
-      frase: (quante) =>
-        `Prendo anche le carte che producono pedine ${sottotipo} pur non essendolo: ` +
-        `${carte(quante)} in più.`,
-    });
-    criteri.push({
-      criterio: { tipo: "nomina-il-sottotipo", sottotipo },
-      frase: (quante) =>
-        `Prendo anche le carte che nominano ${sottotipo} nel loro testo: ${carte(quante)} in più.`,
-    });
+    criteri.push({ tipo: "produce-pedine-del-sottotipo", sottotipo });
+    criteri.push({ tipo: "nomina-il-sottotipo", sottotipo });
   }
 
   const affine = tagPiuFrequente(nelTema, tema.inclusioni.tag);
-  if (affine !== null) {
-    const [tag, quanteLoFanno] = affine;
-    criteri.push({
-      criterio: { tipo: "tag-affine", tag },
-      frase: (quante) =>
-        `Prendo anche le carte che ${azioneDelTag(tag)}, come ${carte(quanteLoFanno)} ` +
-        `che il tema ha già: ${carte(quante)} in più.`,
-    });
-  }
+  if (affine !== null) criteri.push({ tipo: "tag-affine", tag: affine });
 
   const tipoDiCarta = tipoPiuFrequente(nelTema);
   if (tipoDiCarta !== null) {
-    const colori = coloriDelTema(nelTema);
-    criteri.push({
-      criterio: { tipo: "colori-e-tipo", colori, tipoDiCarta },
-      frase: (quante) =>
-        `Allargo a tutte le ${etichettaTipo(tipoDiCarta).toLowerCase()} ` +
-        `di colore ${elencoDiColori(colori)}: ${carte(quante)} in più.`,
-    });
+    criteri.push({ tipo: "colori-e-tipo", colori: coloriDelTema(nelTema), tipoDiCarta });
   }
 
   const proposte: Allargamento[] = [];
-  for (const { criterio, frase } of criteri) {
-    const carteAggiunte = quanteAggiunge(nonTerre, tema, criterio, nelTema.length);
+  for (const criterio of criteri) {
+    const carteAggiunte = quanteAggiunge(nonTerre, tema, seme, criterio, nelTema.length);
     if (carteAggiunte <= 0) continue;
-    proposte.push({ criterio, descrizione: frase(carteAggiunte), carteAggiunte });
+    proposte.push({
+      criterio,
+      descrizione: `Prendo anche ${frasePerCriterio(criterio)}: ${carte(carteAggiunte)} in più.`,
+      carteAggiunte,
+    });
   }
 
   // A pari numero decide la frase: due temi uguali devono dare le proposte

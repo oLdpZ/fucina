@@ -153,14 +153,25 @@ export function eTerra(carta: Carta): boolean {
   return carta.tipi.includes("Land");
 }
 
-/** Se il testo della carta nomina una parola — quella intera, non un pezzo. */
+/**
+ * Se il testo della carta nomina una parola — quella intera, non un pezzo, e
+ * anche al plurale.
+ *
+ * Il plurale non è un vezzo: le carte tribali parlano quasi sempre di «other
+ * Goblins you control», e nel pool di oggi ci sono carte che dicono soltanto
+ * «Goblins» e mai «Goblin». Cercare la parola dentro il testo le prenderebbe
+ * tutte in un colpo, ma prenderebbe anche «Bat» dentro «Battle» e «Ape» dentro
+ * «escape»: si aggiunge quindi la sola *s* finale, e i plurali irregolari
+ * («Elves») restano fuori — meglio tacere che sbagliare.
+ */
 function nomina(carta: Carta, parola: string): boolean {
   const cercata = normalizza(parola);
   if (cercata === "") return false;
   // Un sottotipo di due parole («Time Lord») non sta nell'insieme delle parole:
   // per quello si torna al testo intero.
   if (cercata.includes(" ")) return testoNormalizzato(carta).includes(cercata);
-  return paroleDelTesto(carta).has(cercata);
+  const parole = paroleDelTesto(carta);
+  return parole.has(cercata) || parole.has(`${cercata}s`);
 }
 
 /** Se una carta soddisfa un filtro. Un filtro vuoto non lo soddisfa nessuno. */
@@ -240,13 +251,18 @@ export function appartiene(carta: Carta, risolto: TemaRisolto): boolean {
   if (soddisfa(carta, tema.esclusioni)) return false;
 
   const haInclusioni = !filtroVuoto(tema.inclusioni);
-  const haAllargamenti = tema.allargamenti.length > 0;
   // Il seme si guarda **come è stato dichiarato**, non come si è risolto: un
   // seme uscito dal pool lascia un tema che non prende niente, e va bene così.
   // Guardare la carta trovata, invece, farebbe cadere questo tema nel ramo
   // «solo esclusioni», e da un giorno all'altro il tema di una carta sparita
   // diventerebbe in silenzio il tema di tutte le carte che esistono.
-  if (!haInclusioni && tema.seme === null && !haAllargamenti) return true;
+  //
+  // Gli allargamenti non contano qui, ed è la loro natura: un allargamento è
+  // un'aggiunta a un nucleo, non un nucleo. Se facesse le veci del nucleo,
+  // accettare una proposta che dice «prendo **anche** queste» su un tema di
+  // sole esclusioni lo restringerebbe da quasi tutte le carte a una manciata:
+  // l'esatto contrario di quel che la proposta dice di fare.
+  if (!haInclusioni && tema.seme === null) return true;
 
   if (haInclusioni && soddisfa(carta, tema.inclusioni)) return true;
   if (seme !== null && nelVicinato(carta, seme)) return true;
