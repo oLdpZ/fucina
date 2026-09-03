@@ -21,7 +21,9 @@ import {
   copie,
   decimale,
   elenco,
+  frasePerIlGuaioDellaCombo,
   frasePerIlPasso,
+  frasePerLaCombo,
   frasePerLaPresenza,
   frasePerLeCopie,
   frasePerLeTerre,
@@ -31,6 +33,7 @@ import {
   quantita,
   simboli,
   terre,
+  type GrezziDellaCombo,
   type GrezziDelleCopie,
   type GrezziDelleTerre,
   type GrezziDelPasso,
@@ -381,5 +384,96 @@ describe("che cosa cambia rispetto al mazzo precedente", () => {
     const frase = frasePerIlPasso({ ...base, copieFuoriTemaPrima: 5 });
     expect(frase).toContain("restano 5 su 38");
     expect(frase).not.toContain("0 copie fuori tema in più");
+  });
+});
+
+/**
+ * La combo dichiarata (ticket 05 della tappa 3).
+ *
+ * La frase ha un lavoro in più delle altre: oltre al numero deve dire **il
+ * patto** — non giudico se questa combo vinca, l'hai detto tu; ti dico che
+ * probabilità hai di averla in mano al turno che guardo. Il ticket lo chiede
+ * alla lettera, e un test lo tiene lì.
+ */
+describe("frasePerLaCombo", () => {
+  const base: GrezziDellaCombo = {
+    pezzi: [
+      { nome: "Bombarda Rovente", copie: 4 },
+      { nome: "Fornace Antica", copie: 4 },
+    ],
+    turno: 5,
+    probabilita: 0.3072640358325542,
+    dimensioneMazzo: 60,
+    guai: [],
+  };
+
+  it("dice il patto: non giudico, l'hai detto tu", () => {
+    const frase = frasePerLaCombo(base);
+    expect(frase).toContain("l'hai detto tu");
+    expect(frase).toContain("Bombarda Rovente");
+    expect(frase).toContain("Fornace Antica");
+  });
+
+  it("dice la probabilità, il turno e le copie che ci sono davvero", () => {
+    const frase = frasePerLaCombo(base);
+    expect(frase).toContain("31%");
+    expect(frase).toContain("turno 5");
+    expect(frase).toContain("4 copie");
+  });
+
+  it("con un pezzo solo parla al singolare", () => {
+    const frase = frasePerLaCombo({
+      ...base,
+      pezzi: [{ nome: "Bombarda Rovente", copie: 3 }],
+      probabilita: 0.42,
+    });
+    expect(frase).toContain("3 copie");
+    expect(frase).not.toContain("tutte e");
+  });
+
+  it("quando dei pezzi non ne è rimasto nessuno non scrive nessuna probabilità", () => {
+    const frase = frasePerLaCombo({
+      ...base,
+      pezzi: [],
+      probabilita: null,
+      guai: [{ nome: "Bombarda Rovente", tipo: "sparita" }],
+    });
+    expect(frase).not.toContain("%");
+    expect(frase).toContain("0 su 1");
+  });
+
+  it("se un pezzo è rimasto fuori, il numero non si spaccia per quello della combo", () => {
+    // Il caso che conta: due pezzi su tre si sono trovati, e la probabilità dei
+    // due è **più alta** di quella dei tre. Dirla senza dire che manca il terzo
+    // sarebbe rispondere a una domanda che l'utente non ha fatto.
+    const frase = frasePerLaCombo({
+      ...base,
+      guai: [{ nome: "Vortice Perduto", tipo: "sparita" }],
+    });
+    expect(frase).toContain("Vortice Perduto");
+    expect(frase).toContain("i pezzi rimasti");
+  });
+
+  it("un pezzo che nel mazzo non è entrato porta la probabilità a zero, e lo dice", () => {
+    const frase = frasePerLaCombo({
+      ...base,
+      pezzi: [
+        { nome: "Bombarda Rovente", copie: 4 },
+        { nome: "Fornace Antica", copie: 0 },
+      ],
+      probabilita: 0,
+    });
+    expect(frase).toContain("Fornace Antica");
+    expect(frase).toContain("0%");
+  });
+});
+
+describe("frasePerIlGuaioDellaCombo", () => {
+  it("dice i tre modi in cui un pezzo resta fuori, e nomina la carta", () => {
+    for (const tipo of ["sparita", "esclusa", "terra"] as const) {
+      const frase = frasePerIlGuaioDellaCombo({ nome: "Fornace Antica", tipo });
+      expect(frase).toContain("Fornace Antica");
+      expect(frase.length).toBeGreaterThan("Fornace Antica".length + 10);
+    }
   });
 });

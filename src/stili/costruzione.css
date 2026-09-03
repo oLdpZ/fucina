@@ -285,6 +285,14 @@
 }
 
 /*
+ * La combo dichiarata: dentro c'è il patto — non giudico, l'hai detto tu — e
+ * si legge come il passo, non come una nota a piè di pagina.
+ */
+.spiegazione-combo {
+  color: var(--inchiostro);
+}
+
+/*
  * Le carte del mazzo, una per riga e apribili. La lista resta una lista finché
  * non si tocca: chi vuole solo i nomi non deve scorrere per pagine di frasi.
  */

@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { COMBO_VUOTA } from "../src/combo/combo.ts";
 import type { Carta, Pool } from "../src/dati/pool.ts";
 import { costruisciMazzo, type Frontiera, type MazzoCostruito } from "../src/ricerca/costruisci.ts";
 import { DENSITA_DI_SINERGIA_PIENA } from "../src/punteggio/taratura.ts";
@@ -337,7 +338,13 @@ function main(): void {
     process.stdout.write(`  ${prova.titolo}… `);
     const inizio = Date.now();
     const frontiera = costruisciMazzo(
-      { tema: prova.tema, seme: SEME, tempoMassimoMs: TEMPO_MASSIMO_MS, formato: "standard" },
+      {
+        tema: prova.tema,
+        combo: COMBO_VUOTA,
+        seme: SEME,
+        tempoMassimoMs: TEMPO_MASSIMO_MS,
+        formato: "standard",
+      },
       carte,
     );
     const ms = Date.now() - inizio;

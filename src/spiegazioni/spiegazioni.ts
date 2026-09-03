@@ -29,10 +29,12 @@ import { copieMassime } from "../mazzo/copie.js";
 import { probabilitaDiPescarne } from "../mazzo/probabilita.js";
 import {
   frasePerIlPasso,
+  frasePerLaCombo,
   frasePerLaPresenza,
   frasePerLeCopie,
   frasePerLeTerre,
   frasePerLEsclusione,
+  type GrezziDellaCombo,
   type GrezziDelleCopie,
   type GrezziDelleTerre,
   type GrezziDelPasso,
@@ -68,6 +70,12 @@ export type SpiegazioniDelMazzo = {
   terre: Spiegazione<GrezziDelleTerre>;
   /** Che cosa cambia rispetto al mazzo precedente. `null` sul primo. */
   passo: Spiegazione<GrezziDelPasso> | null;
+  /**
+   * La combo dichiarata su questo mazzo, col patto scritto dentro la frase.
+   * `null` quando l'utente non ne ha dichiarata nessuna: non c'è niente da
+   * dire, e dire zero sarebbe rispondere a una domanda che nessuno ha fatto.
+   */
+  combo: Spiegazione<GrezziDellaCombo> | null;
 };
 
 /**
@@ -116,6 +124,7 @@ export function spiegaMazzo(
     esclusioni: spiegaLeEsclusioni(mazzo, contesto),
     terre: spiegaLeTerre(mazzo),
     passo: precedente === null ? null : spiegaIlPasso(mazzo, precedente, contesto),
+    combo: spiegaLaCombo(mazzo),
   };
 }
 
@@ -324,4 +333,28 @@ function spiegaIlPasso(
     partite: mazzo.simulazione.partite,
   };
   return { frase: frasePerIlPasso(grezzi), grezzi };
+}
+
+/* --- La combo dichiarata --------------------------------------------------- */
+
+/**
+ * La combo, detta a parole: **i numeri non si rifanno qui**.
+ *
+ * Le copie, il turno e la probabilità sono quelli che `misuraLaCombo` ha già
+ * calcolato per questo mazzo (`MazzoCostruito.combo`), e si riportano dentro la
+ * frase così come sono. Ricalcolarli qui vorrebbe dire poter scrivere un numero
+ * diverso da quello che l'utente legge accanto.
+ */
+function spiegaLaCombo(mazzo: MazzoCostruito): Spiegazione<GrezziDellaCombo> | null {
+  const combo = mazzo.combo;
+  if (combo === null) return null;
+
+  const grezzi: GrezziDellaCombo = {
+    pezzi: combo.pezzi,
+    turno: combo.turno,
+    probabilita: combo.probabilita,
+    dimensioneMazzo: combo.dimensioneMazzo,
+    guai: combo.guai,
+  };
+  return { frase: frasePerLaCombo(grezzi), grezzi };
 }

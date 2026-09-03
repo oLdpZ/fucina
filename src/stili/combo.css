@@ -1,0 +1,48 @@
+/*
+ * La combo dichiarata (ticket 05 della tappa 3): il riquadro in cui l'utente
+ * nomina le carte che secondo lui vincono se stanno insieme.
+ *
+ * Sta fra i vincoli e il tasto che costruisce, e ne prende la forma: stesso
+ * riquadro, stesso passo, stessi comandi larghi almeno 44px per il pollice.
+ * Nessun colore letterale — solo le variabili di `tema.css`, come nel resto
+ * dell'app.
+ */
+
+.combo-dichiarata {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.combo-dichiarata > h2 {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+  color: var(--inchiostro);
+}
+
+/*
+ * Il patto. È la frase che rende onesto il numero che si legge dopo, e si legge
+ * per intera: colore pieno, riga stretta, e non il grigio delle note.
+ */
+.combo-dichiarata .patto {
+  max-width: 60ch;
+  margin: 0;
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  color: var(--inchiostro);
+}
+
+.pezzi-combo {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

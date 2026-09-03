@@ -9,7 +9,11 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { probabilitaDiLanciare, probabilitaDiPescarne } from "./probabilita.js";
+import {
+  probabilitaDiAssemblarne,
+  probabilitaDiLanciare,
+  probabilitaDiPescarne,
+} from "./probabilita.js";
 
 /** C(n, k) esatto per i numeri piccoli dei test: nessun logaritmo, nessun dubbio. */
 function combinazioni(n: number, k: number): bigint {
@@ -280,5 +284,71 @@ describe("il conto ricordato", () => {
     for (const domanda of DOMANDE) {
       expect(probabilitaDiLanciare(domanda)).toBe(probabilitaDiLanciare(domanda));
     }
+  });
+});
+
+/**
+ * La combo dichiarata (ticket 05 della tappa 3): la probabilità di avere **in
+ * mano tutti** i pezzi entro un turno.
+ *
+ * I valori attesi non escono dall'inclusione-esclusione che il codice usa: si
+ * scrivono come **enumerazione diretta** delle mani buone — quante copie del
+ * primo pezzo, quante del secondo, e le altre carte a riempire. Due strade
+ * diverse per lo stesso numero: se una delle due sbaglia, il test se ne
+ * accorge.
+ */
+describe("probabilitaDiAssemblarne", () => {
+  /** Le mani con almeno una copia di ogni pezzo, contate una per una. */
+  function enumerata(dimensioneMazzo: number, copie: readonly number[], viste: number): number {
+    const altre = dimensioneMazzo - copie.reduce((somma, quante) => somma + quante, 0);
+    let buone = 0n;
+    const percorri = (indice: number, prese: number, modi: bigint): void => {
+      if (indice === copie.length) {
+        buone += modi * combinazioni(altre, viste - prese);
+        return;
+      }
+      for (let quante = 1; quante <= (copie[indice] as number); quante++) {
+        percorri(indice + 1, prese + quante, modi * combinazioni(copie[indice] as number, quante));
+      }
+    };
+    percorri(0, 0, 1n);
+    return rapporto(buone, combinazioni(dimensioneMazzo, viste));
+  }
+
+  it("due carte in una copia sola, al primo turno: il conto elementare", () => {
+    // Sette carte viste su sessanta: la prima carta nominata ha 7 posti su 60,
+    // la seconda 6 sui 59 che restano.
+    expect(probabilitaDiAssemblarne(60, [1, 1], 1)).toBeCloseTo((7 / 60) * (6 / 59), 12);
+  });
+
+  it("due carte in quattro copie, al quinto turno", () => {
+    expect(probabilitaDiAssemblarne(60, [4, 4], 5)).toBeCloseTo(enumerata(60, [4, 4], 11), 12);
+    // Undici carte viste: meno di una volta su tre, ed è la combo più pescabile
+    // che un mazzo da sessanta carte permetta.
+    expect(probabilitaDiAssemblarne(60, [4, 4], 5)).toBeCloseTo(0.307, 3);
+  });
+
+  it("tre pezzi, uno dei quali in due copie sole", () => {
+    expect(probabilitaDiAssemblarne(60, [4, 4, 2], 4)).toBeCloseTo(enumerata(60, [4, 4, 2], 10), 12);
+  });
+
+  it("un pezzo solo dà la stessa risposta di una carta sola", () => {
+    expect(probabilitaDiAssemblarne(60, [3], 4)).toBeCloseTo(probabilitaDiPescarne(60, 3, 4), 12);
+  });
+
+  it("i casi estremi rispondono senza inventare", () => {
+    // Un pezzo che nel mazzo non c'è: la combo non si assembla mai.
+    expect(probabilitaDiAssemblarne(60, [4, 0], 5)).toBe(0);
+    // Nessun pezzo dichiarato: non c'è niente da assemblare, e non è un guasto.
+    expect(probabilitaDiAssemblarne(60, [], 5)).toBe(1);
+    // Più pezzi che carte da vedere: al primo turno tre pezzi da una copia in
+    // sette carte si possono avere, otto no.
+    expect(probabilitaDiAssemblarne(60, [1, 1, 1, 1, 1, 1, 1, 1], 1)).toBeCloseTo(0, 12);
+  });
+
+  it("aggiungere un pezzo non può alzare la probabilità", () => {
+    expect(probabilitaDiAssemblarne(60, [4, 4, 4], 5)).toBeLessThan(
+      probabilitaDiAssemblarne(60, [4, 4], 5),
+    );
   });
 });

@@ -178,6 +178,11 @@ Che cosa si è deciso, in breve:
   scrive a quali condizioni si riaprirebbe.
 - **I tag di Scryfall si affiancano ai nove** (ADR-0003), congelati nel pool a
   compilazione: l'app non li interroga a runtime e il determinismo non si tocca.
+- **La combo si dichiara nominando le carte** (ticket 05, fatto il 3 settembre
+  2026). L'app non giudica se vincano: mette i pezzi nel mazzo al massimo delle
+  copie, non li scambia via mai, e dice la probabilità **esatta** di averli in
+  mano tutti al turno `TURNO_DELLA_COMBO`. Il patto — *non giudico, l'hai detto
+  tu* — è scritto sullo schermo, non solo nel codice.
 - **Il destinatario è un giocatore esperto** — Q7 di `PROGETTO.md` era sbagliata
   ed è corretta. La sua seconda metà regge: *ogni scelta va motivata a parole*
   non era una concessione ai principianti.
@@ -534,9 +539,16 @@ src/tema/allargamenti.ts le proposte per allargare un tema stretto, con le
                          frasi che le dicono ad alta voce
 src/tema/ampiezza.ts     `valutaTema(...)`: impossibile, stretto o ampio
 src/tema/taratura.ts     le soglie del tema, dichiarate provvisorie
+src/combo/combo.ts       la combo dichiarata: i nomi che l'utente afferma
+                         vincano insieme, risolti sul pool di oggi. L'app non la
+                         capisce, ci crede — vincolo duro, mai un peso
+src/combo/taratura.ts    il turno della combo (taratura da sosta) e quante
+                         carte al massimo si possono nominare
 src/mazzo/probabilita.ts la probabilità di lanciare una carta al suo turno:
                          ipergeometrica multivariata esatta, condizione di Hall
-                         sui colori, e le terre girate contate per quel che sono
+                         sui colori, e le terre girate contate per quel che sono;
+                         e la probabilità di avere in mano tutti i pezzi di una
+                         combo dichiarata, per inclusione-esclusione
 src/mazzo/costo.ts       il costo di mana letto come richiesta di colori
 src/mazzo/base-di-terre.ts `analizzaBaseDiTerre(...)`: la cucitura del ticket 06
 src/mazzo/taratura.ts    ogni numero scelto a occhio, in un posto solo
@@ -572,13 +584,15 @@ src/mazzo/scambio.ts     i due testi che escono dall'app: quello da scambiare
 src/dati/mazzi-salvati.ts i mazzi salvati in IndexedDB, e mai un'eccezione
 src/componenti/          le schermate: Catalogo, PannelloFiltri, GrigliaCarte,
                          SchedaCarta, CostoDiMana, NoteLegali, Mazzo,
-                         PassiDelleCopie, MazziSalvati, Vincoli, Costruzione
+                         PassiDelleCopie, MazziSalvati, Vincoli, Combo,
+                         Costruzione
 src/stili/catalogo.css   lo stile del catalogo, tutto a variabili del tema
 src/stili/mazzo.css      lo stile della schermata del mazzo, stesse variabili
 src/stili/salvati.css    lo stile della schermata dei mazzi salvati
 src/stili/vincoli.css    lo stile della schermata del tema, stesse variabili
 src/stili/costruzione.css lo stile del tasto che costruisce, del suo esito e
                          della striscia dei mazzi affiancati
+src/stili/combo.css      lo stile del riquadro della combo dichiarata
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano

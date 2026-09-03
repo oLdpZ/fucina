@@ -44,6 +44,7 @@
 
 import { useEffect, useMemo, useState } from "preact/hooks";
 
+import type { Combo as CarteDellaCombo } from "../combo/combo.js";
 import type { Pool } from "../dati/pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
 import type { Richiesta } from "../ricerca/costruisci.js";
@@ -74,6 +75,7 @@ const SEME_MASSIMO = 0xffffffff;
 export function Costruzione({
   pool,
   tema,
+  combo,
   seme,
   cambiaSeme,
   motore,
@@ -81,6 +83,8 @@ export function Costruzione({
 }: {
   pool: Pool;
   tema: Tema;
+  /** Le carte della combo dichiarata, per nome: vanno nella richiesta. */
+  combo: CarteDellaCombo;
   seme: number;
   cambiaSeme: (seme: number) => void;
   motore: Motore;
@@ -112,6 +116,7 @@ export function Costruzione({
   const costruisci = () => {
     const richiesta: Richiesta = {
       tema,
+      combo,
       seme,
       tempoMassimoMs: TEMPO_MASSIMO_PREDEFINITO_MS,
       formato: "standard",
@@ -267,6 +272,15 @@ export function Costruzione({
 
               {spiegato !== null && spiegato.passo !== null ? (
                 <p class="spiegazione spiegazione-passo">{spiegato.passo.frase}</p>
+              ) : null}
+
+              {/*
+                La combo dichiarata, col patto dentro la frase: sta sopra la lista
+                perché è la domanda con cui l'utente è venuto, e la lista è la
+                risposta.
+              */}
+              {spiegato !== null && spiegato.combo !== null ? (
+                <p class="spiegazione spiegazione-combo">{spiegato.combo.frase}</p>
               ) : null}
 
               <h3>Le carte</h3>

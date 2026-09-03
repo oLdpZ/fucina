@@ -123,6 +123,19 @@ esatta di averle assemblate entro un certo turno, e costruisce per alzarla.
 
 È la stessa forma del `seme` che il tema già ha: carte nominate, mai oggetti.
 
+Vive in `src/combo/combo.ts` come `Combo` — i soli nomi — e arriva al motore
+dentro la `Richiesta`, accanto al tema.
+
+«Costruisce per alzarla» ha un significato preciso, ed è un **vincolo duro**
+come la strategia: i pezzi entrano nel mazzo **al massimo delle copie** e la
+ricerca non li scambia via mai, nemmeno quando il punteggio salirebbe. Quella è
+la probabilità più alta che un mazzo da sessanta carte permetta, e quel che
+costa si legge dove si leggono tutti i costi: la potenza scende, e la frontiera
+lo mostra. Un peso, invece, avrebbe contrattato la combo contro la potenza senza
+dirlo — il secondo tasso di cambio invisibile che
+[ADR-0001](docs/adr/0001-strategia-dichiarata-verificata-per-comportamento.md)
+rifiuta.
+
 ## Tag
 
 **Quel che una carta sa fare**, in poche parole meccaniche.

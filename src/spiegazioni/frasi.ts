@@ -36,6 +36,7 @@
  */
 
 import { NOMI_DEI_COLORI } from "../catalogo/vocabolario.js";
+import type { GuaioDellaCombo } from "../combo/combo.js";
 import type { ColoreMana } from "../dati/pool.js";
 
 /* --- Come si scrivono i numeri -------------------------------------------- */
@@ -452,4 +453,98 @@ export function frasePerIlPasso(grezzi: GrezziDelPasso): string {
   }
 
   return `${baratto} ${partite}`;
+}
+
+/* --- La combo dichiarata --------------------------------------------------- */
+
+/**
+ * I numeri della combo dichiarata: i pezzi con le copie che sono finite nel
+ * mazzo, il turno a cui si guarda, e la probabilità esatta di averli tutti in
+ * mano entro quel turno.
+ *
+ * Arrivano da `misuraLaCombo`, e nessuno di loro si rifà qui.
+ */
+export type GrezziDellaCombo = {
+  readonly pezzi: readonly { readonly nome: string; readonly copie: number }[];
+  readonly turno: number;
+  /**
+   * `null` quando dei pezzi non ne è rimasto nessuno: di una combo che non
+   * c'è più non esiste una probabilità, e scrivere un numero — qualunque —
+   * vorrebbe dire rispondere a una domanda che non si può fare.
+   */
+  readonly probabilita: number | null;
+  readonly dimensioneMazzo: number;
+  readonly guai: readonly GuaioDellaCombo[];
+};
+
+/** «tutte e due», «tutte e tre»: quanti pezzi si vogliono in mano insieme. */
+const TUTTE_E = ["", "", "tutte e due", "tutte e tre", "tutte e quattro"] as const;
+
+/**
+ * **Il patto, scritto sullo schermo.**
+ *
+ * È la frase che il ticket chiede alla lettera: *non giudico se questa combo
+ * vinca, l'hai detto tu; ti dico che probabilità hai di averla in mano al turno
+ * N*. Sta qui e non in un commento perché è una promessa fatta all'utente, e
+ * una promessa che l'utente non legge non è stata fatta.
+ *
+ * Il numero che la accompagna è esatto — ipergeometrico, non simulato — e vale
+ * per il mazzo che si sta guardando: le copie sono quelle che ci sono finite
+ * davvero, non quelle che si erano volute.
+ */
+export function frasePerLaCombo(grezzi: GrezziDellaCombo): string {
+  const nomi = grezzi.pezzi.map((pezzo) => `«${pezzo.nome}»`);
+
+  // Dei pezzi non ne è rimasto nessuno: non c'è nessuna probabilità da dire, e
+  // il conto non è nemmeno stato fatto (`misuraLaCombo` non lo chiede).
+  if (grezzi.pezzi.length === 0 || grezzi.probabilita === null) {
+    return `Dei pezzi che avevi nominato non ne è rimasto nessuno, 0 su ${grezzi.guai.length}: non c'è nessuna combo di cui dirti la probabilità.`;
+  }
+
+  const patto =
+    grezzi.pezzi.length === 1
+      ? `Non giudico se ${nomi[0] as string} vinca la partita: l'hai detto tu, e ti credo.`
+      : `Non giudico se ${elenco(nomi)} vincano insieme: l'hai detto tu, e ti credo.`;
+
+  const mancante = grezzi.pezzi.find((pezzo) => pezzo.copie === 0);
+  if (mancante !== undefined) {
+    return `${patto} Ma «${mancante.nome}» nel mazzo non è entrata, e senza di lei la probabilità di avere la combo in mano al turno ${grezzi.turno} è ${percento(0)}.`;
+  }
+
+  const dentro = elenco(
+    grezzi.pezzi.map((pezzo) => `${copie(pezzo.copie)} di «${pezzo.nome}»`),
+  );
+  const tutte =
+    grezzi.pezzi.length === 1
+      ? "di averla in mano"
+      : `di averle in mano ${TUTTE_E[grezzi.pezzi.length] ?? `tutte e ${grezzi.pezzi.length}`}`;
+
+  const conto = `${patto} Nel mazzo ci sono ${dentro} su ${grezzi.dimensioneMazzo} carte, e al turno ${grezzi.turno} hai ${conArticolo("il", percento(grezzi.probabilita))} ${tutte}.`;
+
+  // Se qualche pezzo è rimasto fuori, il numero vale per **meno carte** di
+  // quelle nominate, ed è quindi più alto di quello della combo vera. Dirlo
+  // senza dire questo sarebbe la bugia più facile da fare qui dentro.
+  if (grezzi.guai.length === 0) return conto;
+  const fuori = elenco(grezzi.guai.map((guaio) => `«${guaio.nome}»`));
+  const restate =
+    grezzi.guai.length === 1 ? "è rimasta fuori" : "sono rimaste fuori";
+  return `${conto} Ma ${fuori} ${restate}: quel ${percento(grezzi.probabilita)} vale per i pezzi rimasti, non per la combo che avevi dichiarato.`;
+}
+
+/**
+ * Un pezzo dichiarato che nel mazzo non ci va, e perché.
+ *
+ * Si dice sempre, come si dice il seme sparito: una combo che cambia sotto le
+ * mani dell'utente senza che nessuno glielo dica sarebbe peggio di una combo
+ * che non si può fare.
+ */
+export function frasePerIlGuaioDellaCombo(guaio: GuaioDellaCombo): string {
+  switch (guaio.tipo) {
+    case "sparita":
+      return `«${guaio.nome}» non è più fra le carte legali: la combo che avevi dichiarato oggi non è più quella.`;
+    case "esclusa":
+      return `«${guaio.nome}» la esclude il tema, e le esclusioni vincono sempre: dalla combo resta fuori.`;
+    case "terra":
+      return `«${guaio.nome}» è una terra: la base di terre la scelgo io dalla curva del mazzo, e una terra nominata non la so ancora forzare.`;
+  }
 }

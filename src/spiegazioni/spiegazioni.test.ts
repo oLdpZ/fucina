@@ -17,6 +17,7 @@
 import { describe, expect, it } from "vitest";
 
 import { POOL_DEL_MOTORE, TERRE_FINTE } from "../catalogo/pool-finto.js";
+import { COMBO_VUOTA } from "../combo/combo.js";
 import type { Carta } from "../dati/pool.js";
 import {
   costruisciMazzo,
@@ -47,7 +48,14 @@ function tema(parti: Partial<Tema>): Tema {
 const GOBLIN = tema({ inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Goblin"] } });
 
 function richiesta(parti: Partial<Richiesta> = {}): Richiesta {
-  return { tema: GOBLIN, seme: 7, tempoMassimoMs: 10_000, formato: "standard", ...parti };
+  return {
+    tema: GOBLIN,
+    combo: COMBO_VUOTA,
+    seme: 7,
+    tempoMassimoMs: 10_000,
+    formato: "standard",
+    ...parti,
+  };
 }
 
 const FRONTIERA: Frontiera = costruisciMazzo(richiesta(), POOL, SVELTA);
@@ -60,6 +68,7 @@ function frasi(spiegazioni: SpiegazioniDelMazzo): string[] {
     ...spiegazioni.esclusioni.map((esclusione) => esclusione.frase),
     spiegazioni.terre.frase,
     ...(spiegazioni.passo === null ? [] : [spiegazioni.passo.frase]),
+    ...(spiegazioni.combo === null ? [] : [spiegazioni.combo.frase]),
   ];
 }
 
@@ -267,5 +276,34 @@ describe("la spiegazione del passo", () => {
         passo.grezzi.copieFuoriTemaPrima,
       );
     }
+  });
+});
+
+describe("la spiegazione della combo dichiarata", () => {
+  const PEZZI = ["Lone Sphinx", "Iron Sentinel"];
+  const CON_COMBO = costruisciMazzo(richiesta({ combo: PEZZI }), POOL, SVELTA);
+  const SPIEGATA = spiegaFrontiera(CON_COMBO, GOBLIN, POOL)[0];
+
+  it("non dice niente quando l'utente non ha dichiarato nessuna combo", () => {
+    for (const spiegazione of SPIEGATE) expect(spiegazione.combo).toBeNull();
+  });
+
+  it("cita la probabilità che il mazzo porta, e non una rifatta qui", () => {
+    const combo = CON_COMBO.mazzi[0]?.combo;
+    expect(combo).toBeDefined();
+    expect(SPIEGATA?.combo).not.toBeNull();
+    expect(SPIEGATA?.combo?.grezzi.probabilita).toBe(combo?.probabilita);
+    // I due pezzi ci sono tutti e due: la probabilità esiste, e la frase la dice.
+    expect(combo!.probabilita).not.toBeNull();
+    expect(SPIEGATA?.combo?.frase).toContain(percento(combo!.probabilita as number));
+  });
+
+  it("cita il turno della taratura e i pezzi con le loro copie", () => {
+    expect(SPIEGATA?.combo?.grezzi.pezzi).toEqual(CON_COMBO.mazzi[0]?.combo?.pezzi);
+    for (const pezzo of PEZZI) expect(SPIEGATA?.combo?.frase).toContain(pezzo);
+  });
+
+  it("dice il patto: chi ha deciso che quella combo vince", () => {
+    expect(SPIEGATA?.combo?.frase).toContain("l'hai detto tu");
   });
 });

@@ -59,6 +59,14 @@
 
 import { qualitaDiCarta, valutaMazzo, combina, type Punteggio } from "../punteggio/punteggio.js";
 import { caso } from "../caso.js";
+import {
+  comboDichiarata,
+  misuraLaCombo,
+  risolviCombo,
+  type Combo,
+  type ComboRisolta,
+  type EsitoDellaCombo,
+} from "../combo/combo.js";
 import type { Carta } from "../dati/pool.js";
 import { terreDallaCurva, type BaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { copieMassime } from "../mazzo/copie.js";
@@ -85,6 +93,14 @@ import { TARATURA_DELLA_RICERCA, type TaraturaDellaRicerca } from "./taratura.js
  */
 export type Richiesta = {
   tema: Tema;
+  /**
+   * Le carte che l'utente afferma vincano se stanno insieme, **per nome**
+   * (ticket 05 della tappa 3). Vuota quando non ne ha dichiarata nessuna.
+   *
+   * L'app non giudica se quelle carte vincano: le mette nel mazzo al massimo
+   * delle copie e non le scambia via. Vedi `combo/combo.ts`.
+   */
+  combo: Combo;
   /** Il seme del caso: senza, niente di quel che segue è verificabile. */
   seme: number;
   /** Il tetto di tempo, perché la ricerca gira sul telefono. */
@@ -159,6 +175,14 @@ export type MazzoCostruito = {
    */
   potenza: number;
   /**
+   * La combo dichiarata, misurata su **questo** mazzo: quante copie di ogni
+   * pezzo ci sono finite e che probabilità danno di averla assemblata al turno
+   * della taratura. `null` quando l'utente non ne ha dichiarata nessuna — e
+   * `null` e non zero, perché zero sarebbe la risposta a una domanda che
+   * nessuno ha fatto.
+   */
+  combo: EsitoDellaCombo | null;
+  /**
    * Il peso della purezza con cui **questo** mazzo è stato cercato. Sta qui
    * perché la frontiera sia verificabile: è la manopola che l'ha prodotto.
    */
@@ -193,6 +217,12 @@ export type Frontiera = {
   motivo: string;
   /** Il verdetto sul tema, lo stesso che la schermata dei vincoli ha mostrato. */
   ampiezza: Ampiezza;
+  /**
+   * La combo dichiarata come il pool di oggi la vede: i pezzi trovati e i guai
+   * — un nome sparito, uno che il tema esclude, una terra. I guai stanno qui e
+   * non nei mazzi perché non dipendono dal mazzo: sono della richiesta.
+   */
+  combo: ComboRisolta;
   /**
    * I mazzi, **dal più fedele al tema al più forte**: purezza che scende e
    * potenza che sale, passo dopo passo. Vuota quando non c'è niente da
@@ -255,11 +285,15 @@ export function costruisciMazzo(
 
   const tema = richiesta.tema;
   const ampiezza = valutaTema(pool, tema);
+  // La combo si risolve **prima** di qualunque conto, e sul pool intero: un
+  // nome sparito va detto anche quando poi non si costruisce niente.
+  const comboRisolta = risolviCombo(richiesta.combo, pool, tema);
 
   const niente = (esito: Esito, motivo: string): Frontiera => ({
     esito,
     motivo,
     ampiezza,
+    combo: comboRisolta,
     mazzi: [],
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: false,
@@ -302,6 +336,25 @@ export function costruisciMazzo(
   }
 
   const risolto = risolviTema(tema, pool);
+
+  /**
+   * I pezzi della combo, che nel mazzo entrano **al massimo delle copie** e non
+   * si scambiano via: è tutto quel che «crederci» vuol dire, e da lì esce la
+   * probabilità più alta che un mazzo da sessanta carte permetta.
+   */
+  const obbligate = comboRisolta.pezzi;
+  const copieObbligate = obbligate.reduce((somma, carta) => somma + copieDiPartenza(carta), 0);
+  const nomiObbligati = new Set(obbligate.map((carta) => carta.nome));
+
+  // Non può succedere coi quattro pezzi che l'interfaccia concede — sedici
+  // copie sui trentatré posti più stretti — ma una richiesta arriva anche
+  // da un file, e un mazzo che non ci sta va detto invece che consegnato monco.
+  if (copieObbligate > POSTI_NON_TERRA) {
+    return niente(
+      "niente-da-costruire",
+      `I ${obbligate.length} pezzi rimasti della combo vogliono ${copieObbligate} posti, e un mazzo ne ha ${POSTI_NON_TERRA} da riempire oltre alle terre.`,
+    );
+  }
 
   /* --- La ricerca ------------------------------------------------------- */
 
@@ -373,8 +426,8 @@ export function costruisciMazzo(
       const ordine = ordinaPerPartenza(candidati, risolto, peso, partenza, generatore);
       // I posti non-terra non sono liberi: sono sessanta meno le terre che la
       // curva chiede, e non possono superare le copie che il pool sa dare.
-      let posti = assestaIPosti(ordine, capienza);
-      let selezione = riempi(ordine, posti);
+      let posti = assestaIPosti(ordine, capienza, obbligate);
+      let selezione = riempi(ordine, posti, obbligate);
 
       // La prima valutazione si fa **sempre**, anche col tempo già scaduto:
       // senza di lei non ci sarebbe nessun mazzo da restituire, e restituire un
@@ -395,7 +448,7 @@ export function costruisciMazzo(
       let migliorato = true;
       while (migliorato) {
         migliorato = false;
-        for (const scambio of scambi(selezione, candidati, generatore)) {
+        for (const scambio of scambi(selezione, candidati, generatore, nomiObbligati)) {
           if (valutazioniQui >= taratura.valutazioniMassimePerPartenza) break;
           if (scaduto()) {
             troncata = true;
@@ -438,7 +491,7 @@ export function costruisciMazzo(
         const nuoviPosti = postiPerLaCurva(voci(selezione), capienza);
         if (nuoviPosti === posti) break;
         assestamenti += 1;
-        selezione = adatta(selezione, ordine, nuoviPosti);
+        selezione = adatta(selezione, ordine, nuoviPosti, nomiObbligati);
         posti = nuoviPosti;
         corrente = valuta(selezione, posti);
         migliorato = true;
@@ -474,6 +527,9 @@ export function costruisciMazzo(
       base: finale.valutato.base,
       simulazione: finale.valutato.simulazione,
       potenza: finale.potenza,
+      combo: comboDichiarata(richiesta.combo)
+        ? misuraLaCombo(comboRisolta, finale.carte, finale.valutato.base.dimensioneMazzo)
+        : null,
       peso,
       passo: null,
       totale: finale.totale,
@@ -528,6 +584,7 @@ export function costruisciMazzo(
     esito,
     motivo,
     ampiezza,
+    combo: comboRisolta,
     mazzi,
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: troncata,
@@ -685,11 +742,29 @@ function copieDiPartenza(carta: Carta): number {
   return Math.min(copieMassime(carta), COPIE_MASSIME);
 }
 
-function riempi(ordine: readonly Carta[], posti: number): Selezione {
+/**
+ * La partenza riempita: prima i pezzi della combo, che non si contrattano, poi
+ * le carte migliori dell'ordine finché i posti bastano.
+ *
+ * I pezzi vanno **per primi** e non in fondo: se i posti finissero prima di
+ * arrivarci, il mazzo uscirebbe senza la combo che l'utente ha chiesto.
+ */
+function riempi(
+  ordine: readonly Carta[],
+  posti: number,
+  obbligate: readonly Carta[] = [],
+): Selezione {
   const selezione: Selezione = new Map();
   let messe = 0;
+  for (const carta of obbligate) {
+    const copie = Math.min(copieDiPartenza(carta), posti - messe);
+    if (copie <= 0) continue;
+    selezione.set(carta.nome, { carta, copie });
+    messe += copie;
+  }
   for (const carta of ordine) {
     if (messe >= posti) break;
+    if (selezione.has(carta.nome)) continue;
     const copie = Math.min(copieDiPartenza(carta), posti - messe);
     if (copie <= 0) continue;
     selezione.set(carta.nome, { carta, copie });
@@ -727,10 +802,14 @@ function postiPerLaCurva(carte: readonly CopieDiCarta[], capienza: number): numb
  * sempre, e se una volta oscillasse ci si ferma con l'ultima risposta invece di
  * girare per sempre.
  */
-function assestaIPosti(ordine: readonly Carta[], capienza: number): number {
+function assestaIPosti(
+  ordine: readonly Carta[],
+  capienza: number,
+  obbligate: readonly Carta[] = [],
+): number {
   let posti = Math.min(capienza, DIMENSIONE_MAZZO - TERRE_MINIME);
   for (let giro = 0; giro < 5; giro++) {
-    const nuovi = postiPerLaCurva(voci(riempi(ordine, posti)), capienza);
+    const nuovi = postiPerLaCurva(voci(riempi(ordine, posti, obbligate)), capienza);
     if (nuovi === posti) break;
     posti = nuovi;
   }
@@ -745,12 +824,20 @@ function assestaIPosti(ordine: readonly Carta[], capienza: number): number {
  * e un giudizio finale — il giudizio lo dà il punteggio, e la passata dopo
  * rimette mano a queste copie come a tutte le altre.
  */
-function adatta(selezione: Selezione, ordine: readonly Carta[], posti: number): Selezione {
+function adatta(
+  selezione: Selezione,
+  ordine: readonly Carta[],
+  posti: number,
+  obbligate: ReadonlySet<string> = new Set(),
+): Selezione {
   const dopo: Selezione = new Map(selezione);
   let copie = [...dopo.values()].reduce((somma, voce) => somma + voce.copie, 0);
 
   for (let i = ordine.length - 1; i >= 0 && copie > posti; i--) {
     const carta = ordine[i]!;
+    // I pezzi della combo non pagano il conto delle terre: sono la ragione per
+    // cui questo mazzo esiste.
+    if (obbligate.has(carta.nome)) continue;
     const dentro = dopo.get(carta.nome);
     if (dentro === undefined) continue;
     const via = Math.min(dentro.copie, copie - posti);
@@ -787,11 +874,20 @@ function scambi(
   selezione: Selezione,
   candidati: readonly Carta[],
   generatore: ReturnType<typeof caso>,
+  obbligate: ReadonlySet<string> = new Set(),
 ): Scambio[] {
   const tutti: Scambio[] = [];
   for (const fuori of selezione.keys()) {
+    // Un pezzo dichiarato non esce mai dal mazzo, nemmeno se il punteggio
+    // salirebbe: l'app non giudica la combo, ci crede.
+    if (obbligate.has(fuori)) continue;
     for (const dentro of candidati) {
       if (dentro.nome === fuori) continue;
+      // E non ci **entra** nemmeno: al massimo delle copie ci è già, e le
+      // poche carte che se ne concedono infinite potrebbero altrimenti
+      // salirci sopra senza che niente le rimetta giù — `adatta` non le
+      // tocca — fino a sfondare i sessanta.
+      if (obbligate.has(dentro.nome)) continue;
       tutti.push({ fuori, dentro });
     }
   }

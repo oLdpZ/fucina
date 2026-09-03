@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Catalogo } from "./componenti/Catalogo.js";
+import { Combo } from "./componenti/Combo.js";
 import { Costruzione } from "./componenti/Costruzione.js";
 import { Mazzo } from "./componenti/Mazzo.js";
 import { MazziSalvati, type MazzoAperto } from "./componenti/MazziSalvati.js";
@@ -16,6 +17,7 @@ import { copieMassime } from "./mazzo/copie.js";
 import { DIMENSIONE_MAZZO, TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
 import type { MazzoSalvato } from "./mazzo/salvato.js";
 import { usaMotore } from "./ricerca/usa-motore.js";
+import { COMBO_VUOTA, type Combo as CarteDellaCombo } from "./combo/combo.js";
 import { TEMA_VUOTO, type Tema } from "./tema/tema.js";
 import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 
@@ -73,6 +75,14 @@ export function App() {
    */
   const [tema, setTema] = useState<Tema>(TEMA_VUOTO);
   /**
+   * Le carte che l'utente afferma vincano se stanno insieme (ticket 05 della
+   * tappa 3). Vivono qui accanto al tema, e per le stesse ragioni: sono un
+   * ingresso della richiesta, e passando alle altre schermate non si perdono.
+   *
+   * Si tengono **per nome**, come il seme: i pool si aggiornano da soli.
+   */
+  const [combo, setCombo] = useState<CarteDellaCombo>(COMBO_VUOTA);
+  /**
    * Il seme della ricerca (ticket 11). Vive qui, in vista e modificabile, e
    * non nasce dall'orologio: è quello che rende ripetibile il mazzo che l'app
    * costruisce. Stesso tema e stesso seme, stesso mazzo — anche fra un anno.
@@ -86,17 +96,18 @@ export function App() {
    */
   const motore = usaMotore();
 
-  // Un mazzo costruito per un tema che nel frattempo è stato riscritto risponde
-  // a una domanda che non gli è più stata fatta: si butta, invece di restare lì
-  // col suo tasto «mettilo in mano» a dire una piccola bugia.
+  // Un mazzo costruito per un tema — o per una combo — che nel frattempo è stato
+  // riscritto risponde a una domanda che non gli è più stata fatta: si butta,
+  // invece di restare lì col suo tasto «mettilo in mano» a dire una piccola bugia.
   const dimentica = motore.dimentica;
   useEffect(() => {
     dimentica();
     // `dimentica` cambia a ogni render — è ricostruita dal gancio — e metterla
     // fra le dipendenze vorrebbe dire buttare via il mazzo a ogni respiro
-    // dell'app. Quel che deve far scattare l'oblio è il tema, e nient'altro.
+    // dell'app. Quel che deve far scattare l'oblio sono gli ingressi della
+    // richiesta — il tema e la combo — e nient'altro.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tema]);
+  }, [tema, combo]);
 
   /** Il controllo di freschezza si fa una volta per apertura, non a ogni pool. */
   const giaControllato = useRef(false);
@@ -290,9 +301,11 @@ export function App() {
               copiePerNome={copiePerNome}
               cambiaCopie={cambiaCopie}
             />
+            <Combo pool={pool} tema={tema} combo={combo} cambiaCombo={setCombo} />
             <Costruzione
               pool={pool}
               tema={tema}
+              combo={combo}
               seme={seme}
               cambiaSeme={setSeme}
               motore={motore}

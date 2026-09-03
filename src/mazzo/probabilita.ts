@@ -104,6 +104,56 @@ export function probabilitaDiPescarne(
 }
 
 /**
+ * La probabilità di **averli pescati tutti** entro un turno: la combo dichiarata.
+ *
+ * L'app non capisce la combo — non sa se quelle carte vincano, e saperlo
+ * vorrebbe dire un motore di regole (ADR-0002). Sa però rispondere alla domanda
+ * che resta: se il mazzo è questo, che probabilità c'è di avere in mano tutti i
+ * pezzi al turno chiesto. `copie` sono le copie di ogni pezzo, una voce per
+ * pezzo.
+ *
+ * È esatta come l'altra, e non è il loro prodotto: due carte dello stesso mazzo
+ * non si pescano indipendentemente — ogni copia dell'una è un posto in meno per
+ * l'altra, e moltiplicare le probabilità darebbe un numero **troppo alto**. Il
+ * conto giusto è l'inclusione-esclusione sui pezzi mancanti: si somma la
+ * probabilità che manchi almeno uno di ciascun sottoinsieme, a segni alterni, e
+ * ogni addendo è la probabilità di non pescare **nessuna** delle copie di quel
+ * sottoinsieme — cioè il complemento di `probabilitaDiPescarne` sulle copie
+ * messe insieme.
+ *
+ * Nessuna simulazione e nessun campionamento: i sottoinsiemi sono 2^n, e i
+ * pezzi di una combo sono pochi (`CARTE_MASSIME_DELLA_COMBO`).
+ */
+export function probabilitaDiAssemblarne(
+  dimensioneMazzo: number,
+  copie: readonly number[],
+  turno: number,
+): number {
+  // Nessun pezzo dichiarato: non c'è niente da assemblare. Non è un guasto, ed
+  // è la risposta giusta — la condizione «li ho tutti» è già soddisfatta.
+  if (copie.length === 0) return 1;
+  // Un pezzo che nel mazzo non c'è non arriva mai, e non serve nessun conto.
+  if (copie.some((quante) => quante <= 0)) return 0;
+
+  let somma = 0;
+  for (let maschera = 0; maschera < 1 << copie.length; maschera++) {
+    let dentro = 0;
+    let mancanti = 0;
+    for (let i = 0; i < copie.length; i++) {
+      if ((maschera & (1 << i)) === 0) continue;
+      dentro += copie[i] as number;
+      mancanti += 1;
+    }
+    // «Nessuna copia di questo sottoinsieme», che è proprio il complemento
+    // della probabilità di pescarne almeno una.
+    const senza = 1 - probabilitaDiPescarne(dimensioneMazzo, dentro, turno);
+    somma += (mancanti % 2 === 0 ? 1 : -1) * senza;
+  }
+  // La somma a segni alterni può sbordare di un pelo dai limiti.
+  return Math.min(1, Math.max(0, somma));
+}
+
+/**
  * Le risposte già date, tenute da una chiamata all'altra.
  *
  * Non è un'ottimizzazione qualunque, ed è misurata: il conto qui sotto è esatto,

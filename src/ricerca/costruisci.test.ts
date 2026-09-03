@@ -16,7 +16,10 @@
 import { describe, expect, it } from "vitest";
 
 import { POOL_DEL_MOTORE, TERRE_FINTE } from "../catalogo/pool-finto.js";
+import { COMBO_VUOTA } from "../combo/combo.js";
+import { TURNO_DELLA_COMBO } from "../combo/taratura.js";
 import type { Carta } from "../dati/pool.js";
+import { probabilitaDiAssemblarne } from "../mazzo/probabilita.js";
 import { COPIE_MASSIME, DIMENSIONE_MAZZO } from "../mazzo/taratura.js";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import { costruisciMazzo, type Frontiera, type Opzioni, type Richiesta } from "./costruisci.js";
@@ -50,7 +53,14 @@ function tema(parti: Partial<Tema>): Tema {
 const GOBLIN = tema({ inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Goblin"] } });
 
 function richiesta(parti: Partial<Richiesta> = {}): Richiesta {
-  return { tema: GOBLIN, seme: 7, tempoMassimoMs: 10_000, formato: "standard", ...parti };
+  return {
+    tema: GOBLIN,
+    combo: COMBO_VUOTA,
+    seme: 7,
+    tempoMassimoMs: 10_000,
+    formato: "standard",
+    ...parti,
+  };
 }
 
 function costruisci(parti: Partial<Richiesta> = {}, opzioni: Opzioni = SVELTA): Frontiera {
@@ -415,5 +425,88 @@ describe("la frontiera: il tasso di cambio fra tema e potenza", () => {
     expect(uno.mazzi.map((mazzo) => [mazzo.purezza, mazzo.potenza])).toEqual(
       altro.mazzi.map((mazzo) => [mazzo.purezza, mazzo.potenza]),
     );
+  });
+});
+
+/**
+ * La combo dichiarata (ticket 05 della tappa 3).
+ *
+ * L'app non capisce la combo: ci crede. Quel che si prova qui è esattamente
+ * quel che crederci vuol dire — i pezzi entrano nel mazzo al massimo delle
+ * copie e la ricerca non li scambia via, qualunque cosa il punteggio ne pensi —
+ * e che il numero che ne esce sia quello esatto e non un altro.
+ */
+describe("la combo dichiarata", () => {
+  /** Due carte fuori tema e deboli: se restano, è perché la combo le tiene. */
+  const PEZZI = ["Lone Sphinx", "Iron Sentinel"];
+
+  function copieDi(frontiera: Frontiera, nome: string): number[] {
+    return frontiera.mazzi.map(
+      (mazzo) => mazzo.carte.find((voce) => voce.carta.nome === nome)?.copie ?? 0,
+    );
+  }
+
+  it("mette i pezzi dichiarati in ogni mazzo della frontiera, al massimo delle copie", () => {
+    const frontiera = costruisci({ combo: PEZZI });
+
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
+    for (const pezzo of PEZZI) {
+      for (const copie of copieDi(frontiera, pezzo)) expect(copie).toBe(COPIE_MASSIME);
+    }
+  });
+
+  it("senza dichiararli, quegli stessi pezzi il mazzo Goblin non li vuole", () => {
+    // Il confronto è la prova che sopra non ci sono per caso: la combo li tiene
+    // dentro **contro** il punteggio, che è quel che «crederci» vuol dire.
+    for (const pezzo of PEZZI) expect(copieDi(costruisci(), pezzo)[0]).toBe(0);
+  });
+
+  it("il mazzo resta legale: sessanta carte, coi pezzi dentro", () => {
+    expect(carteTotali(costruisci({ combo: PEZZI }))).toBe(DIMENSIONE_MAZZO);
+  });
+
+  it("dice la probabilità esatta di averla assemblata al turno della taratura", () => {
+    const mazzo = costruisci({ combo: PEZZI }).mazzi[0]!;
+
+    expect(mazzo.combo).not.toBeNull();
+    expect(mazzo.combo!.turno).toBe(TURNO_DELLA_COMBO);
+    expect(mazzo.combo!.pezzi).toEqual([
+      { nome: "Lone Sphinx", copie: COPIE_MASSIME },
+      { nome: "Iron Sentinel", copie: COPIE_MASSIME },
+    ]);
+    expect(mazzo.combo!.probabilita).toBeCloseTo(
+      probabilitaDiAssemblarne(DIMENSIONE_MAZZO, [COPIE_MASSIME, COPIE_MASSIME], TURNO_DELLA_COMBO),
+      12,
+    );
+  });
+
+  it("senza combo dichiarata non dice niente, invece di dire zero", () => {
+    expect(costruisci().mazzi[0]!.combo).toBeNull();
+  });
+
+  it("un pezzo sparito dal pool si dichiara, e il mazzo si fa lo stesso", () => {
+    const frontiera = costruisci({ combo: ["Lone Sphinx", "Splendore Rotato"] });
+
+    expect(frontiera.combo.guai).toEqual([{ nome: "Splendore Rotato", tipo: "sparita" }]);
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
+    // La probabilità è quella dei pezzi rimasti, non quella della combo intera:
+    // fingere che sia ancora quella sarebbe la bugia che il ticket vieta.
+    expect(frontiera.mazzi[0]!.combo!.pezzi).toEqual([
+      { nome: "Lone Sphinx", copie: COPIE_MASSIME },
+    ]);
+  });
+
+  it("una combo di sole carte sparite non fa cadere niente", () => {
+    const frontiera = costruisci({ combo: ["Splendore Rotato"] });
+
+    expect(frontiera.esito).toBe("costruito");
+    expect(frontiera.combo.pezzi).toHaveLength(0);
+    // Non zero e non uno: di una combo che non c'è più non esiste una
+    // probabilità, e l'app non ne inventa una.
+    expect(frontiera.mazzi[0]!.combo!.probabilita).toBeNull();
+  });
+
+  it("resta ripetibile: stessa richiesta, stessa lista", () => {
+    expect(lista(costruisci({ combo: PEZZI }))).toBe(lista(costruisci({ combo: PEZZI })));
   });
 });
