@@ -1,4 +1,4 @@
-# Ripresa del lavoro — stato al 3 settembre 2026
+# Ripresa del lavoro — stato al 3 settembre 2026 (sera)
 
 Documento di passaggio: aprendo un nuovo terminale, leggi questo per primo,
 poi `PROGETTO.md`.
@@ -59,7 +59,13 @@ si è comprato cedendo tema. Sono modelli di frase riempiti con numeri già
 calcolati — nessun testo inventato, nessun modello linguistico — e stanno tutti
 in un file solo, che si legge come si legge una pagina. Il prossimo è il
 ticket 14: la **sosta e prova reale**, dove le tarature provvisorie si misurano
-sui dati veri.
+sui dati veri — e la prima misura è già stata fatta. Sul pool vero la frontiera
+intera costava **centoquattro secondi** contro i quindici che l'app concedeva:
+si apriva la schermata e si trovava un mazzo solo e una riga di scuse, cioè
+l'app senza il suo fulcro. La causa non era la ricerca ma lo stesso conto esatto
+rifatto migliaia di volte; ora le risposte si ricordano, e la frontiera è **sei
+volte più veloce senza cedere un decimale**. E l'app **ha un nome**: si chiama
+**Fucina**.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -83,8 +89,8 @@ spiegazioni mai inventate.
 
 ## Cosa manca per partire — tre cose, tutte dell'utente
 
-1. **Il nome dell'app.** Serve per cartella, pacchetto e indirizzo web. Nei
-   mockup compare come segnaposto `[NOME APP]`.
+1. ~~Il nome dell'app.~~ **Fatto: si chiama «Fucina»** (`src/identita.ts`).
+   Resta tuo il nome della **cartella** sul disco e dell'**indirizzo web**.
 2. **La direzione visiva.** Quattro candidate, tutte già disegnate e visibili
    nella tela pubblicata:
    - lo stile **chiaro e blu** dell'artboard importato da Claude Design (attuale);
@@ -97,12 +103,47 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 14
-   (`.scratch/fondamenta-e-motore/issues/14-sosta-prova-reale-e-taratura.md`),
-   e così via un ticket alla volta.
+Il ticket 13 è chiuso. **Il 14 non è per un agente**: porta scritto
+`Status: ready-for-human` ed è un giudizio — *questo mazzo lo porterei al
+negozio?*, *le spiegazioni si capiscono lette a voce alta?*. Un agente può
+apparecchiarlo (generare le frontiere di cinque temi veri in un file da leggere)
+ma non risponderci.
+
+Il discorso aperto quando la sessione si è chiusa era **dove pubblicare l'app**.
+Vedi «La pubblicazione» qui sotto.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
 **sosta e prova reale** → galleria e budget → ciclo iterativo → meta → sideboard.
+
+## La pubblicazione — dove eravamo arrivati
+
+La domanda aperta: **dove si pubblica Fucina**, perché l'amico dell'utente possa
+installarsela sul telefono. Oggi non c'è **nessun remote git**: il progetto vive
+solo su questo computer, e una PWA si installa solo da https.
+
+Quel che è già misurato e verificato (3 settembre 2026):
+
+- il primo caricamento pesa **640 KB compressi** — `pool.json` è 4,2 MB grezzi
+  ma è JSON, e ogni host statico serio lo comprime. Il resto dell'app sono
+  ~150 KB fra codice e stile;
+- il service worker **precarica anche il pool**, quindi dalla seconda visita
+  l'app va senza rete;
+- l'app servita da un **sottopercorso** (`http://host/fucina/`) si apre senza un
+  errore in console: `base: "./"` in `vite.config.ts` fa il suo lavoro, e questo
+  è il caso di un «project site» di GitHub Pages;
+- il controllo di freschezza del ticket 05 era **già stato verificato contro le
+  regole di GitHub Pages** (ETag, Last-Modified, 304): è la ragione più forte
+  per scegliere quello e non un altro host.
+
+La proposta, da confermare: **GitHub Pages**, repo pubblico, indirizzo
+`https://<utente>.github.io/fucina/`. Gratis per sempre, https compreso, niente
+build da pagare, dominio suo quando vorrà. L'alternativa è **Cloudflare Pages**,
+ugualmente gratis, se il repo deve restare **privato** (su GitHub Pages i repo
+privati vogliono un piano a pagamento).
+
+Le decisioni che restano all'utente: repo pubblico o privato, il nome del repo
+(diventa l'indirizzo), e se vuole un dominio suo. Poi serve **lui** per creare
+il repo e collegare l'account: è lavoro da `/wizard`, non da agente.
 
 ## Fatti verificati da non ri-cercare
 
