@@ -6,6 +6,7 @@
 @import "./catalogo.css";
 @import "./mazzo.css";
 @import "./salvati.css";
+@import "./vincoli.css";
 
 *,
 *::before,

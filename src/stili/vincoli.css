@@ -1,0 +1,241 @@
+/*
+ * La schermata dei vincoli: il tema che l'utente dichiara, e il verdetto che
+ * l'app gli dà prima di costruire (ticket 08).
+ *
+ * Nessun colore letterale — solo le variabili di `tema.css`, come nel resto
+ * dell'app. Prima il telefono: una colonna sola, il verdetto in cima dove si
+ * legge senza scorrere, e i comandi larghi almeno 44px per lato.
+ */
+
+.vincoli {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 6);
+  width: 100%;
+  max-width: var(--larghezza-colonna);
+  margin: 0 auto;
+}
+
+/* --- il verdetto --- */
+
+.verdetto {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  padding: calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-left: 3px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.verdetto[data-verdetto="impossibile"] {
+  border-left-color: var(--accento);
+}
+
+.verdetto[data-verdetto="stretto"] {
+  border-left-color: var(--accento-secondario);
+}
+
+.conteggio-tema {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  color: var(--inchiostro-tenue);
+}
+
+.conteggio-tema strong {
+  font-family: var(--carattere-dati);
+  font-size: var(--titolo-pagina);
+  line-height: 1.1;
+  color: var(--inchiostro);
+}
+
+.spiega-verdetto {
+  margin: 0;
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  color: var(--inchiostro-tenue);
+  text-wrap: pretty;
+}
+
+.barra-ampiezza {
+  height: 10px;
+  background: var(--superficie-alta);
+  border: 1px solid var(--bordo);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.barra-ampiezza .riempimento {
+  height: 100%;
+  background: var(--accento);
+  /* Un tema appena dichiarato non deve far sobbalzare la barra da 0 a tutto. */
+  transition: width 120ms ease-out;
+}
+
+.scala-ampiezza {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(var(--passo) * 2);
+  margin: 0;
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+}
+
+/* --- i blocchi del tema --- */
+
+.gruppo-vincolo {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 3);
+}
+
+.gruppo-vincolo > h2 {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+  color: var(--inchiostro);
+}
+
+.vincoli .gruppo-filtro h3 {
+  margin: 0;
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+.coppia-di-costi {
+  display: flex;
+  gap: calc(var(--passo) * 3);
+}
+
+.coppia-di-costi .campo {
+  flex: 1 1 0;
+}
+
+/* --- gli allargamenti --- */
+
+.elenco-allargamenti {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.allargamento {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 3) calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.allargamento.accettato {
+  border-color: var(--accento-secondario);
+}
+
+.frase-allargamento {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.accetta {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 calc(var(--passo) * 4);
+  background: var(--accento);
+  border: 1px solid var(--accento);
+  border-radius: var(--raggio);
+  font: inherit;
+  font-size: var(--testo-piccolo);
+  font-weight: 600;
+  color: var(--superficie);
+  cursor: pointer;
+}
+
+.accetta:hover,
+.accetta:focus-visible {
+  background: var(--accento-vivo);
+  border-color: var(--accento-vivo);
+}
+
+/* --- le due colonne del corpo --- */
+
+.corpo-vincoli {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 6);
+}
+
+.colonna-vincoli {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 6);
+}
+
+/* --- la carta-seme --- */
+
+.seme-scelto {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 3) calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--accento);
+  border-radius: var(--raggio);
+}
+
+.nome-seme {
+  flex: 1 1 auto;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+}
+
+.proposte-seme {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--passo) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.avviso-seme {
+  color: var(--accento);
+}
+
+/* --- schermo grande: le colonne invece del margine (Q20) --- */
+
+@media (min-width: 48rem) {
+  .vincoli {
+    max-width: var(--larghezza-massima);
+  }
+
+  .corpo-vincoli {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .colonna-vincoli {
+    flex: 0 0 22rem;
+  }
+
+  .carte-del-tema {
+    /* Senza questo la griglia delle carte allarga la colonna oltre lo schermo. */
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}

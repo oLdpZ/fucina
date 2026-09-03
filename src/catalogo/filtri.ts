@@ -13,7 +13,7 @@
  */
 
 import type { Carta, Colore } from "../dati/pool.js";
-import { cercaPerNome, normalizza } from "./ricerca.js";
+import { cercaPerNome, normalizza, testoNormalizzato } from "./ricerca.js";
 
 /**
  * L'ultimo scalino del filtro sui costi raccoglie tutto ciò che costa **almeno**
@@ -76,25 +76,6 @@ function costoNelloScalino(valoreDiMana: number, scalino: number): boolean {
   return scalino >= COSTO_MASSIMO_SEPARATO
     ? valoreDiMana >= COSTO_MASSIMO_SEPARATO
     : valoreDiMana === scalino;
-}
-
-/**
- * Il testo delle regole normalizzato, calcolato una volta per carta.
- *
- * Senza questa memoria, cercare una parola nel testo rinormalizzerebbe quasi un
- * megabyte di regole a ogni tasto premuto — sul telefono si sentirebbe. La
- * mappa è debole: se un giorno il pool venisse sostituito, il vecchio se ne va
- * da solo.
- */
-const testiNormalizzati = new WeakMap<Carta, string>();
-
-function testoNormalizzato(carta: Carta): string {
-  let pronto = testiNormalizzati.get(carta);
-  if (pronto === undefined) {
-    pronto = normalizza(carta.testo);
-    testiNormalizzati.set(carta, pronto);
-  }
-  return pronto;
 }
 
 /** Le carte che soddisfano i filtri, nell'ordine in cui vanno mostrate. */

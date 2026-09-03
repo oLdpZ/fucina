@@ -5,6 +5,7 @@ import { Mazzo } from "./componenti/Mazzo.js";
 import { MazziSalvati, type MazzoAperto } from "./componenti/MazziSalvati.js";
 import { NoteLegali } from "./componenti/NoteLegali.js";
 import { SchedaCarta } from "./componenti/SchedaCarta.js";
+import { Vincoli } from "./componenti/Vincoli.js";
 import { aggiornaInSottofondo, poolDaAprire } from "./dati/aggiornamento.js";
 import { dataInItaliano } from "./dati/carica-pool.js";
 import type { Carta, Pool } from "./dati/pool.js";
@@ -13,13 +14,16 @@ import type { CopieDiCarta } from "./mazzo/base-di-terre.js";
 import { copieMassime } from "./mazzo/copie.js";
 import { DIMENSIONE_MAZZO, TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
 import type { MazzoSalvato } from "./mazzo/salvato.js";
+import { TEMA_VUOTO, type Tema } from "./tema/tema.js";
 import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 
 /**
- * Le tre schermate dell'app: il catalogo delle carte legali in Standard
- * cartaceo (ticket 04), il mazzo che se ne mette insieme, con la base di terre
- * e le probabilità reali (ticket 06), e i mazzi salvati sul dispositivo, che si
- * riaprono, si scambiano per iscritto e si esportano per l'arbitro (ticket 07).
+ * Le quattro schermate dell'app: il catalogo delle carte legali in Standard
+ * cartaceo (ticket 04), i vincoli — il tema che l'utente dichiara, con
+ * l'avviso quando è troppo stretto (ticket 08) —, il mazzo che se ne mette
+ * insieme, con la base di terre e le probabilità reali (ticket 06), e i mazzi
+ * salvati sul dispositivo, che si riaprono, si scambiano per iscritto e si
+ * esportano per l'arbitro (ticket 07).
  *
  * Il pool sta nel pacchetto e il service worker lo tiene in cache, quindi
  * l'app si apre anche senza rete (storia 15); solo le immagini arrivano da
@@ -37,7 +41,7 @@ import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 export function App() {
   const [pool, setPool] = useState<Pool | null>(null);
   const [guasto, setGuasto] = useState<string | null>(null);
-  const [pagina, setPagina] = useState<"catalogo" | "mazzo" | "salvati">("catalogo");
+  const [pagina, setPagina] = useState<"catalogo" | "tema" | "mazzo" | "salvati">("catalogo");
 
   /**
    * Il mazzo si tiene **per nome di carta**, non per oggetto: i dati si
@@ -60,6 +64,12 @@ export function App() {
    * quelle dodici e non tutte le quattromilaottocento.
    */
   const [filtri, setFiltri] = useState<Filtri>(FILTRI_VUOTI);
+  /**
+   * Il tema dichiarato dall'utente (ticket 08). Vive qui per la stessa ragione
+   * dei filtri — passando alle altre schermate non si perde — e perché è quel
+   * che il motore riceverà quando esisterà: la richiesta parte da qui.
+   */
+  const [tema, setTema] = useState<Tema>(TEMA_VUOTO);
 
   /** Il controllo di freschezza si fa una volta per apertura, non a ogni pool. */
   const giaControllato = useRef(false);
@@ -182,6 +192,14 @@ export function App() {
             <button
               type="button"
               class="scheda-nav"
+              aria-current={pagina === "tema" ? "page" : undefined}
+              onClick={() => setPagina("tema")}
+            >
+              Tema
+            </button>
+            <button
+              type="button"
+              class="scheda-nav"
               aria-current={pagina === "mazzo" ? "page" : undefined}
               onClick={() => setPagina("mazzo")}
             >
@@ -214,6 +232,14 @@ export function App() {
             pool={pool}
             filtri={filtri}
             cambiaFiltri={setFiltri}
+            copiePerNome={copiePerNome}
+            cambiaCopie={cambiaCopie}
+          />
+        ) : pagina === "tema" ? (
+          <Vincoli
+            pool={pool}
+            tema={tema}
+            cambiaTema={setTema}
             copiePerNome={copiePerNome}
             cambiaCopie={cambiaCopie}
           />

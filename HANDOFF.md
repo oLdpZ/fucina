@@ -12,7 +12,7 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
 La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
-`.scratch/fondamenta-e-motore/`. **I ticket dal 01 al 07 sono implementati**:
+`.scratch/fondamenta-e-motore/`. **I ticket dal 01 al 08 sono implementati**:
 l'app si apre, si installa, funziona senza rete e mostra le note legali; il pool
 delle carte esiste, costruito dai dati veri di Scryfall; ogni carta porta i suoi
 tag di sinergia; e l'app ora **serve a qualcosa** — si cercano le carte per nome
@@ -25,8 +25,13 @@ terre servono, quali, e con che probabilità reale ogni carta parte al suo turno
 E il mazzo **non si perde più**: si salva sul dispositivo con un nome, si
 riapre, si cancella; si esporta in un testo che porta con sé anche la richiesta
 che l'ha prodotto, e chi lo importa ritrova il mazzo com'era; e se ne esce la
-lista da consegnare all'arbitro. Il prossimo è il ticket 08, il tema come
-vincolo: comincia la tappa del motore.
+lista da consegnare all'arbitro. E la tappa del motore è cominciata: l'utente
+**dichiara il suo tema** — un sottotipo, dei colori, una cosa che le carte
+sanno fare, una carta da cui partire, e quel che non vuole giocare — e l'app
+gli dice subito, mentre lo costruisce, se con quelle carte un mazzo si fa. Se
+non si fa, o se le carte bastano appena, propone di allargarlo: una strada per
+volta, ciascuna con quante carte porterebbe dentro, e nessuna applicata finché
+non la accetta. Il prossimo è il ticket 09, la simulazione goldfish.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -64,8 +69,8 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 08
-   (`.scratch/fondamenta-e-motore/issues/08-il-tema-come-vincolo.md`),
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 09
+   (`.scratch/fondamenta-e-motore/issues/09-simulazione-goldfish.md`),
    e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
@@ -156,9 +161,22 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
 - Il deposito IndexedDB è alla **versione 2**: due scaffali, il pool e i mazzi
   salvati. Una versione nuova aggiunge scaffali e non tocca quel che c'era.
 - **In Standard ci sono 95 Goblin giocabili**, non quattordici come diceva il
-  mockup iniziale. Il pool vero lo conferma. Conseguenza: l'esempio della schermata "tema troppo stretto"
-  va ritarato su un vincolo davvero stretto, e quale sia lo si scoprirà solo
-  facendo girare il motore sui dati veri.
+  mockup iniziale. Il pool vero lo conferma. Conseguenza: l'esempio della
+  schermata "tema troppo stretto" va ritarato su un vincolo davvero stretto, e
+  quale sia lo si scoprirà solo facendo girare il motore sui dati veri.
+- Con le soglie provvisorie del ticket 08, sui dati veri: i Goblin (95 carte)
+  sono un tema **ampio**; i Draghi (75) pure; i **Draghi rossi sono 30**, cioè
+  «stretto», ed è il primo esempio vero di tema che sta appena in piedi.
+  Accettando il primo allargamento proposto — le carte che fanno pedine Dragon —
+  diventano 41 e il tema torna comodo. Un sottotipo che non esiste dà zero carte
+  e verdetto «impossibile», senza cadere.
+- Il verdetto sul tema costa **circa 3 ms** sul pool vero, allargamenti
+  compresi: si rifà a ogni tocco mentre l'utente costruisce il tema, ed è per
+  questo che l'avviso arriva prima di generare e non dopo.
+- I posti non-terra da riempire sono **40** (sessanta carte meno il minimo di
+  terre): è il conto che decide se un tema è *impossibile*, e non è una
+  taratura. La soglia di *stretto* — quaranta carte distinte — invece lo è, e
+  sta in `src/tema/taratura.ts` da ritarare alla sosta.
 
 ## Mappa dei file
 
@@ -175,6 +193,12 @@ src/catalogo/filtri.ts   `cerca(carte, filtri)`: la cucitura del catalogo
 src/catalogo/ricerca.ts  la ricerca per nome che perdona i refusi
 src/catalogo/vocabolario.ts tipi e sottotipi ricavati dal pool, mai scritti
 src/catalogo/pool-finto.ts il pool finto condiviso dai test
+src/tema/tema.ts         il tema come oggetto: appartenenza e purezza, e le
+                         esclusioni che vincono sempre
+src/tema/allargamenti.ts le proposte per allargare un tema stretto, con le
+                         frasi che le dicono ad alta voce
+src/tema/ampiezza.ts     `valutaTema(...)`: impossibile, stretto o ampio
+src/tema/taratura.ts     le soglie del tema, dichiarate provvisorie
 src/mazzo/probabilita.ts la probabilità di lanciare una carta al suo turno:
                          ipergeometrica multivariata esatta, condizione di Hall
                          sui colori, e le terre girate contate per quel che sono
@@ -188,10 +212,11 @@ src/mazzo/scambio.ts     i due testi che escono dall'app: quello da scambiare
 src/dati/mazzi-salvati.ts i mazzi salvati in IndexedDB, e mai un'eccezione
 src/componenti/          le schermate: Catalogo, PannelloFiltri, GrigliaCarte,
                          SchedaCarta, CostoDiMana, NoteLegali, Mazzo,
-                         PassiDelleCopie, MazziSalvati
+                         PassiDelleCopie, MazziSalvati, Vincoli
 src/stili/catalogo.css   lo stile del catalogo, tutto a variabili del tema
 src/stili/mazzo.css      lo stile della schermata del mazzo, stesse variabili
 src/stili/salvati.css    lo stile della schermata dei mazzi salvati
+src/stili/vincoli.css    lo stile della schermata del tema, stesse variabili
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano

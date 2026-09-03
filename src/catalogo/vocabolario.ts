@@ -11,7 +11,7 @@
  * cui i tipi compaiono: tradurre e ordinare sono scelte, non dati.
  */
 
-import type { Carta } from "../dati/pool.js";
+import type { Carta, Colore, Tag } from "../dati/pool.js";
 
 /**
  * I tipi di carta nell'ordine in cui un giocatore se li aspetta — quello in cui
@@ -36,6 +36,61 @@ const TIPI_NOTI: readonly { tipo: string; etichetta: string; singolare: string }
  * «tutte le leggendarie» per comporre le proporzioni del mazzo (storia 10).
  */
 const SUPERTIPI = new Set(["Legendary", "Basic", "Snow", "World", "Host", "Ongoing", "Token"]);
+
+/**
+ * I colori col loro nome italiano: l'unico posto in cui la lettera diventa una
+ * parola. Le lettere sono quelle stampate sulle carte e non si traducono; i
+ * nomi servono a chi legge una frase, e a chi usa il filtro senza saperle.
+ */
+export const NOMI_DEI_COLORI: Readonly<Record<Colore, string>> = {
+  W: "bianco",
+  U: "blu",
+  B: "nero",
+  R: "rosso",
+  G: "verde",
+};
+
+/** L'ordine in cui i colori si dicono e si mostrano: quello delle carte. */
+export const ORDINE_DEI_COLORI: readonly Colore[] = ["W", "U", "B", "R", "G"];
+
+/**
+ * I nove tag di sinergia in italiano, in due forme perché servono in due posti:
+ * `etichetta` sta su un bottone del filtro, `azione` sta dentro una frase dopo
+ * «le carte che…». Tradurre è una scelta, e come i nomi dei tipi sta scritta a
+ * mano qui e in nessun altro posto.
+ */
+const TAG_NOTI: Readonly<Record<Tag, { etichetta: string; azione: string }>> = {
+  "produce-pedine": { etichetta: "Produce pedine", azione: "producono pedine" },
+  sacrifica: { etichetta: "Sacrifica", azione: "sacrificano le proprie creature" },
+  "guadagna-punti-vita": {
+    etichetta: "Guadagna punti vita",
+    azione: "fanno guadagnare punti vita",
+  },
+  "rimozione-mirata": { etichetta: "Rimozione mirata", azione: "tolgono di mezzo una carta sola" },
+  "spazza-via": { etichetta: "Spazza via", azione: "spazzano via il campo" },
+  pesca: { etichetta: "Pesca", azione: "fanno pescare" },
+  "accelerazione-di-mana": { etichetta: "Accelera il mana", azione: "accelerano il mana" },
+  "conta-le-creature": { etichetta: "Conta le creature", azione: "contano le creature" },
+  "si-cura-del-cimitero": { etichetta: "Si cura del cimitero", azione: "si curano del cimitero" },
+};
+
+/** L'elenco dei tag nell'ordine in cui si mostrano: quello in cui sono scritti. */
+export const TAG_IN_ORDINE: readonly Tag[] = Object.keys(TAG_NOTI) as Tag[];
+
+/** Come si chiama un tag su un bottone. */
+export function etichettaTag(tag: Tag): string {
+  return TAG_NOTI[tag].etichetta;
+}
+
+/** Come si dice un tag dentro una frase, dopo «le carte che…». */
+export function azioneDelTag(tag: Tag): string {
+  return TAG_NOTI[tag].azione;
+}
+
+/** Come si chiama un tipo di carta al plurale: «Creature», «Istantanei». */
+export function etichettaTipo(tipo: string): string {
+  return TIPI_NOTI.find((noto) => noto.tipo === tipo)?.etichetta ?? tipo;
+}
 
 export type VoceTipo = { tipo: string; etichetta: string; quante: number };
 export type VoceSottotipo = { sottotipo: string; quante: number };
@@ -93,4 +148,15 @@ export function tipoPrincipale(tipi: readonly string[]): string {
     if (tipi.includes(noto.tipo)) return noto.singolare;
   }
   return tipi.find((tipo) => !SUPERTIPI.has(tipo)) ?? tipi[0] ?? "Carta";
+}
+
+/**
+ * Lo stesso tipo principale, ma com'è scritto nei dati: serve a chi con quel
+ * tipo ci deve filtrare, non a chi lo deve leggere.
+ */
+export function tipoPrincipaleInglese(tipi: readonly string[]): string | null {
+  for (const noto of TIPI_NOTI) {
+    if (tipi.includes(noto.tipo)) return noto.tipo;
+  }
+  return tipi.find((tipo) => !SUPERTIPI.has(tipo)) ?? null;
 }

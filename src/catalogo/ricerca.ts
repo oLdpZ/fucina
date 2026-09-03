@@ -33,6 +33,43 @@ export function normalizza(testo: string): string {
 }
 
 /**
+ * Il testo delle regole di una carta, normalizzato, calcolato una volta sola.
+ *
+ * Senza questa memoria, cercare una parola nel testo rinormalizzerebbe quasi
+ * un megabyte di regole a ogni tasto premuto — sul telefono si sentirebbe. La
+ * mappa è debole: se un giorno il pool venisse sostituito, il vecchio se ne va
+ * da solo.
+ */
+const testiNormalizzati = new WeakMap<Carta, string>();
+
+export function testoNormalizzato(carta: Carta): string {
+  let pronto = testiNormalizzati.get(carta);
+  if (pronto === undefined) {
+    pronto = normalizza(carta.testo);
+    testiNormalizzati.set(carta, pronto);
+  }
+  return pronto;
+}
+
+/**
+ * Le parole del testo delle regole, come insieme.
+ *
+ * Serve a chiedere se una carta **nomina** qualcosa — un sottotipo, di solito —
+ * senza che «Goblin» si trovi dentro «Goblinoid»: cercare la parola intera è la
+ * sola lettura che non inventi corrispondenze.
+ */
+const paroleDeiTesti = new WeakMap<Carta, ReadonlySet<string>>();
+
+export function paroleDelTesto(carta: Carta): ReadonlySet<string> {
+  let pronte = paroleDeiTesti.get(carta);
+  if (pronte === undefined) {
+    pronte = new Set(testoNormalizzato(carta).split(" ").filter((parola) => parola !== ""));
+    paroleDeiTesti.set(carta, pronte);
+  }
+  return pronte;
+}
+
+/**
  * I nomi normalizzati costano più della ricerca stessa: si calcolano una volta
  * sola per nome e restano qui. La mappa cresce quanto il pool, e il pool è uno.
  */
