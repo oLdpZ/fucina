@@ -30,7 +30,7 @@ npm run dev      # sviluppo
 npm test         # i test
 npm run tipi     # solo il controllo dei tipi
 npm run build    # compila in dist/
-npm run dati     # riscarica le carte da Scryfall e riscrive il pool
+npm run dati     # riscarica carte e tag da Scryfall e riscrive il pool
 ```
 
 Serve Node 22.18 o più recente. `public/dati/pool.json` è un prodotto di

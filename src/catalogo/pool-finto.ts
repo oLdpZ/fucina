@@ -46,6 +46,7 @@ function carta(abbozzo: Abbozzo): Carta {
     legalitaStandard: "legal",
     prezzo: { euro: abbozzo.euro ?? 0.1, aggiornatoIl: GENERATO_IL },
     tag: abbozzo.tag ?? [],
+    tagScryfall: [],
     facce: null,
     terra: null,
   };

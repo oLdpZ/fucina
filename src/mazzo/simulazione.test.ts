@@ -42,6 +42,7 @@ function magia(abbozzo: {
     legalitaStandard: "legal",
     prezzo: { euro: 0.1, aggiornatoIl: "2026-09-02" },
     tag: [],
+    tagScryfall: [],
     facce: null,
     terra: null,
   };

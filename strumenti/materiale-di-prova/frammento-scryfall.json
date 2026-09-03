@@ -1,7 +1,7 @@
 [
   {
     "_nota": "Carta con piu stampe a prezzi diversi: vince la piu economica fra quelle di carta.",
-    "object": "card", "id": "aaaa0001-cara", "lang": "en", "layout": "normal",
+    "object": "card", "id": "aaaa0001-cara", "oracle_id": "oracolo-goblin", "lang": "en", "layout": "normal",
     "name": "Fixture Goblin", "released_at": "2025-09-26",
     "set": "fx1", "collector_number": "101",
     "mana_cost": "{1}{R}", "cmc": 2,
@@ -15,7 +15,7 @@
     "image_uris": { "small": "https://immagini/goblin-cara-piccola.jpg", "normal": "https://immagini/goblin-cara-normale.jpg" }
   },
   {
-    "object": "card", "id": "aaaa0002-economica", "lang": "en", "layout": "normal",
+    "object": "card", "id": "aaaa0002-economica", "oracle_id": "oracolo-goblin", "lang": "en", "layout": "normal",
     "name": "Fixture Goblin", "released_at": "2026-02-14",
     "set": "fx2", "collector_number": "7",
     "mana_cost": "{1}{R}", "cmc": 2,
@@ -30,7 +30,7 @@
   },
   {
     "_nota": "Stampa solo digitale della stessa carta: costa meno di tutte, e non deve mai essere scelta.",
-    "object": "card", "id": "aaaa0003-digitale", "lang": "en", "layout": "normal",
+    "object": "card", "id": "aaaa0003-digitale", "oracle_id": "oracolo-goblin", "lang": "en", "layout": "normal",
     "name": "Fixture Goblin", "released_at": "2026-03-01",
     "set": "fxa", "collector_number": "3",
     "mana_cost": "{1}{R}", "cmc": 2,
@@ -45,7 +45,7 @@
   },
   {
     "_nota": "Carta bandita: fuori dal pool, ma il diario deve saperla nominare.",
-    "object": "card", "id": "bbbb0001", "lang": "en", "layout": "normal",
+    "object": "card", "id": "bbbb0001", "oracle_id": "oracolo-cutter", "lang": "en", "layout": "normal",
     "name": "Fixture Cutter", "released_at": "2025-04-11",
     "set": "fx1", "collector_number": "12",
     "mana_cost": "{1}{R}", "cmc": 2,
@@ -300,7 +300,7 @@
   },
   {
     "_nota": "Rimozione mirata a danno: parla di bersaglio, non di tutte le creature.",
-    "object": "card", "id": "tttt0002", "lang": "en", "layout": "normal",
+    "object": "card", "id": "tttt0002", "oracle_id": "oracolo-bolt", "lang": "en", "layout": "normal",
     "name": "Fixture Bolt", "released_at": "2025-09-26",
     "set": "fx1", "collector_number": "41",
     "mana_cost": "{R}", "cmc": 1,
@@ -343,7 +343,7 @@
   },
   {
     "_nota": "Il testo fra parentesi e un promemoria delle regole, non quel che la carta fa: sacrificare la pedina del Tesoro non fa della carta una carta che sacrifica.",
-    "object": "card", "id": "tttt0005", "lang": "en", "layout": "normal",
+    "object": "card", "id": "tttt0005", "oracle_id": "oracolo-refusal", "lang": "en", "layout": "normal",
     "name": "Fixture Refusal", "released_at": "2025-09-26",
     "set": "fx1", "collector_number": "44",
     "mana_cost": "{U}", "cmc": 1,

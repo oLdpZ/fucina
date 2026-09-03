@@ -227,7 +227,9 @@ Come sta messa:
 Verificato dal vivo sull'indirizzo pubblico, non dedotto:
 
 - `pool.json` è 4,2 MB grezzi e GitHub Pages lo serve **compresso a 674 KB**: la
-  stima di 640 KB reggeva;
+  stima di 640 KB reggeva. Dal 3 settembre 2026, coi tag di Scryfall dentro
+  (ADR-0003), sono **5,1 MB grezzi e 865 KB compressi**: un quinto in più, che
+  è il prezzo dichiarato di avere una parola per le contromagie;
 - **il controllo di freschezza del ticket 05 funziona sull'host vero**, ed era
   la ragione dichiarata per scegliere Pages e non un altro: richiesta
   condizionale col suo ETag, risposta **304 con corpo di zero byte**. Non i

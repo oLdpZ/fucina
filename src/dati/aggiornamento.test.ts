@@ -24,7 +24,7 @@ import type { Pool } from "./pool.js";
 
 /** Un pool datato, con carte vere del pool finto: la data è l'unica cosa in gioco. */
 function poolDel(giorno: string): Pool {
-  return { generatoIl: giorno, carte: [...POOL_FINTO] };
+  return { generatoIl: giorno, registroTagScryfall: [], carte: [...POOL_FINTO] };
 }
 
 const VECCHIO = poolDel("2026-08-01T00:00:00.000+00:00");

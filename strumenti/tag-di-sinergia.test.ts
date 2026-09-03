@@ -32,6 +32,7 @@ function carta(nome: string, testo: string, tipi: string[] = ["Creature"]): Cart
     legalitaStandard: "legal",
     prezzo: { euro: null, aggiornatoIl: "2026-09-02" },
     tag: [],
+    tagScryfall: [],
     facce: null,
     terra: null,
   };

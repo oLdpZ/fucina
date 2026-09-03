@@ -10,6 +10,7 @@ import {
   raccontaDiario,
   type CartaScryfall,
 } from "./prepara-pool.ts";
+import { indicizzaTag } from "./tag-di-scryfall.ts";
 
 /**
  * Cucitura 2 della specifica: `preparaPool(datiGrezzi) → pool`.
@@ -128,6 +129,7 @@ describe("preparazione del pool", () => {
         "rarita",
         "sottotipi",
         "tag",
+        "tagScryfall",
         "terra",
         "testo",
         "tipi",
@@ -324,11 +326,85 @@ describe("ripetibilità", () => {
   });
 });
 
+describe("i tag di Scryfall, accanto ai nove", () => {
+  /**
+   * L'indice come lo consegnerebbe il file bulk: il Goblin e il Refusal
+   * taggati, il Cutter pure — ma il Cutter è bandito e nel pool non entra.
+   */
+  const INDICE = indicizzaTag([
+    { id: "id-counterspell", nome: "counterspell", oracleId: ["oracolo-refusal"] },
+    { id: "id-aggro", nome: "aggro-payoff", oracleId: ["oracolo-goblin"] },
+    { id: "id-token", nome: "token-generator", oracleId: ["oracolo-goblin"] },
+    { id: "id-equip", nome: "equipment", oracleId: ["oracolo-cutter"] },
+  ]);
+
+  const conTag = () => preparaPool(FRAMMENTO, { aggiornatoIl: QUANDO, tag: INDICE });
+
+  it("aggancia i tag alla carta per oracle_id, in ordine", () => {
+    expect(carta(conTag().pool, "Fixture Goblin").tagScryfall).toEqual([
+      "aggro-payoff",
+      "token-generator",
+    ]);
+    expect(carta(conTag().pool, "Fixture Refusal").tagScryfall).toEqual(["counterspell"]);
+  });
+
+  it("dice per ogni tag il suo id stabile, non solo il nome", () => {
+    expect(conTag().pool.registroTagScryfall).toContainEqual({
+      id: "id-counterspell",
+      nome: "counterspell",
+    });
+  });
+
+  it("nel registro non mette i tag che nessuna carta del pool porta", () => {
+    // «equipment» esiste nell'indice, ma è solo del Cutter, che è bandito.
+    const nomi = conTag().pool.registroTagScryfall.map((t) => t.nome);
+
+    expect(nomi).not.toContain("equipment");
+    expect(nomi).toEqual(["aggro-payoff", "counterspell", "token-generator"]);
+  });
+
+  it("lascia i nove dove sono e come sono", () => {
+    const senza = carta(preparazione().pool, "Fixture Goblin");
+    const con = carta(conTag().pool, "Fixture Goblin");
+
+    expect(con.tag).toEqual(senza.tag);
+    expect(con.tag).toContain("produce-pedine");
+  });
+
+  it("una carta senza tag di Scryfall resta legittima", () => {
+    expect(carta(conTag().pool, "Fixture Bluffs").tagScryfall).toEqual([]);
+  });
+
+  it("senza indice dei tag il pool si prepara lo stesso, con i campi vuoti", () => {
+    const { pool } = preparazione();
+
+    expect(pool.registroTagScryfall).toEqual([]);
+    expect(pool.carte.every((c) => c.tagScryfall.length === 0)).toBe(true);
+  });
+
+  it("un tag che sparisce fra due aggiornamenti non fa cadere niente", () => {
+    const dopo = preparaPool(FRAMMENTO, {
+      aggiornatoIl: QUANDO,
+      tag: indicizzaTag([
+        { id: "id-aggro", nome: "aggro-payoff", oracleId: ["oracolo-goblin"] },
+      ]),
+    });
+
+    expect(carta(dopo.pool, "Fixture Refusal").tagScryfall).toEqual([]);
+    expect(dopo.pool.registroTagScryfall.map((t) => t.nome)).toEqual(["aggro-payoff"]);
+  });
+
+  it("dà lo stesso pool a ogni giro, byte per byte, anche coi tag", () => {
+    expect(JSON.stringify(conTag())).toBe(JSON.stringify(conTag()));
+  });
+});
+
 describe("diario delle differenze", () => {
   const nuova = preparazione();
 
   const poolPrecedente = (nomi: string[]): Pool => ({
     generatoIl: "2026-08-01T00:00:00.000+00:00",
+    registroTagScryfall: [],
     carte: nomi.map((nome) => ({ ...carta(nuova.pool, "Fixture Goblin"), nome })),
   });
 

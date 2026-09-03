@@ -31,6 +31,7 @@ function magia(nome: string, costoDiMana: string, valoreDiMana: number): Carta {
     legalitaStandard: "legal",
     prezzo: { euro: 0.1, aggiornatoIl: "2026-09-02" },
     tag: [],
+    tagScryfall: [],
     facce: null,
     terra: null,
   };

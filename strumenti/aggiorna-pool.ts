@@ -14,6 +14,13 @@ import {
   type CartaScryfall,
 } from "./prepara-pool.ts";
 import { leggiCorrezioni, raccontaCorrezioni } from "./tag-di-sinergia.ts";
+import {
+  indicizzaTag,
+  riduciTag,
+  type IndiceTag,
+  type TagGrezzo,
+  type TagRidotto,
+} from "./tag-di-scryfall.ts";
 
 /**
  * Il comando unico di aggiornamento dei dati (user story 60).
@@ -31,10 +38,21 @@ import { leggiCorrezioni, raccontaCorrezioni } from "./tag-di-sinergia.ts";
  *
  * Con `--da <archivio>` legge un archivio Scryfall già sulla macchina invece
  * di scaricarlo — `.jsonl` o `.jsonl.gz`, col nome che gli dà Scryfall: serve
- * per riprovare senza rifare ottanta megabyte di rete.
+ * per riprovare senza rifare ottanta megabyte di rete. `--tag <archivio>` fa
+ * lo stesso per l'archivio dei tag funzionali, che però pesa un ventesimo: con
+ * `--da` da solo i tag si riscaricano, ed è un costo che si può pagare.
  */
 
 const DESCRITTORE = "https://api.scryfall.com/bulk-data/default-cards";
+
+/**
+ * I tag funzionali di **Scryfall Tagger**, la seconda razza di tag
+ * (ADR-0003): `counterspell`, `removal`, `win-condition` — quel che i nove
+ * tag nostri, che leggono le regole meccaniche, non sanno dire.
+ *
+ * Si scaricano qui e si congelano nel pool. L'app non li chiede mai a runtime.
+ */
+const DESCRITTORE_TAG = "https://api.scryfall.com/bulk-data/oracle-tags";
 
 /**
  * Scryfall chiede a chi usa l'API di farsi riconoscere. È gratis e senza
@@ -65,6 +83,7 @@ type Descrittore = {
 async function principale(): Promise<void> {
   const argomenti = process.argv.slice(2);
   const daFile = leggiOpzione(argomenti, "--da");
+  const daFileTag = leggiOpzione(argomenti, "--tag");
 
   const { grezze, aggiornatoIl } = daFile
     ? await daArchivioLocale(daFile)
@@ -72,8 +91,17 @@ async function principale(): Promise<void> {
 
   console.log(`Trovate ${grezze.length} stampe legali o bandite in Standard cartaceo.`);
 
+  // I tag si chiedono per le carte che abbiamo in mano e non per tutta la
+  // storia di Magic: Tagger copre trent'anni, lo Standard è un anno e mezzo, e
+  // tenere in memoria il resto non servirebbe a nessuno.
+  const tag = await tagFunzionali(daFileTag, oracleIdDelle(grezze));
+
   const lettura = leggiCorrezioni(existsSync(CORREZIONI) ? readFileSync(CORREZIONI, "utf8") : "");
-  const preparazione = preparaPool(grezze, { aggiornatoIl, correzioni: lettura.correzioni });
+  const preparazione = preparaPool(grezze, {
+    aggiornatoIl,
+    correzioni: lettura.correzioni,
+    tag: tag.indice,
+  });
   const precedente = poolPrecedente();
 
   if (lettura.correzioni.length > 0) {
@@ -99,6 +127,25 @@ async function principale(): Promise<void> {
   }
 
   scriviPool(preparazione.pool);
+
+  const conTag = preparazione.pool.carte.filter((c) => c.tagScryfall.length > 0).length;
+  console.log(
+    `Agganciati ${preparazione.pool.registroTagScryfall.length} tag funzionali di Scryfall ` +
+      `Tagger: ne ha almeno uno ${conTag} carte su ${preparazione.pool.carte.length}.`,
+  );
+
+  // I tag più freschi delle carte vogliono dire un pool nuovo con la data
+  // vecchia — perché la data dei dati è quella delle carte, ed è la stessa dei
+  // prezzi. Il file sul disco è giusto, ma il controllo di freschezza (storia
+  // 18) non scatterà: chi ha già quel pool datato non vedrà mai i tag nuovi.
+  // Succede solo rileggendo un archivio di carte vecchio con `--da`.
+  if (tag.aggiornatoIl !== null && tag.aggiornatoIl > aggiornatoIl) {
+    console.log(
+      `  Attenzione: i tag sono del ${tag.aggiornatoIl}, più freschi delle carte. ` +
+        `La data del pool resta quella delle carte, quindi le app già installate ` +
+        `non si accorgeranno di questo aggiornamento: rilancia senza --da.`,
+    );
+  }
 
   console.log("");
   console.log(raccontaDiario(confrontaPool(precedente, preparazione)));
@@ -175,32 +222,151 @@ async function daArchivioLocale(
  * e non il mezzo gigabyte dell'archivio intero.
  */
 async function setaccia(sorgente: Readable, compresso: boolean): Promise<CartaScryfall[]> {
-  if (!compresso) return raccogli(sorgente);
+  return raccogli(setacciaFlusso(sorgente, compresso));
+}
+
+/** Il flusso pronto da leggere a righe: decompresso se serve. */
+function setacciaFlusso(sorgente: Readable, compresso: boolean): Readable {
+  if (!compresso) return sorgente;
 
   const decompresso = sorgente.pipe(createGunzip());
   // `pipe` non porta avanti gli errori: senza questo, una rete che cade a metà
   // lascerebbe il comando ad aspettare per sempre invece di dirlo.
   sorgente.on("error", (guaio) => decompresso.destroy(guaio));
-  return raccogli(decompresso);
+  return decompresso;
 }
 
 async function raccogli(flusso: Readable): Promise<CartaScryfall[]> {
   const grezze: CartaScryfall[] = [];
   let lette = 0;
 
-  for await (const riga of createInterface({ input: flusso, crlfDelay: Infinity })) {
-    const pulita = riga.trim().replace(/,$/, "");
-    // L'archivio JSONL ha una carta per riga; le parentesi quadre della
-    // variante a elenco, se ci sono, non sono carte.
-    if (pulita === "" || pulita === "[" || pulita === "]") continue;
-
-    const grezza = JSON.parse(pulita) as CartaScryfall;
+  for await (const grezza of righeJson<CartaScryfall>(flusso)) {
     if (interessante(grezza)) grezze.push(grezza);
 
     lette += 1;
     if (lette % 100_000 === 0) console.log(`  …${lette.toLocaleString("it")} carte lette`);
   }
   return grezze;
+}
+
+/**
+ * Le righe di un archivio JSONL, una alla volta e già interpretate. L'archivio
+ * ha un oggetto per riga; le parentesi quadre della variante a elenco, se ci
+ * sono, non sono un oggetto.
+ */
+async function* righeJson<T>(flusso: Readable): AsyncGenerator<T> {
+  for await (const riga of createInterface({ input: flusso, crlfDelay: Infinity })) {
+    const pulita = riga.trim().replace(/,$/, "");
+    if (pulita === "" || pulita === "[" || pulita === "]") continue;
+    yield JSON.parse(pulita) as T;
+  }
+}
+
+/**
+ * Gli `oracle_id` delle carte in mano: è per quello che Tagger aggancia i suoi
+ * tag, e le tre stampe di una carta lo condividono.
+ */
+function oracleIdDelle(grezze: CartaScryfall[]): Set<string> {
+  const identificativi = new Set<string>();
+  for (const grezza of grezze) {
+    if (grezza.oracle_id !== undefined && grezza.oracle_id !== "") {
+      identificativi.add(grezza.oracle_id);
+    }
+  }
+  return identificativi;
+}
+
+/**
+ * L'archivio dei tag funzionali, scaricato o letto da disco, e ridotto mentre
+ * scorre alle sole carte che ci riguardano.
+ *
+ * L'archivio è orientato al tag e non alla carta — una riga per tag, con
+ * dentro tutte le carte che ce l'hanno — e la stragrande maggioranza dei tag
+ * non tocca nemmeno una carta del nostro pool: setacciare mentre si legge
+ * significa tenere in memoria un migliaio di righe invece di cinquemila piene.
+ */
+async function tagFunzionali(
+  daFile: string | null,
+  interessanti: Set<string>,
+): Promise<EsitoTag> {
+  try {
+    const archivio = daFile
+      ? apriArchivioLocaleDeiTag(daFile)
+      : await scaricaArchivioDeiTag();
+
+    const ridotti: TagRidotto[] = [];
+    for await (const grezzo of righeJson<TagGrezzo>(archivio.flusso)) {
+      const ridotto = riduciTag(grezzo, interessanti);
+      if (ridotto !== null) ridotti.push(ridotto);
+    }
+    return { indice: indicizzaTag(ridotti), aggiornatoIl: archivio.aggiornatoIl };
+  } catch (guaio) {
+    // Il pavimento non si perde per il vocabolario (ADR-0003): se Tagger non
+    // risponde, o cambia indirizzo, o sparisce, il pool si scrive lo stesso —
+    // senza i tag della comunità, con dentro tutto il resto. Buttare via anche
+    // ottanta megabyte di carte già scaricate sarebbe il modo peggiore di
+    // fallire, e il giorno in cui capiterà è il giorno di un annuncio di bandi.
+    //
+    // Ma si dice forte, e il comando esce con un codice di errore: un pool a cui
+    // mancano di colpo millesettecento tag non deve poter passare inosservato.
+    console.log("");
+    console.log(
+      `I tag funzionali di Scryfall non si sono presi: ${(guaio as Error).message}\n` +
+        `  Il pool si scrive lo stesso, senza. Le carte e i nove tag nostri ci sono ` +
+        `tutti;\n  quel che manca è il vocabolario della comunità. Riprova più tardi.`,
+    );
+    process.exitCode = 1;
+    return { aggiornatoIl: null };
+  }
+}
+
+/**
+ * Com'è andata la richiesta dei tag: l'indice quando c'è, e la data che
+ * l'archivio dichiara — che non è quella del pool, ma serve ad accorgersi
+ * quando le due sorgenti non sono dello stesso giorno.
+ */
+type EsitoTag = {
+  indice?: IndiceTag;
+  aggiornatoIl: string | null;
+};
+
+type ArchivioDeiTag = { flusso: Readable; aggiornatoIl: string | null };
+
+async function scaricaArchivioDeiTag(): Promise<ArchivioDeiTag> {
+  const risposta = await fetch(DESCRITTORE_TAG, { headers: INTESTAZIONI });
+  if (!risposta.ok) {
+    throw new Error(`Scryfall ha risposto ${risposta.status} al descrittore dei tag funzionali.`);
+  }
+  const descrittore = (await risposta.json()) as Descrittore;
+
+  const peso = descrittore.compressed_size;
+  console.log(
+    `Tag funzionali del ${descrittore.updated_at}` +
+      (peso === undefined ? "" : `, ${(peso / 1e6).toFixed(0)} MB compressi`) +
+      ". Scarico…",
+  );
+
+  const scaricato = await fetch(descrittore.jsonl_download_uri, { headers: INTESTAZIONI });
+  if (!scaricato.ok || scaricato.body === null) {
+    throw new Error(`Scryfall ha risposto ${scaricato.status} all'archivio dei tag funzionali.`);
+  }
+  return {
+    flusso: setacciaFlusso(Readable.fromWeb(scaricato.body as never), true),
+    aggiornatoIl: descrittore.updated_at,
+  };
+}
+
+/**
+ * L'archivio dei tag già sul disco. Qui la data non si legge dal nome, come
+ * invece si fa per le carte: da questo file non viene nessun prezzo, e una data
+ * sbagliata non finirebbe sotto gli occhi di nessuno.
+ */
+function apriArchivioLocaleDeiTag(percorso: string): ArchivioDeiTag {
+  console.log(`Leggo i tag funzionali da ${percorsoLeggibile(percorso)}…`);
+  return {
+    flusso: setacciaFlusso(createReadStream(percorso), percorso.endsWith(".gz")),
+    aggiornatoIl: null,
+  };
 }
 
 /** Il pool com'era prima di questo giro, se esiste: serve solo al diario. */
@@ -228,9 +394,15 @@ function scriviPool(pool: Pool): void {
 
   mkdirSync(qui("../public/dati"), { recursive: true });
   const carte = pool.carte.map((carta) => JSON.stringify(carta)).join(",\n");
+  // Anche il registro dei tag va a righe, e per la stessa ragione delle carte:
+  // fra due aggiornamenti la comunità ne aggiunge e ne toglie una manciata, e
+  // il diff deve poter mostrare quali.
+  const tag = pool.registroTagScryfall.map((voce) => JSON.stringify(voce)).join(",\n");
   writeFileSync(
     POOL,
-    `{\n"generatoIl": ${JSON.stringify(pool.generatoIl)},\n"carte": [\n${carte}\n]\n}\n`,
+    `{\n"generatoIl": ${JSON.stringify(pool.generatoIl)},\n` +
+      `"registroTagScryfall": [\n${tag}\n],\n` +
+      `"carte": [\n${carte}\n]\n}\n`,
     "utf8",
   );
 }

@@ -35,6 +35,27 @@ export type Tag =
   | "conta-le-creature"
   | "si-cura-del-cimitero";
 
+/**
+ * Un tag di **Scryfall Tagger**, la seconda razza (ADR-0003): quel che la
+ * comunità dice che una carta faccia — `counterspell`, `removal`,
+ * `win-condition` — dove i nove nostri non arrivano.
+ *
+ * Non è un elenco chiuso: sono migliaia e cambiano nel tempo, e per questo il
+ * pool ne porta il **registro** invece di scriverli nel codice. Di ciascuno si
+ * tiene l'`id` UUID stabile accanto al nome, come Scryfall consiglia: la
+ * comunità rinomina, e il nome dice come si legge un tag oggi mentre l'id dice
+ * chi è.
+ *
+ * Sull'app pesano come dati e non come rete: sono congelati nel pool, e nessuna
+ * richiesta a Scryfall parte mai dal browser.
+ */
+export type TagDiScryfall = {
+  /** L'identificativo stabile: quello che sopravvive a un rinominamento. */
+  id: string;
+  /** Lo slug, la parola con cui il tag si cerca su Tagger (`otag:removal`). */
+  nome: string;
+};
+
 /** Gli indirizzi delle immagini: una per l'elenco, una per la carta aperta. */
 export type Immagine = {
   piccola: string;
@@ -117,6 +138,17 @@ export type Carta = {
    * meccaniche più correzioni a mano, come vuole Q13.
    */
   tag: Tag[];
+  /**
+   * I nomi dei tag di **Scryfall Tagger** che la carta porta, in ordine
+   * alfabetico. Sono un'altra razza dai nove qui sopra, e stanno in un campo
+   * diverso apposta: chi legge il pool deve sapere da dove viene un tag senza
+   * indovinarlo. I loro id stanno nel registro del pool.
+   *
+   * Vuoto è uno stato legittimo, e non solo per le carte che Tagger non ha
+   * ancora guardato: nel pool del 2 settembre 2026 sono senza nemmeno uno dei
+   * nove 1.943 carte.
+   */
+  tagScryfall: string[];
   /** Le facce, annidate, quando la carta ne ha più di una. Altrimenti `null`. */
   facce: Faccia[] | null;
   /** Presente solo se la carta è una terra. */
@@ -129,5 +161,18 @@ export type Pool = {
    * l'app mostra all'utente (user story 17) ed è la stessa dei prezzi.
    */
   generatoIl: string;
+  /**
+   * I tag di Scryfall Tagger che almeno una carta del pool porta, col loro id
+   * stabile, in ordine alfabetico.
+   *
+   * Sta qui e non su ogni carta perché un id è lungo trentasei caratteri e le
+   * carte sono migliaia: scriverlo una volta per tag invece che una per
+   * accoppiata risparmia al pool un paio di megabyte, che sono megabyte che
+   * l'app scarica.
+   *
+   * Un tag che sparisce da Tagger fra due aggiornamenti sparisce di qui e dalle
+   * carte, e non fa cadere niente.
+   */
+  registroTagScryfall: TagDiScryfall[];
   carte: Carta[];
 };

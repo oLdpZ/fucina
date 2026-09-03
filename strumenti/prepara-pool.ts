@@ -1,5 +1,6 @@
 import type { Carta, Colore, ColoreMana, Faccia, Immagine, Pool, Terra } from "../src/dati/pool.ts";
 import { applicaCorrezioni, tagMeccanici, type Correzione } from "./tag-di-sinergia.ts";
+import { registroDeiTag, type IndiceTag } from "./tag-di-scryfall.ts";
 
 /**
  * Da archivio Scryfall a pool: la trasformazione, e nient'altro.
@@ -25,6 +26,12 @@ export type FacciaScryfall = {
 
 export type CartaScryfall = {
   id?: string;
+  /**
+   * L'identificativo della **carta** e non della stampa: è per questo che
+   * Scryfall Tagger aggancia i suoi tag, e le tre stampe di una carta lo
+   * condividono.
+   */
+  oracle_id?: string;
   name?: string;
   lang?: string;
   layout?: string;
@@ -124,7 +131,7 @@ function nataDaUnUnione(grezza: CartaScryfall): boolean {
  */
 export function preparaPool(
   datiGrezzi: CartaScryfall[],
-  opzioni: { aggiornatoIl: string; correzioni?: Correzione[] },
+  opzioni: { aggiornatoIl: string; correzioni?: Correzione[]; tag?: IndiceTag | undefined },
 ): Preparazione {
   const perNome = new Map<string, CartaScryfall[]>();
   for (const grezza of datiGrezzi) {
@@ -146,7 +153,7 @@ export function preparaPool(
       bandite.push(nome);
       continue;
     }
-    carte.push(riduci(nome, sceltaPiuEconomica(legali), opzioni.aggiornatoIl));
+    carte.push(riduci(nome, sceltaPiuEconomica(legali), opzioni.aggiornatoIl, opzioni.tag));
   }
 
   // L'ordine è alfabetico e non quello dell'archivio: il file finisce in git, e
@@ -158,8 +165,19 @@ export function preparaPool(
   // l'ordine deciso in Q13, ed è quel che rende le correzioni l'ultima parola.
   const corrette = applicaCorrezioni(carte, opzioni.correzioni ?? []);
 
+  // Il registro si costruisce dai tag **finiti sulle carte**, non dall'indice
+  // intero: fra i due qualche carta si perde per strada — le bandite, le stampe
+  // doppie — e un registro che nomina tag che nessuno porta direbbe una falsità.
+  const registroTagScryfall =
+    opzioni.tag === undefined
+      ? []
+      : registroDeiTag(
+          opzioni.tag,
+          corrette.carte.flatMap((carta) => carta.tagScryfall),
+        );
+
   return {
-    pool: { generatoIl: opzioni.aggiornatoIl, carte: corrette.carte },
+    pool: { generatoIl: opzioni.aggiornatoIl, registroTagScryfall, carte: corrette.carte },
     bandite,
     correzioniOrfane: corrette.orfane,
   };
@@ -192,7 +210,12 @@ function prezzoInEuro(grezza: CartaScryfall): number | null {
 }
 
 /** La stampa scelta, ridotta ai soli campi che l'app usa davvero. */
-function riduci(nome: string, grezza: CartaScryfall, aggiornatoIl: string): Carta {
+function riduci(
+  nome: string,
+  grezza: CartaScryfall,
+  aggiornatoIl: string,
+  tag: IndiceTag | undefined,
+): Carta {
   const facce = (grezza.card_faces ?? []).map(riduciFaccia);
   const davanti = facce[0] ?? null;
 
@@ -239,6 +262,10 @@ function riduci(nome: string, grezza: CartaScryfall, aggiornatoIl: string): Cart
     legalitaStandard: grezza.legalities?.["standard"] ?? "",
     prezzo: { euro: prezzoInEuro(grezza), aggiornatoIl },
     tag: [],
+    // I tag della comunità arrivano già pronti dall'indice: qui non si deduce
+    // nulla, si aggancia e basta. L'assenza è uno stato legittimo. La copia
+    // serve a non consegnare alla carta un elenco che appartiene all'indice.
+    tagScryfall: [...(tag?.perCarta.get(grezza.oracle_id ?? "") ?? [])],
     facce: facce.length > 0 ? facce : null,
     terra: tipi.includes("Land") ? leggiTerra(grezza, testo) : null,
   };

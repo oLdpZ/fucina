@@ -12,7 +12,7 @@
  * sbagliata.
  */
 
-import type { Carta, Pool } from "./pool.js";
+import type { Carta, Pool, TagDiScryfall } from "./pool.js";
 
 /** Dov'è il pool, relativo alla base dell'app: l'app gira anche in sottocartella. */
 const PERCORSO_POOL = `${import.meta.env.BASE_URL}dati/pool.json`;
@@ -30,7 +30,11 @@ export function interpretaPool(dati: unknown): Pool {
     throw new Error("Il file del pool delle carte non si legge.");
   }
 
-  const { generatoIl, carte } = dati as { generatoIl?: unknown; carte?: unknown };
+  const { generatoIl, carte, registroTagScryfall } = dati as {
+    generatoIl?: unknown;
+    carte?: unknown;
+    registroTagScryfall?: unknown;
+  };
 
   if (typeof generatoIl !== "string" || generatoIl === "") {
     throw new Error("Il pool delle carte non dice di che data sono i suoi dati.");
@@ -42,7 +46,28 @@ export function interpretaPool(dati: unknown): Pool {
     throw new Error("Il pool delle carte è vuoto.");
   }
 
-  return { generatoIl, carte: carte as Carta[] };
+  // Il registro dei tag di Scryfall è l'unico campo che si può non trovare:
+  // esistono pool scritti prima che i tag della comunità entrassero nel file
+  // (ADR-0003), e un registro che manca vuol dire soltanto nessun tag. Un pool
+  // senza carte è un guasto; un pool senza tag è un pool più povero, e basta.
+  //
+  // Quando manca, mancherà anche sulle carte, e a quelle si rimette mano: non è
+  // il controllo carta per carta che questo modulo rifiuta di fare — quello
+  // sarebbe un secondo posto in cui è scritta la forma dei dati — è il rattoppo
+  // di un pool di ieri a una forma di oggi, e vale per un campo solo.
+  if (!Array.isArray(registroTagScryfall)) {
+    return {
+      generatoIl,
+      registroTagScryfall: [],
+      carte: (carte as Carta[]).map((carta) => ({ ...carta, tagScryfall: [] })),
+    };
+  }
+
+  return {
+    generatoIl,
+    registroTagScryfall: registroTagScryfall as TagDiScryfall[],
+    carte: carte as Carta[],
+  };
 }
 
 /** Legge il pool incluso nell'app. */
