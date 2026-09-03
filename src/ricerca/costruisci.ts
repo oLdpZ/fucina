@@ -625,10 +625,14 @@ function scegliCandidati(
   taratura: TaraturaDellaRicerca,
   peso: number,
 ): Carta[] {
-  const ordinate = [...giocabili].sort(
-    (a, b) =>
-      merito(b, risolto, peso) - merito(a, risolto, peso) || a.nome.localeCompare(b.nome, "en"),
-  );
+  // Il merito si calcola **una volta per carta** e non dentro il confronto: un
+  // ordinamento ne fa una dozzina per carta, e su quattromilaottocento carte
+  // erano cinquanta millesimi di secondo per peso invece di cinque. L'ordine che
+  // ne esce è lo stesso — il merito di una carta non cambia mentre si ordina.
+  const conMerito = giocabili.map((carta) => ({ carta, merito: merito(carta, risolto, peso) }));
+  const ordinate = conMerito
+    .sort((a, b) => b.merito - a.merito || a.carta.nome.localeCompare(b.carta.nome, "en"))
+    .map((voce) => voce.carta);
 
   // Il tetto vale se resta comunque di che riempire un mazzo: meglio una
   // ricerca lenta di una ricerca che non ha abbastanza carte per finire.

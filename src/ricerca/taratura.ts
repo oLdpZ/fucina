@@ -88,7 +88,24 @@ export type TaraturaDellaRicerca = {
  *
  * Sono cinque perché il ticket ne chiede quattro o cinque; se due pesi vicini
  * danno lo stesso mazzo, il duplicato si scarta e la frontiera ne mostra meno.
- * Come ogni taratura del progetto, alla sosta si misurano e si spostano.
+ *
+ * **Misurati sul pool vero** (settembre 2026), e restano cinque. Lo 0,05 era
+ * indiziato: costava da solo il settanta per cento del tempo di una frontiera,
+ * e su tre temi su quattro — Goblin con due semi, e tutto il rosso — il mazzo
+ * che produceva veniva scartato comunque. Ma sul tema **stretto** (i Draghi
+ * rossi, trenta carte) è l'unico che arriva in fondo, e il mazzo che porta è un
+ * baratto vero: 45,5% di tema e 85,9 di potenza diventano 28,6 e 87,1. Su un
+ * tema largo lo 0,15 arriva già dove stanno i mazzi forti; su un tema stretto la
+ * parte lontana della frontiera è davvero lontana, e senza lo 0,05 nessuno ci
+ * va. Toglierlo avrebbe risparmiato tempo proprio sui temi per cui l'app esiste.
+ *
+ * Il tempo si è poi risparmiato dove era sprecato per davvero, senza cedere un
+ * decimale: vedi `GIA_CALCOLATE` in `mazzo/probabilita.ts`.
+ *
+ * Il peso **1** non è sopravvissuto ai tagli in nessuna delle quattro prove.
+ * Costa poco — due secondi — e resta perché quattro misure non bastano a
+ * togliere un passo alla frontiera, ma è il primo indiziato della prossima
+ * sosta.
  */
 export const PESI_DELLA_PUREZZA: readonly number[] = [200, 1, 0.4, 0.15, 0.05];
 
@@ -126,7 +143,20 @@ export const TARATURA_DELLA_RICERCA: TaraturaDellaRicerca = {
  * frontiera è il fulcro del progetto, e consegnarne un pezzo per difendere
  * l'attesa vuol dire difendere la cosa sbagliata. Quindici secondi sono
  * un'attesa che si sopporta **perché si vede**: la riga dell'avanzamento dice a
- * che mazzo è arrivata, e il tasto «Ferma» c'è. Alla sosta (ticket 14) si
- * misura sul telefono vero, ed è lì che questo numero si decide davvero.
+ * che mazzo è arrivata, e il tasto «Ferma» c'è.
+ *
+ * **Sessanta dalla prima misura sul pool vero** (settembre 2026). Quindici
+ * secondi bastavano sul pool finto e non sul pool vero: la frontiera intera
+ * costa fra gli 8 e i 17 secondi su un computer da tavolo — tema Goblin 17 s,
+ * Draghi rossi 13 s, tutto il rosso 8 s — e un telefono è più lento. Il conto
+ * non è quello che sembra: troncare non toglie l'ultimo mazzo, toglie **quello
+ * che conta**, perché i mazzi che sopravvivono ai tagli vengono dal peso 200 e
+ * dal peso 0,15, che è il quarto dei cinque. Una frontiera troncata a metà è
+ * quasi sempre un mazzo solo, cioè l'app senza il suo fulcro.
+ *
+ * Alzare questo numero non cambia **nessun** risultato: a fermare la ricerca è
+ * il tetto delle valutazioni, e questo tetto può solo troncare prima. È quindi
+ * il caso di essere generosi. Quanto ci metta un telefono vero resta la misura
+ * che il ticket 14 chiede e che nessuno ha ancora fatto.
  */
-export const TEMPO_MASSIMO_PREDEFINITO_MS = 15000;
+export const TEMPO_MASSIMO_PREDEFINITO_MS = 60000;

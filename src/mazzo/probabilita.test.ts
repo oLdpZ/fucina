@@ -7,7 +7,7 @@
  * con risposta calcolabile a penna».
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { probabilitaDiLanciare, probabilitaDiPescarne } from "./probabilita.js";
 
@@ -230,5 +230,55 @@ describe("probabilitaDiPescarne", () => {
     expect(probabilitaDiPescarne(60, 60, 1)).toBe(1);
     // Viste tutte le carte del mazzo, la copia c'è di sicuro.
     expect(probabilitaDiPescarne(10, 1, 20)).toBeCloseTo(1, 12);
+  });
+});
+
+/**
+ * Il conto è ricordato fra una chiamata e l'altra, ed è quel che ha reso la
+ * frontiera sei volte più veloce. Il rischio di ricordare è uno solo, ed è
+ * grave: che due domande **diverse** finiscano sulla stessa risposta perché la
+ * chiave che le distingue ha dimenticato un campo.
+ *
+ * Il test lo esclude nel solo modo che vale: ogni domanda si rifà in un modulo
+ * appena caricato, che di quella domanda non sa niente e non ha visto le altre.
+ * Se la risposta ricordata coincide con quella calcolata da solo, la chiave
+ * distingue tutto quel che deve.
+ */
+describe("il conto ricordato", () => {
+  const MONTAGNE = { copie: 24, produce: ["R"] as const, girata: false };
+  const PALUDI = { copie: 10, produce: ["B"] as const, girata: false };
+  const GIRATA = { copie: 4, produce: ["R", "B"] as const, girata: true };
+
+  /** Domande che differiscono per **un campo alla volta**: è lì che una chiave sbaglia. */
+  const DOMANDE = [
+    { dimensioneMazzo: 60, terre: [MONTAGNE], pips: [["R"] as const], valoreDiMana: 1, turno: 1 },
+    { dimensioneMazzo: 60, terre: [MONTAGNE], pips: [["R"] as const], valoreDiMana: 1, turno: 2 },
+    { dimensioneMazzo: 60, terre: [MONTAGNE], pips: [["R"] as const], valoreDiMana: 2, turno: 2 },
+    { dimensioneMazzo: 40, terre: [MONTAGNE], pips: [["R"] as const], valoreDiMana: 1, turno: 1 },
+    { dimensioneMazzo: 60, terre: [{ ...MONTAGNE, copie: 23 }], pips: [["R"] as const], valoreDiMana: 1, turno: 1 },
+    { dimensioneMazzo: 60, terre: [{ ...MONTAGNE, girata: true }], pips: [["R"] as const], valoreDiMana: 1, turno: 1 },
+    { dimensioneMazzo: 60, terre: [PALUDI], pips: [["B"] as const], valoreDiMana: 1, turno: 1 },
+    { dimensioneMazzo: 60, terre: [MONTAGNE, PALUDI], pips: [["R"] as const, ["B"] as const], valoreDiMana: 2, turno: 2 },
+    { dimensioneMazzo: 60, terre: [PALUDI, MONTAGNE], pips: [["R"] as const, ["B"] as const], valoreDiMana: 2, turno: 2 },
+    { dimensioneMazzo: 60, terre: [MONTAGNE, PALUDI, GIRATA], pips: [["R", "B"] as const], valoreDiMana: 3, turno: 3 },
+    { dimensioneMazzo: 60, terre: [MONTAGNE, PALUDI, GIRATA], pips: [["R"] as const, ["R"] as const], valoreDiMana: 3, turno: 3 },
+  ];
+
+  it("dà a ogni domanda la risposta che avrebbe avuto da sola", async () => {
+    // Prima le si fanno tutte, in fila, allo stesso modulo: da qui in poi la
+    // sua memoria è piena delle altre dieci.
+    const ricordate = DOMANDE.map((domanda) => probabilitaDiLanciare(domanda));
+
+    for (const [indice, domanda] of DOMANDE.entries()) {
+      vi.resetModules();
+      const solo = await import("./probabilita.js");
+      expect(solo.probabilitaDiLanciare(domanda), JSON.stringify(domanda)).toBe(ricordate[indice]);
+    }
+  });
+
+  it("risponde uguale a chiederglielo due volte", () => {
+    for (const domanda of DOMANDE) {
+      expect(probabilitaDiLanciare(domanda)).toBe(probabilitaDiLanciare(domanda));
+    }
   });
 });

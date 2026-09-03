@@ -274,16 +274,48 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   intera costa **circa sette secondi** su un computer da tavolo e conta
   **quattro** mazzi — purezza 1,0000 → 0,9737 → 0,8684 → 0,6410, potenza
   0,7922 → 0,8067 → 0,8182 → 0,8296. La ricerca è tutta seminata: questi numeri
-  si rifanno identici, e se un giorno non tornano è cambiato qualcosa. Quanti
-  mazzi conti sul **pool vero**, e quanto ci metta su un telefono, sono due
-  delle misure della sosta.
-- Il tetto di tempo predefinito è salito da **otto a quindici secondi**: dal
-  ticket 12 paga cinque ricerche invece di una, e otto secondi la troncavano a
-  uno o due mazzi su un telefono di fascia media. Il troncamento si dichiara
-  sempre — è onesto — ma consegnare un pezzo di frontiera per difendere
-  l'attesa vuol dire difendere la cosa sbagliata: la frontiera è il fulcro del
-  progetto. L'attesa si sopporta perché **si vede**: la riga dell'avanzamento
-  dice a che mazzo è arrivata, e il tasto «Ferma» c'è.
+  si rifanno identici, e se un giorno non tornano è cambiato qualcosa.
+- Il tetto di tempo predefinito è **sessanta secondi**, salito dagli otto del
+  ticket 11 e dai quindici del 12. Il troncamento si dichiara sempre — è onesto
+  — ma consegnare un pezzo di frontiera per difendere l'attesa vuol dire
+  difendere la cosa sbagliata: la frontiera è il fulcro del progetto. E il
+  pezzo che si perde non è la coda: i mazzi che sopravvivono ai tagli vengono
+  dal peso 200 e dal peso 0,15, che è il **quarto** dei cinque, quindi una
+  frontiera troncata a metà è quasi sempre un mazzo solo. Alzare il tetto non
+  cambia nessun risultato — a fermare la ricerca è il tetto delle valutazioni —
+  e l'attesa si sopporta perché **si vede**: la riga dell'avanzamento dice a che
+  mazzo è arrivata, e il tasto «Ferma» c'è.
+
+### La prima misura sul pool vero (3 settembre 2026)
+
+Fatta sul computer da tavolo, dalla schermata e dal motore. **Quanto ci metta un
+telefono vero resta da misurare**, ed è la casella aperta del ticket 14.
+
+- Il costo di una valutazione **esplode coi colori**, perché il conto delle
+  probabilità è esatto: 3,2 ms su un mazzo monocolore, 7,1 a tre colori, **24,7
+  a quattro**, 30,5 a cinque. E i pesi bassi della frontiera — quelli che
+  ignorano il tema — producono proprio le pile a quattro colori: lì se ne andava
+  quasi tutto il tempo.
+- La stessa domanda veniva rifatta migliaia di volte. Ricordare le risposte
+  (`GIA_CALCOLATE` in `mazzo/probabilita.ts`) ha reso la frontiera **sei volte
+  più veloce senza cambiare un decimale**: Goblin 104 s → 17 s, Draghi rossi
+  99 s → 13 s, tutto il rosso 39 s → 8 s, con mazzi e numeri identici. Un test
+  lo tiene fermo: ogni domanda deve dare la risposta che avrebbe avuto da sola.
+- Con le risposte ricordate una valutazione costa **2,8 ms** anche a quattro
+  colori, e i due terzi sono la **simulazione goldfish**. Quel che resta da
+  guadagnare sta lì, e non è più spreco: è lavoro vero.
+- La frontiera sul pool vero: **Goblin 2 mazzi** (tema 100% potenza 86,8 → tema
+  48,6 potenza 87,2), **Draghi rossi 4 mazzi**, **tutto il rosso 2 mazzi**.
+- Il peso **0,05** sembrava da togliere — da solo costava il 70% del tempo, e su
+  tre temi su quattro il suo mazzo veniva scartato comunque. Ma sul tema
+  **stretto** è l'unico che arriva in fondo: sui Draghi rossi porta il quarto
+  mazzo, da 45,5% di tema e 85,9 di potenza a 28,6 e 87,1. Toglierlo avrebbe
+  risparmiato tempo proprio sui temi per cui l'app esiste. Resta.
+- Il peso **1** non è sopravvissuto ai tagli in nessuna delle quattro prove: è
+  il primo indiziato della prossima sosta, ma quattro misure non bastano.
+- Il merito delle carte si calcolava **dentro il confronto** dell'ordinamento
+  delle candidate: cinquanta millesimi di secondo per peso invece di cinque, su
+  quattromilaottocento carte. Ora si calcola una volta per carta.
 - La probabilità che il punteggio calcola per ogni carta è quella di **avere il
   mana** per lanciarla al suo turno, e **non dipende da quante copie** ce ne
   sono: due copie o quattro, il numero è lo stesso. Spiegare «perché quattro

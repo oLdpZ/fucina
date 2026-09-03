@@ -104,13 +104,63 @@ export function probabilitaDiPescarne(
 }
 
 /**
+ * Le risposte già date, tenute da una chiamata all'altra.
+ *
+ * Non è un'ottimizzazione qualunque, ed è misurata: il conto qui sotto è esatto,
+ * e il suo prezzo cresce coi colori — 3 millesimi di secondo su un mazzo
+ * monocolore, 25 su uno a quattro colori (misurato sul pool vero, settembre
+ * 2026). La ricerca del ticket 11 lo richiede migliaia di volte, e i pesi bassi
+ * della frontiera producono proprio i mazzi a quattro colori: è lì che se ne
+ * andava quasi tutto il tempo di una frontiera.
+ *
+ * Quel che si evita è **la stessa identica domanda rifatta**: durante la ricerca
+ * la base di terre cambia di rado — cambiare una carta non cambia quali terre il
+ * mazzo vuole — mentre i costi delle carte si ripetono di continuo. La risposta
+ * è la stessa che il conto darebbe: non si perde un decimale, e la frontiera che
+ * ne esce è identica byte per byte. Se non fosse così sarebbe un guasto, e c'è
+ * un test che lo controlla.
+ */
+const GIA_CALCOLATE = new Map<string, number>();
+
+/**
+ * Quante risposte si tengono. Il tetto esiste perché la memoria di un telefono
+ * non è infinita; svuotare tutto invece di sfrattare una per volta costa una
+ * ricerca più lenta ogni tanto e nessuna riga di codice in più — e non cambia
+ * mai una risposta, che è la sola cosa che non si può permettere di cambiare.
+ */
+const MASSIMO_RICORDATO = 50_000;
+
+/** La domanda ridotta a una stringa: due domande uguali qui danno la stessa. */
+function chiaveDella(domanda: Domanda): string {
+  let terre = "";
+  for (const gruppo of domanda.terre) {
+    terre += `${gruppo.copie}:${gruppo.produce.join("")}:${gruppo.girata ? 1 : 0};`;
+  }
+  return `${domanda.dimensioneMazzo}|${domanda.valoreDiMana}|${domanda.turno}|${terre}|${domanda.pips
+    .map((pip) => pip.join("/"))
+    .join(",")}`;
+}
+
+/**
  * La probabilità di poter lanciare la carta al turno chiesto.
  *
  * Si enumerano tutti i modi in cui le terre pescate possono distribuirsi fra i
  * gruppi, si scarta quelli che non bastano, e si sommano le loro probabilità
- * ipergeometriche multivariate. È un conto esatto, non un campionamento.
+ * ipergeometriche multivariate. È un conto esatto, non un campionamento — e una
+ * domanda già fatta non si rifà (vedi `GIA_CALCOLATE`).
  */
 export function probabilitaDiLanciare(domanda: Domanda): number {
+  const chiave = chiaveDella(domanda);
+  const gia = GIA_CALCOLATE.get(chiave);
+  if (gia !== undefined) return gia;
+
+  const risposta = conta(domanda);
+  if (GIA_CALCOLATE.size >= MASSIMO_RICORDATO) GIA_CALCOLATE.clear();
+  GIA_CALCOLATE.set(chiave, risposta);
+  return risposta;
+}
+
+function conta(domanda: Domanda): number {
   const { dimensioneMazzo, terre, valoreDiMana, turno } = domanda;
   if (valoreDiMana <= 0 && domanda.pips.length === 0) return 1;
 
