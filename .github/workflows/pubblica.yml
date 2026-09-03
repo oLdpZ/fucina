@@ -1,0 +1,58 @@
+# Compila Fucina e la pubblica su GitHub Pages.
+#
+# La pubblicazione non è un passaggio a parte: se i test non passano o i tipi
+# non tornano, non esce niente. Quel che sta online è sempre roba compilata da
+# questo file, mai caricata a mano.
+name: Pubblica
+
+on:
+  push:
+    branches: [main]
+  # Per ripubblicare senza dover fare un commit finto.
+  workflow_dispatch:
+
+# Il permesso minimo che serve a scrivere su Pages, e nient'altro.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una pubblicazione per volta; le spinte in mezzo aspettano, non si annullano.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  compila:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # La stessa versione dichiarata in `package.json`.
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run build` controlla già i tipi; i test stanno prima perché un
+      # mazzo sbagliato è un guasto peggiore di un tipo sbagliato.
+      - run: npm test
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  pubblica:
+    needs: compila
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pagine.outputs.page_url }}
+    steps:
+      - id: pagine
+        uses: actions/deploy-pages@v4
