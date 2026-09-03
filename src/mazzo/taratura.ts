@@ -1,5 +1,6 @@
 /**
- * Le costanti di taratura della base di terre, tutte in un punto solo.
+ * Le costanti di taratura del mazzo — base di terre e simulazione — tutte in
+ * un punto solo.
  *
  * `spec.md` lo chiede a chiare lettere: ogni numero scelto a occhio è
  * **provvisorio** e va ritarato alla sosta, guardando le liste che l'app
@@ -90,3 +91,85 @@ export const PENALITA_ENTRA_GIRATA_A_VOLTE = 0.5;
  * restano in mano.
  */
 export const PERDITA_MASSIMA_PER_I_COLORI = 0.1;
+
+/* ------------------------------------------------------------------------- *
+ * La simulazione goldfish (ticket 09)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Quante partite si simulano per ogni mazzo.
+ *
+ * È il numero **provvisorio** che il ticket 09 chiede di tenere in un punto
+ * solo e di ritarare alla sosta misurando davvero. È un compromesso fra due
+ * cose che tirano in direzioni opposte: poche partite fanno ballare i numeri da
+ * un'esecuzione all'altra, tante fanno aspettare chi usa l'app dal telefono.
+ *
+ * Cinquecento partite tengono l'errore su una quota attorno a due punti
+ * percentuali, che è abbastanza fine per distinguere due mazzi diversi e non
+ * abbastanza per fidarsi dell'ultima cifra. Costano una quindicina di
+ * millisecondi su un computer da tavolo — misurati, non stimati — e quindi
+ * verosimilmente attorno al decimo di secondo su un telefono.
+ *
+ * **Quel «verosimilmente» è il motivo per cui il numero è provvisorio**: alla
+ * sosta si misura il tempo vero su un telefono vero, tenendo conto che la
+ * ricerca a scambi singoli (ticket 11) chiamerà questa simulazione una volta
+ * per ogni scambio provato, e si sposta questo numero — non gli altri.
+ */
+export const PARTITE_SIMULATE = 500;
+
+/** I punti vita da togliere per vincere: è una regola, non una taratura. */
+export const VITE_AVVERSARIO = 20;
+
+/** Le carte della mano iniziale: regola, non taratura. */
+export const CARTE_IN_MANO_INIZIALI = 7;
+
+/**
+ * Il turno oltre il quale si smette di simulare e la partita si conta come
+ * **non chiusa**.
+ *
+ * Un mazzo che non ha ucciso entro il ventesimo turno non ucciderà: continuare
+ * costerebbe tempo e non direbbe niente di nuovo. Le partite non chiuse non
+ * entrano nel turno medio di chiusura — entrano nella quota di partite chiuse,
+ * che è il numero onesto da mettere accanto alla media.
+ */
+export const TURNO_MASSIMO = 20;
+
+/**
+ * Quante volte si rimescola prima di tenere per forza.
+ *
+ * Si usa il mulligan «di Londra», che è quello vero del formato: si rimescola
+ * tutto, si pescano di nuovo sette carte, e se ne mettono sotto tante quante
+ * sono le volte che si è rimescolato. Oltre il secondo mulligan una mano da
+ * cinque carte non salva quasi mai la partita, e chi gioca lo sa: si tiene.
+ */
+export const MULLIGAN_MASSIMI = 2;
+
+/**
+ * La regola di mulligan, **scritta e dichiarata** come chiede il ticket 09: si
+ * tiene una mano se le terre che contiene stanno fra questi due numeri.
+ *
+ * Non è la sola regola possibile ed è di proposito grossolana: guarda le terre
+ * e nient'altro, perché ogni raffinamento in più sarebbe un giudizio nostro
+ * mascherato da misura. Chi legge i numeri della simulazione deve poter sapere
+ * in una frase come sono stati ottenuti.
+ */
+export const TERRE_MINIME_IN_MANO = 2;
+export const TERRE_MASSIME_IN_MANO = 5;
+
+/**
+ * Quante terre vuole tenere in mano chi deve mettere carte sotto dopo un
+ * mulligan: le terre in più vanno sotto per prime, poi le magie più care.
+ */
+export const TERRE_VOLUTE_IN_MANO = 3;
+
+/**
+ * Quando una partenza si dice **impiantata**: entro questo turno il mazzo ha
+ * lanciato meno di questo numero di magie.
+ *
+ * Si misura dall'esito e non dalla causa, ed è una scelta: una mano che non
+ * lancia niente perché le terre mancano e una che non lancia niente perché sono
+ * arrivate solo terre sono lo stesso guaio per chi gioca. Le partite chiuse
+ * entro il turno della partenza non sono impiantate — hanno già vinto.
+ */
+export const TURNO_DELLA_PARTENZA = 3;
+export const MAGIE_MINIME_ALLA_PARTENZA = 2;

@@ -12,7 +12,7 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
 La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
-`.scratch/fondamenta-e-motore/`. **I ticket dal 01 al 08 sono implementati**:
+`.scratch/fondamenta-e-motore/`. **I ticket dal 01 al 09 sono implementati**:
 l'app si apre, si installa, funziona senza rete e mostra le note legali; il pool
 delle carte esiste, costruito dai dati veri di Scryfall; ogni carta porta i suoi
 tag di sinergia; e l'app ora **serve a qualcosa** — si cercano le carte per nome
@@ -31,7 +31,11 @@ sanno fare, una carta da cui partire, e quel che non vuole giocare — e l'app
 gli dice subito, mentre lo costruisce, se con quelle carte un mazzo si fa. Se
 non si fa, o se le carte bastano appena, propone di allargarlo: una strada per
 volta, ciascuna con quante carte porterebbe dentro, e nessuna applicata finché
-non la accetta. Il prossimo è il ticket 09, la simulazione goldfish.
+non la accetta. E adesso un mazzo **si prova**: la simulazione goldfish lo fa
+giocare da solo per qualche centinaio di partite e ne ricava in quanti turni
+chiude, quante mani rimescolerebbe, quante volte parte impiantato. Il caso è
+governato da un seme che arriva da fuori: stessa richiesta, stesso risultato,
+sempre. Il prossimo è il ticket 10, il punteggio a componenti separate.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -69,8 +73,8 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 09
-   (`.scratch/fondamenta-e-motore/issues/09-simulazione-goldfish.md`),
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 10
+   (`.scratch/fondamenta-e-motore/issues/10-punteggio-a-componenti-separate.md`),
    e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
