@@ -35,7 +35,12 @@ non la accetta. E adesso un mazzo **si prova**: la simulazione goldfish lo fa
 giocare da solo per qualche centinaio di partite e ne ricava in quanti turni
 chiude, quante mani rimescolerebbe, quante volte parte impiantato. Il caso è
 governato da un seme che arriva da fuori: stessa richiesta, stesso risultato,
-sempre. Il prossimo è il ticket 10, il punteggio a componenti separate.
+sempre. E adesso l'app sa dire **quanto è forte** un mazzo — non con un numero
+solo, che non spiegherebbe niente, ma con cinque componenti tenute separate:
+velocità e affidabilità, forma della curva, salute dei colori, densità di
+sinergia, qualità delle singole carte. Ognuna porta con sé i valori grezzi che
+la giustificano, perché saranno le spiegazioni a citarli. Il prossimo è il
+ticket 11, la ricerca a scambi singoli.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -73,8 +78,8 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 10
-   (`.scratch/fondamenta-e-motore/issues/10-punteggio-a-componenti-separate.md`),
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 11
+   (`.scratch/fondamenta-e-motore/issues/11-ricerca-a-scambi-singoli.md`),
    e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
@@ -187,6 +192,27 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   un tema che ce l'avrebbe fatta sarebbe un errore dell'app. La soglia di
   *stretto* — quaranta carte distinte — invece è una taratura, sta in
   `src/tema/taratura.ts` ed è da ritarare alla sosta.
+- Il punteggio non restituisce **nessun totale**: le cinque componenti stanno
+  separate, e chi ne vuole uno solo — la ricerca del ticket 11 — chiama
+  `combina`. Non è pignoleria: sommarle nella risposta vorrebbe dire perdere
+  proprio i numeri che le spiegazioni devono citare.
+- **La forma attesa della curva non è una sola**: è quella della velocità del
+  mazzo, e la velocità la dice la simulazione, non un archetipo scritto nel
+  codice. Un mazzo che chiude al quarto turno si confronta con una curva bassa,
+  uno che chiude al decimo con una alta.
+- **La qualità di una carta non la punisce per il costo**, se non attraverso
+  l'efficienza: un 8/8 da sette mana ha qualità piena, ed è la *forma della
+  curva* a dire che un mazzo di soli 8/8 non sta in piedi. Le due componenti
+  rispondono a due domande diverse, e sovrapporle vorrebbe dire contare due
+  volte lo stesso difetto.
+- La *salute dei colori* si misura come quota di probabilità **conservata**
+  rispetto alla stessa carta senza simboli colorati: è la stessa lettura
+  dell'avviso «carta difficile» del ticket 06, e per la stessa ragione — la
+  probabilità assoluta parlerebbe del costo, non dei colori.
+- Le coppie di tag che «si attivano a vicenda» sono **quattro**, e l'elenco è
+  corto di proposito come le regole dei tag: `accelerazione-di-mana` non
+  compare perché accelera le carte care, che non sono un tag, e `spazza-via`
+  non compare perché con le pedine litiga invece di collaborare.
 
 ## Mappa dei file
 
@@ -215,6 +241,12 @@ src/mazzo/probabilita.ts la probabilità di lanciare una carta al suo turno:
 src/mazzo/costo.ts       il costo di mana letto come richiesta di colori
 src/mazzo/base-di-terre.ts `analizzaBaseDiTerre(...)`: la cucitura del ticket 06
 src/mazzo/taratura.ts    ogni numero scelto a occhio, in un posto solo
+src/caso.ts              il generatore col seme, e il mescolare che ne discende
+src/mazzo/simulazione.ts la simulazione goldfish, con le regole del gioco finto
+                         scritte per intero in testa al file
+src/punteggio/punteggio.ts `valutaMazzo(...)`: le cinque componenti tenute
+                         separate, ognuna coi suoi valori grezzi
+src/punteggio/taratura.ts tutti i pesi del punteggio, in un punto solo
 src/mazzo/salvato.ts     la forma di un mazzo salvato: la lista **e la
                          richiesta** che l'ha prodotta, con la sua verifica
 src/mazzo/scambio.ts     i due testi che escono dall'app: quello da scambiare
