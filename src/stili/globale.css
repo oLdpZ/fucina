@@ -7,6 +7,7 @@
 @import "./mazzo.css";
 @import "./salvati.css";
 @import "./vincoli.css";
+@import "./costruzione.css";
 
 *,
 *::before,

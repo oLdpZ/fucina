@@ -1,0 +1,174 @@
+/*
+ * Il tasto che costruisce il mazzo e quel che si vede mentre lo costruisce
+ * (ticket 11). In fondo alla schermata dei vincoli: prima si dichiara il tema,
+ * poi si preme.
+ *
+ * Nessun colore letterale, come nel resto dell'app: solo le variabili di
+ * `tema.css`, così la direzione visiva resta un cambio di valori.
+ */
+
+/*
+ * La schermata del tema è due blocchi impilati: i vincoli, e sotto il tasto che
+ * costruisce. Larghezza e margini li tiene questo contenitore, così i due
+ * blocchi restano allineati anche quando su schermo grande i vincoli si aprono
+ * a colonne.
+ */
+.schermata-tema {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 6);
+  width: 100%;
+  max-width: var(--larghezza-colonna);
+  margin: 0 auto;
+}
+
+@media (min-width: 48rem) {
+  .schermata-tema {
+    max-width: var(--larghezza-massima);
+  }
+}
+
+.costruzione {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.costruzione > h2 {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+  color: var(--inchiostro);
+}
+
+.comandi-costruzione {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: calc(var(--passo) * 2);
+}
+
+.costruzione .genera {
+  flex: 1 1 12rem;
+  min-height: 44px;
+  padding: calc(var(--passo) * 2) calc(var(--passo) * 4);
+  font-family: var(--carattere-titolo);
+  font-size: var(--testo-normale);
+  color: var(--fondo);
+  background: var(--accento);
+  border: 1px solid var(--accento);
+  border-radius: var(--raggio);
+  cursor: pointer;
+}
+
+.costruzione .genera:disabled {
+  color: var(--inchiostro-debole);
+  background: var(--superficie-alta);
+  border-color: var(--bordo);
+  cursor: not-allowed;
+}
+
+.costruzione .ferma {
+  min-height: 44px;
+  padding: calc(var(--passo) * 2) calc(var(--passo) * 3);
+  color: var(--inchiostro);
+  background: var(--superficie-alta);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  cursor: pointer;
+}
+
+/* Il seme sta stretto: è un numero, non una frase. */
+.costruzione .campo.seme {
+  flex: 0 0 7rem;
+}
+
+.costruzione .avanzamento {
+  margin: 0;
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+}
+
+.esito-costruzione {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 3);
+  padding-top: calc(var(--passo) * 2);
+  border-top: 1px solid var(--bordo);
+}
+
+.esito-costruzione .motivo {
+  margin: 0;
+  color: var(--inchiostro);
+}
+
+/* Il mazzo completato con carte fuori tema si vede a colpo d'occhio. */
+.esito-costruzione[data-esito="costruito-fuori-tema"] .motivo,
+.esito-costruzione[data-esito="niente-da-costruire"] .motivo {
+  color: var(--accento);
+}
+
+.costruzione .componenti {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: calc(var(--passo) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.costruzione .componenti li {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo));
+  padding: calc(var(--passo) * 2);
+  background: var(--superficie-alta);
+  border-radius: var(--raggio);
+}
+
+.costruzione .componenti span {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+.costruzione .componenti strong {
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-normale);
+  color: var(--inchiostro);
+}
+
+.lista-costruita {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0 calc(var(--passo) * 4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro);
+}
+
+.lista-costruita .copie {
+  display: inline-block;
+  min-width: 1.6em;
+  font-family: var(--carattere-dati);
+  color: var(--inchiostro-debole);
+}
+
+/*
+ * Il tasto che consegna il mazzo non è il tasto che lo costruisce: sta in una
+ * colonna, e senza questo si allargherebbe per tutta l'altezza che trova.
+ */
+.esito-costruzione .genera {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}

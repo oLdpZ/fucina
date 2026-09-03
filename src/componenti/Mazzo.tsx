@@ -23,6 +23,7 @@ import {
   TERRE_A_MANO_MINIME,
 } from "../mazzo/taratura.js";
 import type { Carta, ColoreMana, Pool } from "../dati/pool.js";
+import { escluso, type Tema } from "../tema/tema.js";
 import { CostoDiMana } from "./CostoDiMana.js";
 
 const PERCENTUALE = new Intl.NumberFormat("it-IT", {
@@ -42,6 +43,7 @@ const NOME_COLORE: Record<ColoreMana, string> = {
 
 export function Mazzo({
   pool,
+  tema,
   mazzo,
   cambiaCopie,
   terreVolute,
@@ -49,13 +51,23 @@ export function Mazzo({
   apri,
 }: {
   pool: Pool;
+  /** Il tema serve qui per una cosa sola: le sue **esclusioni**. */
+  tema: Tema;
   mazzo: readonly CopieDiCarta[];
   cambiaCopie: (carta: Carta, delta: number) => void;
   terreVolute: number | null;
   cambiaTerre: (quante: number | null) => void;
   apri: (carta: Carta) => void;
 }) {
-  const terreDelPool = useMemo(() => pool.carte.filter((carta) => carta.terra !== null), [pool]);
+  // Le esclusioni del tema valgono anche per le terre, e valgono **qui** come
+  // valgono nel motore: se l'utente ha detto «niente verde», dal verde non
+  // arriva nemmeno una foresta. Se questa schermata pescasse dal pool intero,
+  // un mazzo costruito senza certe terre se le ritroverebbe dentro appena
+  // messo in mano, e la promessa sarebbe rotta nel punto in cui si guarda.
+  const terreDelPool = useMemo(
+    () => pool.carte.filter((carta) => carta.terra !== null && !escluso(carta, tema)),
+    [pool, tema],
+  );
   const base = useMemo(
     () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute }),
     [mazzo, terreDelPool, terreVolute],

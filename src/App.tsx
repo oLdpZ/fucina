@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Catalogo } from "./componenti/Catalogo.js";
+import { Costruzione } from "./componenti/Costruzione.js";
 import { Mazzo } from "./componenti/Mazzo.js";
 import { MazziSalvati, type MazzoAperto } from "./componenti/MazziSalvati.js";
 import { NoteLegali } from "./componenti/NoteLegali.js";
@@ -14,6 +15,7 @@ import type { CopieDiCarta } from "./mazzo/base-di-terre.js";
 import { copieMassime } from "./mazzo/copie.js";
 import { DIMENSIONE_MAZZO, TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
 import type { MazzoSalvato } from "./mazzo/salvato.js";
+import { usaMotore } from "./ricerca/usa-motore.js";
 import { TEMA_VUOTO, type Tema } from "./tema/tema.js";
 import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 
@@ -70,6 +72,31 @@ export function App() {
    * che il motore riceverà quando esisterà: la richiesta parte da qui.
    */
   const [tema, setTema] = useState<Tema>(TEMA_VUOTO);
+  /**
+   * Il seme della ricerca (ticket 11). Vive qui, in vista e modificabile, e
+   * non nasce dall'orologio: è quello che rende ripetibile il mazzo che l'app
+   * costruisce. Stesso tema e stesso seme, stesso mazzo — anche fra un anno.
+   */
+  const [seme, setSeme] = useState(1);
+  /**
+   * Il motore vive qui e non nella schermata da cui lo si accende: le pagine
+   * si smontano passando da una all'altra, e una ricerca che vivesse dentro la
+   * pagina morirebbe andando a controllare una carta nel catalogo — cioè
+   * proprio la cosa che il worker esiste per permettere.
+   */
+  const motore = usaMotore();
+
+  // Un mazzo costruito per un tema che nel frattempo è stato riscritto risponde
+  // a una domanda che non gli è più stata fatta: si butta, invece di restare lì
+  // col suo tasto «mettilo in mano» a dire una piccola bugia.
+  const dimentica = motore.dimentica;
+  useEffect(() => {
+    dimentica();
+    // `dimentica` cambia a ogni render — è ricostruita dal gancio — e metterla
+    // fra le dipendenze vorrebbe dire buttare via il mazzo a ogni respiro
+    // dell'app. Quel che deve far scattare l'oblio è il tema, e nient'altro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tema]);
 
   /** Il controllo di freschezza si fa una volta per apertura, non a ogni pool. */
   const giaControllato = useRef(false);
@@ -174,6 +201,25 @@ export function App() {
     if (vaiAlMazzo) setPagina("mazzo");
   };
 
+  /**
+   * Il mazzo che il motore ha costruito torna in mano all'utente: le carte
+   * nella schermata «Mazzo», e le terre fissate a quelle che la ricerca ha
+   * scelto, così i numeri che si leggono lì sono gli stessi su cui il motore
+   * ha deciso. Da quel momento è un mazzo come gli altri: si tocca, si salva,
+   * si esporta.
+   */
+  const mettiInMano = (carte: readonly CopieDiCarta[], terre: number) => {
+    // Le terre non si trasportano una per una: la schermata del mazzo le
+    // ricalcola dalle stesse carte, dallo stesso pool e dalle stesse
+    // esclusioni del tema, e con lo stesso numero ritrova la stessa base.
+    // Portarsi dietro l'elenco vorrebbe dire avere due liste di terre che
+    // possono divergere, e prima o poi divergerebbero.
+    setCopiePerNome(new Map(carte.map((voce) => [voce.carta.nome, voce.copie])));
+    cambiaTerre(terre);
+    setAperto(null);
+    setPagina("mazzo");
+  };
+
   return (
     <div class="guscio">
       <header class="testata">
@@ -236,13 +282,23 @@ export function App() {
             cambiaCopie={cambiaCopie}
           />
         ) : pagina === "tema" ? (
-          <Vincoli
-            pool={pool}
-            tema={tema}
-            cambiaTema={setTema}
-            copiePerNome={copiePerNome}
-            cambiaCopie={cambiaCopie}
-          />
+          <div class="schermata-tema">
+            <Vincoli
+              pool={pool}
+              tema={tema}
+              cambiaTema={setTema}
+              copiePerNome={copiePerNome}
+              cambiaCopie={cambiaCopie}
+            />
+            <Costruzione
+              pool={pool}
+              tema={tema}
+              seme={seme}
+              cambiaSeme={setSeme}
+              motore={motore}
+              mettiInMano={mettiInMano}
+            />
+          </div>
         ) : pagina === "salvati" ? (
           <MazziSalvati
             pool={pool}
@@ -255,6 +311,7 @@ export function App() {
         ) : (
           <SchermataMazzo
             pool={pool}
+            tema={tema}
             mazzo={mazzo}
             copiePerNome={copiePerNome}
             cambiaCopie={cambiaCopie}
@@ -285,6 +342,7 @@ export function App() {
  */
 function SchermataMazzo({
   pool,
+  tema,
   mazzo,
   copiePerNome,
   cambiaCopie,
@@ -292,6 +350,7 @@ function SchermataMazzo({
   cambiaTerre,
 }: {
   pool: Pool;
+  tema: Tema;
   mazzo: readonly CopieDiCarta[];
   copiePerNome: ReadonlyMap<string, number>;
   cambiaCopie: (carta: Carta, delta: number) => void;
@@ -313,6 +372,7 @@ function SchermataMazzo({
     <>
       <Mazzo
         pool={pool}
+        tema={tema}
         mazzo={mazzo}
         cambiaCopie={cambiaCopie}
         terreVolute={terreVolute}

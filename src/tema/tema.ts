@@ -236,6 +236,23 @@ export function soddisfaCriterio(carta: Carta, criterio: CriterioAllargamento): 
 }
 
 /**
+ * Se una carta cade sotto le **esclusioni** del tema.
+ *
+ * È metà di `appartiene`, e sta a sé perché la ricerca (ticket 11) ha bisogno
+ * proprio di questa metà: il vincolo del tema è morbido — un mazzo può
+ * contenere carte fuori tema, e il costo si legge nella purezza — ma le
+ * esclusioni no, non si violano mai, nemmeno quando violarle alzerebbe il
+ * punteggio. Chiedere `appartiene` al loro posto direbbe di no anche alle carte
+ * semplicemente fuori tema, che invece la ricerca può prendere.
+ *
+ * Vale anche per le terre: se l'utente ha detto «niente verde», dal verde non
+ * deve arrivare nemmeno una foresta.
+ */
+export function escluso(carta: Carta, tema: Tema): boolean {
+  return soddisfa(carta, tema.esclusioni);
+}
+
+/**
  * La prima delle due domande del motore: **questa carta appartiene al tema?**
  *
  * L'ordine delle risposte è l'ordine delle regole. Prima le esclusioni, che
@@ -248,7 +265,7 @@ export function soddisfaCriterio(carta: Carta, criterio: CriterioAllargamento): 
 export function appartiene(carta: Carta, risolto: TemaRisolto): boolean {
   const { tema, seme } = risolto;
 
-  if (soddisfa(carta, tema.esclusioni)) return false;
+  if (escluso(carta, tema)) return false;
 
   const haInclusioni = !filtroVuoto(tema.inclusioni);
   // Il seme si guarda **come è stato dichiarato**, non come si è risolto: un

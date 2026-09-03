@@ -537,6 +537,21 @@ function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
   };
 }
 
+/**
+ * La qualità di una carta sola, fra zero e uno: la stessa euristica che la
+ * componente usa, chiesta per una carta invece che per un mazzo.
+ *
+ * Serve alla ricerca (ticket 11) per **ordinare le candidate** prima di
+ * cominciare: partire dalle carte migliori invece che da carte a caso è quel
+ * che rende utile una ricerca che ha un tetto di tempo addosso. Non è il
+ * punteggio del mazzo e non lo sostituisce — quello lo dà `valutaMazzo`, che
+ * guarda anche curva, colori e sinergie — ma è un ordine di partenza
+ * deterministico e già tarato in un punto solo.
+ */
+export function qualitaDiCarta(carta: Carta): number {
+  return qualitaDiUnaCarta({ carta, copie: 1 }).valore;
+}
+
 function qualita(nonTerre: readonly CopieDiCarta[]): Componente<GrezziDiQualita> {
   const perCarta = nonTerre.map(qualitaDiUnaCarta);
   const copie = perCarta.reduce((somma, riga) => somma + riga.copie, 0);

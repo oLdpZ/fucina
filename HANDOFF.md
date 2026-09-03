@@ -39,8 +39,15 @@ sempre. E adesso l'app sa dire **quanto è forte** un mazzo — non con un numer
 solo, che non spiegherebbe niente, ma con cinque componenti tenute separate:
 velocità e affidabilità, forma della curva, salute dei colori, densità di
 sinergia, qualità delle singole carte. Ognuna porta con sé i valori grezzi che
-la giustificano, perché saranno le spiegazioni a citarli. Il prossimo è il
-ticket 11, la ricerca a scambi singoli.
+la giustificano, perché saranno le spiegazioni a citarli. E adesso **l'app
+costruisce**: si dichiara il tema, si preme un tasto, e in qualche secondo esce
+un mazzo legale da sessanta carte con la sua base di terre. La ricerca parte da
+un mazzo ragionevole, prova a cambiare una carta alla volta, tiene lo scambio se
+il punteggio sale, e si rifà da quattro partenze diverse tenendo la migliore.
+Gira in un web worker, dice a che punto è, e ha un tetto di tempo: superato,
+torna il meglio che ha trovato dichiarando di essersi fermata prima. Il prossimo
+è il ticket 12, la frontiera: gli stessi scambi ripetuti con pesi diversi dati
+al tema, per allineare quattro o cinque mazzi da purissimo a più forte.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -78,8 +85,8 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 11
-   (`.scratch/fondamenta-e-motore/issues/11-ricerca-a-scambi-singoli.md`),
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 12
+   (`.scratch/fondamenta-e-motore/issues/12-la-frontiera.md`),
    e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
@@ -209,6 +216,23 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   rispetto alla stessa carta senza simboli colorati: è la stessa lettura
   dell'avviso «carta difficile» del ticket 06, e per la stessa ragione — la
   probabilità assoluta parlerebbe del costo, non dei colori.
+- La ricerca a scambi singoli sul pool vero, tema Goblin, con le manopole di
+  `src/ricerca/taratura.ts` (quattro partenze da quattrocento valutazioni):
+  **milleseicento scambi provati, un centinaio tenuti, sei secondi** su un
+  computer da tavolo. Ne esce un mazzo da sessanta carte con purezza 1. Il tetto
+  che si tocca per primo è quello delle **valutazioni**, non quello del tempo, ed
+  è apposta: il tetto di tempo può solo fermare prima, e il determinismo regge
+  solo finché a fermare è il conto delle valutazioni.
+- **L'orologio della ricerca arriva da fuori**, come il seme. Non è pignoleria:
+  un orologio letto di nascosto renderebbe il mazzo dipendente da quanto è
+  veloce il telefono, e il vincolo di determinismo di `CLAUDE.md` sarebbe carta
+  straccia. Il worker passa quello vero, i test ne passano uno fermo.
+- Tutte le valutazioni di una ricerca usano **lo stesso seme**: due mazzi vanno
+  confrontati sulle stesse partite, se no quel che si misura è la differenza fra
+  due mescolate e non quella fra due mazzi.
+- Durante la ricerca si simulano **sessanta** partite per mazzo provato, non le
+  cinquecento della schermata: lì serve solo dire quale di due mazzi è meglio. Il
+  vincitore si rivaluta per intero, ed è quello il numero che l'utente legge.
 - Le coppie di tag che «si attivano a vicenda» sono **quattro**, e l'elenco è
   corto di proposito come le regole dei tag: `accelerazione-di-mana` non
   compare perché accelera le carte care, che non sono un tag, e `spazza-via`
@@ -247,6 +271,17 @@ src/mazzo/simulazione.ts la simulazione goldfish, con le regole del gioco finto
 src/punteggio/punteggio.ts `valutaMazzo(...)`: le cinque componenti tenute
                          separate, ognuna coi suoi valori grezzi
 src/punteggio/taratura.ts tutti i pesi del punteggio, in un punto solo
+src/ricerca/costruisci.ts `costruisciMazzo(richiesta, pool)`: **la cucitura
+                         principale** — la ricerca a scambi singoli, pura, col
+                         caso e l'orologio che arrivano tutti e due da fuori
+src/ricerca/taratura.ts  le manopole della ricerca, sovrascrivibili da fuori
+src/ricerca/protocollo.ts le poche frasi fra interfaccia e worker: solo tipi
+src/ricerca/motore.worker.ts il motore in un thread suo: nessuna decisione,
+                         solo il passaggio dei messaggi e l'orologio vero
+src/ricerca/usa-motore.ts il worker visto dall'interfaccia. Vive nell'App e non
+                         nella schermata, se no cambiare pagina ucciderebbe la
+                         ricerca — cioè la cosa che il worker esiste per
+                         permettere
 src/mazzo/salvato.ts     la forma di un mazzo salvato: la lista **e la
                          richiesta** che l'ha prodotta, con la sua verifica
 src/mazzo/scambio.ts     i due testi che escono dall'app: quello da scambiare
@@ -254,11 +289,12 @@ src/mazzo/scambio.ts     i due testi che escono dall'app: quello da scambiare
 src/dati/mazzi-salvati.ts i mazzi salvati in IndexedDB, e mai un'eccezione
 src/componenti/          le schermate: Catalogo, PannelloFiltri, GrigliaCarte,
                          SchedaCarta, CostoDiMana, NoteLegali, Mazzo,
-                         PassiDelleCopie, MazziSalvati, Vincoli
+                         PassiDelleCopie, MazziSalvati, Vincoli, Costruzione
 src/stili/catalogo.css   lo stile del catalogo, tutto a variabili del tema
 src/stili/mazzo.css      lo stile della schermata del mazzo, stesse variabili
 src/stili/salvati.css    lo stile della schermata dei mazzi salvati
 src/stili/vincoli.css    lo stile della schermata del tema, stesse variabili
+src/stili/costruzione.css lo stile del tasto che costruisce e del suo esito
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano
