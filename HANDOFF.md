@@ -468,6 +468,26 @@ telefono vero resta da misurare**, ed è la casella aperta del ticket 14.
   una volta arrotondato. La frase del passo sceglie perciò il numero che dice
   qualcosa — turno medio, poi quota di partite chiuse, poi nessuno dei due — e
   non scrive mai «al turno 5,7 invece che al turno 5,7».
+- **La misura da aggro non è più un sospetto, è misurata** (2026-09-03, sei temi
+  sul pool vero, seme 7). Un mazzo **senza creature** prende **metà** del voto
+  di velocità di uno di creature — 0,42 contro 0,83 — e non chiude **mai**, non
+  «tardi»: mai, in 500 partite su 500. La potenza cala di **due decimi**. E la
+  sua frontiera è **piatta**: tre millesimi di potenza comprati cedendo il 18%
+  del tema, cioè il tasso di cambio che non dice niente proprio dove servirebbe.
+- **Le carte a due facce mascheravano il difetto.** Un tema «istantanei e
+  stregonerie» senza escludere le creature dà un mazzo con potenza 0,81 che
+  chiude al turno 7,5 e sembra sano: è pieno di carte a due facce, che nei dati
+  hanno **entrambi i tipi** e la forza della faccia creatura. Purezza 1,0000 —
+  l'app dichiara «100% del tema» per quello che in partita è un mazzo di
+  creature. Dai numeri non si vede: si vede solo leggendo la lista.
+- **La densità di sinergia vale 1,000 su nove mazzi da sei temi diversi.** Un
+  numero che non cambia mai non porta informazione: sono quindici centesimi del
+  punteggio che non distinguono niente, e una delle cinque frasi che le
+  spiegazioni citano non dice nulla di quel mazzo in particolare.
+- **Dentro un `FiltroTema` le categorie si sommano in *and*.** Escludere
+  «Creature» e «produce-pedine» insieme esclude le sole creature che fanno
+  pedine, non le creature. Per le esclusioni è probabilmente la semantica
+  sbagliata: chi le scrive intende un *or*.
 - **La simulazione non legge il testo delle carte.** `leggi()` in
   `mazzo/simulazione.ts` ricava di ogni carta quattro cose sole: terra o no,
   costo di mana, forza, valore di mana. Nessun tag, nessuna riga di oracolo. È
@@ -558,6 +578,12 @@ strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano
 strumenti/correzioni-tag.txt le correzioni a mano: file dell'uomo, mai riscritto
 strumenti/aggiorna-pool.ts il comando `npm run dati`: scarica, filtra, racconta
+strumenti/apparecchia-la-sosta.ts  fa girare il motore sui dati veri per sei
+                         temi e ne scrive un documento da leggere. Apparecchia
+                         il ticket 14, non lo risolve: i giudizi vogliono una
+                         persona. Da rifare dopo ogni ritaratura
+strumenti/risolvi-ts.mjs il gancio che fa risolvere a Node gli import di `src/`,
+                         che finiscono in `.js`. Solo per gli strumenti
 src/stili/tema.css       colori e caratteri: le quattro direzioni, in un file
 src/stili/direzione.ts   quale direzione è attiva
 src/sw.js                service worker (elenco risorse scritto dalla build)
