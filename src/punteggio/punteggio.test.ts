@@ -96,7 +96,7 @@ const AGGRO: CopieDiCarta[] = [
   },
   {
     carta: magia({
-      nome: "Bruto di Fucina",
+      nome: "Bruto di Ferriera",
       costoDiMana: "{1}{R}",
       valoreDiMana: 2,
       identitaDiColore: ["R"],

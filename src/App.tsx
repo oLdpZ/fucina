@@ -325,9 +325,15 @@ export function App() {
         {pool !== null ? (
           <p class="data-dati">
             Carte e prezzi del {dataInItaliano(pool.generatoIl)}.
+            {/*
+              L'aspetto è ancora da scegliere anche adesso che il nome c'è, e
+              l'avviso lo dice per quel che è invece di sparire con lui: un'app
+              che smettesse di dichiarare i propri lavori in corso appena ne
+              chiude uno direbbe il falso sugli altri.
+            */}
             {NOME_APP_DA_DECIDERE
               ? " Il nome dell’app e il suo aspetto non sono ancora stati scelti."
-              : ""}
+              : " L’aspetto dell’app non è ancora stato scelto."}
           </p>
         ) : null}
         <NoteLegali />
