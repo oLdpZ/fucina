@@ -1,0 +1,166 @@
+/*
+ * I mazzi salvati: salvataggio, elenco, esportazione, importazione (ticket 07).
+ *
+ * Nessun colore letterale — solo le variabili di `tema.css`, come nel resto
+ * dell'app. Prima il telefono: una colonna sola, e ogni cosa da toccare larga
+ * almeno 44px, che è il polpastrello di chi guarda in negozio.
+ */
+
+.salvati {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 7);
+}
+
+.salvati h2 {
+  margin: 0 0 calc(var(--passo) * 2);
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+}
+
+.salvati p {
+  margin: calc(var(--passo) * 2) 0 0;
+  font-size: var(--testo-normale);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.salvati .nota {
+  color: var(--inchiostro-tenue);
+  font-size: var(--testo-piccolo);
+  max-width: var(--larghezza-colonna);
+}
+
+.salvati textarea,
+.salvati input[type="text"] {
+  display: block;
+  width: 100%;
+  max-width: var(--larghezza-colonna);
+  margin-top: calc(var(--passo) * 2);
+  padding: calc(var(--passo) * 2.5) calc(var(--passo) * 3);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  color: var(--inchiostro);
+  font: inherit;
+  font-size: var(--testo-piccolo);
+}
+
+.salvati textarea {
+  font-family: var(--carattere-dati);
+  resize: vertical;
+}
+
+.salvati button {
+  min-height: 44px;
+  margin-top: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 2.5) calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  font: inherit;
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro);
+  cursor: pointer;
+}
+
+.salvati button.principale {
+  background: var(--superficie-alta);
+  border-color: var(--accento);
+  font-weight: 600;
+}
+
+.salvati button[disabled] {
+  color: var(--inchiostro-debole);
+  cursor: default;
+}
+
+.campo-nome span {
+  display: block;
+  color: var(--inchiostro-tenue);
+  font-size: var(--testo-piccolo);
+}
+
+/* --- l'elenco dei mazzi salvati --- */
+
+.elenco-salvati ul {
+  margin: calc(var(--passo) * 2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+}
+
+.elenco-salvati li {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 2);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+/* Il mazzo che si sta guardando si riconosce senza doverlo leggere. */
+.elenco-salvati li[data-aperto="true"] {
+  border-color: var(--accento);
+  background: var(--superficie-alta);
+}
+
+.elenco-salvati .nome-salvato {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--passo));
+  margin: 0;
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.elenco-salvati .nome-salvato .nome {
+  font-size: var(--testo-normale);
+  font-weight: 600;
+}
+
+.elenco-salvati .nome-salvato .dettagli {
+  color: var(--inchiostro-tenue);
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+}
+
+.elenco-salvati .cancella {
+  flex: 0 0 auto;
+  margin: calc(var(--passo) * 2);
+  color: var(--inchiostro-tenue);
+}
+
+/* --- i due testi da portare via --- */
+
+.testo-da-portare .bottoni {
+  display: flex;
+  gap: calc(var(--passo) * 2);
+}
+
+/* --- quel che è andato bene, e quel che non è andato --- */
+
+.salvati .avviso-guasto,
+.salvati .avviso-fatto {
+  margin: 0;
+  padding: calc(var(--passo) * 3);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  background: var(--superficie);
+  font-size: var(--testo-piccolo);
+  max-width: var(--larghezza-colonna);
+}
+
+.salvati .avviso-guasto {
+  border-color: var(--accento);
+  color: var(--accento);
+}
+
+.salvati .avviso-fatto {
+  color: var(--inchiostro-tenue);
+}

@@ -12,7 +12,7 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
 La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
-`.scratch/fondamenta-e-motore/`. **I ticket dal 01 al 06 sono implementati**:
+`.scratch/fondamenta-e-motore/`. **I ticket dal 01 al 07 sono implementati**:
 l'app si apre, si installa, funziona senza rete e mostra le note legali; il pool
 delle carte esiste, costruito dai dati veri di Scryfall; ogni carta porta i suoi
 tag di sinergia; e l'app ora **serve a qualcosa** — si cercano le carte per nome
@@ -22,7 +22,11 @@ aggiornano da soli: l'app parte sempre da quelli che ha, e in sottofondo chiede
 al server se ne esistono di più freschi. E adesso l'app **calcola**: si mette
 insieme un gruppo di carte dal catalogo, e la schermata «Mazzo» dice quante
 terre servono, quali, e con che probabilità reale ogni carta parte al suo turno.
-Il prossimo è il ticket 07, salvataggio ed esportazione.
+E il mazzo **non si perde più**: si salva sul dispositivo con un nome, si
+riapre, si cancella; si esporta in un testo che porta con sé anche la richiesta
+che l'ha prodotto, e chi lo importa ritrova il mazzo com'era; e se ne esce la
+lista da consegnare all'arbitro. Il prossimo è il ticket 08, il tema come
+vincolo: comincia la tappa del motore.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -60,8 +64,8 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 07
-   (`.scratch/fondamenta-e-motore/issues/07-salvataggio-esportazione-importazione.md`),
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 08
+   (`.scratch/fondamenta-e-motore/issues/08-il-tema-come-vincolo.md`),
    e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
@@ -143,6 +147,14 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
 - Il conto delle probabilità sul caso peggiore provato (mazzo a tre colori,
   quattordici costi diversi, pool vero) costa **circa 30 ms**: l'interfaccia lo
   rifà a ogni tocco sul numero di terre senza che si senta.
+- Il **formato di scambio dei mazzi** porta un numero di formato in
+  intestazione (`formato 1`) e dichiara quante carte contiene, con una riga
+  finale di chiusura: è così che un testo tagliato da un programma di posta si
+  riconosce come tagliato invece di importare mezzo mazzo in silenzio. Quando la
+  richiesta crescerà col tema e il seme del motore, il numero di formato sale, e
+  un'app vecchia sa dire «viene da una versione più recente».
+- Il deposito IndexedDB è alla **versione 2**: due scaffali, il pool e i mazzi
+  salvati. Una versione nuova aggiunge scaffali e non tocca quel che c'era.
 - **In Standard ci sono 95 Goblin giocabili**, non quattordici come diceva il
   mockup iniziale. Il pool vero lo conferma. Conseguenza: l'esempio della schermata "tema troppo stretto"
   va ritarato su un vincolo davvero stretto, e quale sia lo si scoprirà solo
@@ -169,11 +181,17 @@ src/mazzo/probabilita.ts la probabilità di lanciare una carta al suo turno:
 src/mazzo/costo.ts       il costo di mana letto come richiesta di colori
 src/mazzo/base-di-terre.ts `analizzaBaseDiTerre(...)`: la cucitura del ticket 06
 src/mazzo/taratura.ts    ogni numero scelto a occhio, in un posto solo
+src/mazzo/salvato.ts     la forma di un mazzo salvato: la lista **e la
+                         richiesta** che l'ha prodotta, con la sua verifica
+src/mazzo/scambio.ts     i due testi che escono dall'app: quello da scambiare
+                         (che si rilegge) e la lista da torneo
+src/dati/mazzi-salvati.ts i mazzi salvati in IndexedDB, e mai un'eccezione
 src/componenti/          le schermate: Catalogo, PannelloFiltri, GrigliaCarte,
                          SchedaCarta, CostoDiMana, NoteLegali, Mazzo,
-                         PassiDelleCopie
+                         PassiDelleCopie, MazziSalvati
 src/stili/catalogo.css   lo stile del catalogo, tutto a variabili del tema
 src/stili/mazzo.css      lo stile della schermata del mazzo, stesse variabili
+src/stili/salvati.css    lo stile della schermata dei mazzi salvati
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano

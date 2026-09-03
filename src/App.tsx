@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { Catalogo } from "./componenti/Catalogo.js";
 import { Mazzo } from "./componenti/Mazzo.js";
+import { MazziSalvati, type MazzoAperto } from "./componenti/MazziSalvati.js";
 import { NoteLegali } from "./componenti/NoteLegali.js";
 import { SchedaCarta } from "./componenti/SchedaCarta.js";
 import { aggiornaInSottofondo, poolDaAprire } from "./dati/aggiornamento.js";
@@ -11,12 +12,14 @@ import { FILTRI_VUOTI, type Filtri } from "./catalogo/filtri.js";
 import type { CopieDiCarta } from "./mazzo/base-di-terre.js";
 import { copieMassime } from "./mazzo/copie.js";
 import { DIMENSIONE_MAZZO, TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
+import type { MazzoSalvato } from "./mazzo/salvato.js";
 import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 
 /**
- * Le due schermate dell'app: il catalogo delle carte legali in Standard
- * cartaceo (ticket 04) e il mazzo che se ne mette insieme, con la base di terre
- * e le probabilità reali (ticket 06).
+ * Le tre schermate dell'app: il catalogo delle carte legali in Standard
+ * cartaceo (ticket 04), il mazzo che se ne mette insieme, con la base di terre
+ * e le probabilità reali (ticket 06), e i mazzi salvati sul dispositivo, che si
+ * riaprono, si scambiano per iscritto e si esportano per l'arbitro (ticket 07).
  *
  * Il pool sta nel pacchetto e il service worker lo tiene in cache, quindi
  * l'app si apre anche senza rete (storia 15); solo le immagini arrivano da
@@ -34,15 +37,21 @@ import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 export function App() {
   const [pool, setPool] = useState<Pool | null>(null);
   const [guasto, setGuasto] = useState<string | null>(null);
-  const [pagina, setPagina] = useState<"catalogo" | "mazzo">("catalogo");
+  const [pagina, setPagina] = useState<"catalogo" | "mazzo" | "salvati">("catalogo");
 
   /**
    * Il mazzo si tiene **per nome di carta**, non per oggetto: i dati si
    * aggiornano da soli in sottofondo (ticket 05), e un mazzo legato agli
    * oggetti del vecchio pool si svuoterebbe da sé sotto le mani dell'utente.
-   * Il mazzo non sopravvive alla chiusura dell'app: salvarlo è il ticket 07.
+   * Chiudendo l'app il mazzo in mano si perde: quello che resta è il mazzo
+   * **salvato** con un nome, nella terza schermata (ticket 07).
    */
   const [copiePerNome, setCopiePerNome] = useState<ReadonlyMap<string, number>>(new Map());
+  /**
+   * Il mazzo salvato che si sta guardando, se se ne sta guardando uno: serve a
+   * risalvarlo al suo posto invece di farne ogni volta una copia nuova.
+   */
+  const [aperto, setAperto] = useState<MazzoAperto>(null);
   /** Le terre volute a mano; `null` finché decide la curva del mazzo. */
   const [terreVolute, setTerreVolute] = useState<number | null>(null);
   /**
@@ -128,6 +137,33 @@ export function App() {
     );
   };
 
+  /**
+   * Aprire un mazzo salvato è rimetterselo in mano: le carte tornano quelle,
+   * le terre tornano quelle che l'utente aveva chiesto, e da lì si riprende a
+   * lavorarci.
+   *
+   * Quel che rientra passa dagli **stessi limiti** di quel che si aggiunge a
+   * mano dal catalogo: un mazzo può arrivare da un file scritto a mano, e non
+   * deve poter mettere nell'app uno stato che l'app da sola non produrrebbe
+   * mai. Le carte che nel frattempo sono uscite dallo Standard non rientrano
+   * affatto — una rotazione, un bando — ed è quel che deve succedere: non sono
+   * più giocabili.
+   */
+  const apriMazzo = (salvato: MazzoSalvato, vaiAlMazzo: boolean) => {
+    const perNome = new Map(pool?.carte.map((carta) => [carta.nome, carta]) ?? []);
+    const copie = new Map<string, number>();
+    for (const voce of salvato.carte) {
+      const carta = perNome.get(voce.nome);
+      if (carta === undefined) continue;
+      const tetto = Math.min(copieMassime(carta), DIMENSIONE_MAZZO);
+      copie.set(voce.nome, Math.max(1, Math.min(tetto, voce.copie)));
+    }
+    setCopiePerNome(copie);
+    cambiaTerre(salvato.richiesta.terreVolute);
+    setAperto({ id: salvato.id, nome: salvato.nome, salvatoIl: salvato.salvatoIl });
+    if (vaiAlMazzo) setPagina("mazzo");
+  };
+
   return (
     <div class="guscio">
       <header class="testata">
@@ -151,6 +187,14 @@ export function App() {
             >
               Mazzo{carteNelMazzo > 0 ? ` · ${carteNelMazzo}` : ""}
             </button>
+            <button
+              type="button"
+              class="scheda-nav"
+              aria-current={pagina === "salvati" ? "page" : undefined}
+              onClick={() => setPagina("salvati")}
+            >
+              Salvati
+            </button>
           </nav>
         ) : null}
       </header>
@@ -172,6 +216,15 @@ export function App() {
             cambiaFiltri={setFiltri}
             copiePerNome={copiePerNome}
             cambiaCopie={cambiaCopie}
+          />
+        ) : pagina === "salvati" ? (
+          <MazziSalvati
+            pool={pool}
+            mazzo={mazzo}
+            terreVolute={terreVolute}
+            aperto={aperto}
+            apriMazzo={apriMazzo}
+            chiudiMazzo={() => setAperto(null)}
           />
         ) : (
           <SchermataMazzo

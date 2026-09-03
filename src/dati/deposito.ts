@@ -1,10 +1,10 @@
 /**
  * Il deposito dei dati sul dispositivo: dove finisce il pool scaricato in
- * sottofondo, perché la prossima apertura parta già fresca.
+ * sottofondo, perché la prossima apertura parta già fresca, e dove stanno i
+ * mazzi che l'utente ha salvato (ticket 07).
  *
  * IndexedDB e non `localStorage`: il pool pesa qualche megabyte, cioè più di
  * quanto `localStorage` conceda, e ci si scrive senza fermare l'interfaccia.
- * È lo stesso deposito che la tappa dei mazzi salvati userà (spec, «Salvataggio»).
  *
  * **Nessuna di queste funzioni può fallire rumorosamente.** Modo privato,
  * spazio esaurito, permessi negati, database aperto da un'altra scheda: sono
@@ -16,18 +16,28 @@ import { interpretaPool } from "./carica-pool.js";
 import type { Pool } from "./pool.js";
 
 const DEPOSITO = "mazzi-fuori-meta";
+/** Lo scaffale dei dati: una voce sola, il pool più fresco che si è preso. */
 const SCAFFALE = "dati";
+/**
+ * Lo scaffale dei mazzi salvati, uno per mazzo, con la chiave dentro la voce.
+ *
+ * È arrivato con la versione 2 del deposito: chi aveva già un pool conservato
+ * lo ritrova dov'era, perché una versione nuova aggiunge scaffali e non li
+ * riscrive.
+ */
+export const SCAFFALE_MAZZI = "mazzi";
+const VERSIONE = 2;
 /** Una voce sola: il pool più fresco che si è riusciti a scaricare. */
 const CHIAVE = "pool";
 
-/** Apre il deposito, creando lo scaffale la prima volta. `null` se non si può. */
+/** Apre il deposito, creando gli scaffali che mancano. `null` se non si può. */
 function apri(): Promise<IDBDatabase | null> {
   return new Promise((risolvi) => {
     if (typeof indexedDB === "undefined") return risolvi(null);
 
     let richiesta: IDBOpenDBRequest;
     try {
-      richiesta = indexedDB.open(DEPOSITO, 1);
+      richiesta = indexedDB.open(DEPOSITO, VERSIONE);
     } catch {
       // Firefox in navigazione privata lancia qui, invece di rispondere.
       return risolvi(null);
@@ -36,6 +46,9 @@ function apri(): Promise<IDBDatabase | null> {
     richiesta.onupgradeneeded = () => {
       const deposito = richiesta.result;
       if (!deposito.objectStoreNames.contains(SCAFFALE)) deposito.createObjectStore(SCAFFALE);
+      if (!deposito.objectStoreNames.contains(SCAFFALE_MAZZI)) {
+        deposito.createObjectStore(SCAFFALE_MAZZI, { keyPath: "id" });
+      }
     };
     // Chi ha già rinunciato non torna indietro, ma il deposito che arriva dopo
     // va chiuso lo stesso: una connessione lasciata aperta e dimenticata
@@ -57,7 +70,8 @@ function apri(): Promise<IDBDatabase | null> {
 }
 
 /** Una transazione sola, chiusa da sola, con l'esito promesso. */
-function transazione<T>(
+export function transazione<T>(
+  scaffale: string,
   modo: IDBTransactionMode,
   lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
 ): Promise<T | null> {
@@ -68,8 +82,8 @@ function transazione<T>(
 
         let esito: T | null = null;
         try {
-          const trans = deposito.transaction(SCAFFALE, modo);
-          const richiesta = lavoro(trans.objectStore(SCAFFALE));
+          const trans = deposito.transaction(scaffale, modo);
+          const richiesta = lavoro(trans.objectStore(scaffale));
           richiesta.onsuccess = () => {
             esito = richiesta.result ?? null;
           };
@@ -104,7 +118,9 @@ function transazione<T>(
  * svuoterebbe il catalogo in silenzio.
  */
 export async function leggiPoolConservato(): Promise<Pool | null> {
-  const letto = await transazione<unknown>("readonly", (scaffale) => scaffale.get(CHIAVE));
+  const letto = await transazione<unknown>(SCAFFALE, "readonly", (scaffale) =>
+    scaffale.get(CHIAVE),
+  );
   if (letto === null || letto === undefined) return null;
   try {
     return interpretaPool(letto);
@@ -116,11 +132,13 @@ export async function leggiPoolConservato(): Promise<Pool | null> {
 
 /** Tiene da parte il pool per la prossima apertura. `false` se non c'è spazio. */
 export async function conservaPool(pool: Pool): Promise<boolean> {
-  const esito = await transazione("readwrite", (scaffale) => scaffale.put(pool, CHIAVE));
+  const esito = await transazione(SCAFFALE, "readwrite", (scaffale) =>
+    scaffale.put(pool, CHIAVE),
+  );
   return esito !== null;
 }
 
 /** Libera lo spazio quando la copia conservata non serve più. */
 export async function dimenticaPool(): Promise<void> {
-  await transazione("readwrite", (scaffale) => scaffale.delete(CHIAVE));
+  await transazione(SCAFFALE, "readwrite", (scaffale) => scaffale.delete(CHIAVE));
 }
