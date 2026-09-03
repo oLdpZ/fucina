@@ -18,29 +18,55 @@ import { dataInItaliano } from "../dati/carica-pool.js";
 import type { Carta, Faccia } from "../dati/pool.js";
 import { tipoPrincipale } from "../catalogo/vocabolario.js";
 import { CostoDiMana } from "./CostoDiMana.js";
+import { PassiDelleCopie } from "./PassiDelleCopie.js";
 
 /** I prezzi hanno la virgola e il simbolo, come sullo scontrino del negozio. */
 const EURO = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 
-export function SchedaCarta({ carta, chiudi }: { carta: Carta; chiudi: () => void }) {
+export function SchedaCarta({
+  carta,
+  chiudi,
+  copie,
+  cambiaCopie,
+}: {
+  carta: Carta;
+  chiudi: () => void;
+  /** Quante copie ne stanno nel mazzo; assenti quando la scheda è di sola lettura. */
+  copie?: number;
+  cambiaCopie?: (carta: Carta, delta: number) => void;
+}) {
   const [immagineRotta, setImmagineRotta] = useState(false);
   const scheda = useRef<HTMLDivElement | null>(null);
 
+  const dentro = () => [
+    ...(scheda.current?.querySelectorAll<HTMLElement>("button, a[href], img[tabindex]") ?? []),
+  ];
+
   /**
-   * La tastiera entra nella scheda, ci resta finché è aperta, e torna dove era
-   * quando si chiude.
+   * La tastiera entra nella scheda quando si apre, e torna dove era quando si
+   * chiude.
    *
    * Senza questo, chi apre una carta col tasto invio resta col fuoco sulla
    * cella dietro il velo: tabulando gira per la griglia e per i filtri che non
-   * vede più, e la ✕ arriva per ultima. Il tasto di fuga chiude comunque — è
-   * il gesto che tutti provano per primo — ma non basta da solo.
+   * vede più, e la ✕ arriva per ultima.
+   *
+   * Sta da solo, senza dipendenze, e non è un dettaglio: la scheda contiene i
+   * bottoni delle copie, e ogni copia aggiunta cambia lo stato dell'app. Se
+   * questo effetto ripartisse a ogni cambiamento, il fuoco tornerebbe sulla ✕
+   * a ogni «+» — e chi aggiunge copie con la tastiera, premendo invio la
+   * seconda volta, si chiuderebbe la carta in faccia.
    */
   useEffect(() => {
     const primaEra = document.activeElement as HTMLElement | null;
-    const dentro = () =>
-      [...(scheda.current?.querySelectorAll<HTMLElement>("button, a[href], img[tabindex]") ?? [])];
     dentro()[0]?.focus();
+    return () => primaEra?.focus();
+  }, []);
 
+  /**
+   * Il giro della tastiera dentro la scheda, e il tasto di fuga — che è il
+   * gesto che tutti provano per primo, ma da solo non basterebbe.
+   */
+  useEffect(() => {
     const allaTastiera = (evento: KeyboardEvent) => {
       if (evento.key === "Escape") {
         chiudi();
@@ -61,10 +87,7 @@ export function SchedaCarta({ carta, chiudi }: { carta: Carta; chiudi: () => voi
     };
 
     document.addEventListener("keydown", allaTastiera);
-    return () => {
-      document.removeEventListener("keydown", allaTastiera);
-      primaEra?.focus();
-    };
+    return () => document.removeEventListener("keydown", allaTastiera);
   }, [chiudi]);
 
   const indirizzo = carta.immagine?.normale;
@@ -128,6 +151,10 @@ export function SchedaCarta({ carta, chiudi }: { carta: Carta; chiudi: () => voi
                   <li key={tag}>{tag.replace(/-/g, " ")}</li>
                 ))}
               </ul>
+            ) : null}
+
+            {cambiaCopie !== undefined ? (
+              <PassiDelleCopie carta={carta} copie={copie ?? 0} cambiaCopie={cambiaCopie} grande />
             ) : null}
 
             <p class="prezzo">

@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { Carta } from "../dati/pool.js";
 import { tipoPrincipale } from "../catalogo/vocabolario.js";
 import { CostoDiMana } from "./CostoDiMana.js";
+import { PassiDelleCopie } from "./PassiDelleCopie.js";
 
 /** Quante carte per volta. Un blocco riempie più di uno schermo di telefono. */
 const BLOCCO = 60;
@@ -24,9 +25,13 @@ const BLOCCO = 60;
 export function GrigliaCarte({
   carte,
   apri,
+  copiePerNome,
+  cambiaCopie,
 }: {
   carte: readonly Carta[];
   apri: (carta: Carta) => void;
+  copiePerNome: ReadonlyMap<string, number>;
+  cambiaCopie: (carta: Carta, delta: number) => void;
 }) {
   const [quante, setQuante] = useState(BLOCCO);
   const sentinella = useRef<HTMLDivElement | null>(null);
@@ -75,6 +80,11 @@ export function GrigliaCarte({
         {carte.slice(0, quante).map((carta) => (
           <li key={carta.id}>
             <CartaInGriglia carta={carta} apri={apri} />
+            <PassiDelleCopie
+              carta={carta}
+              copie={copiePerNome.get(carta.nome) ?? 0}
+              cambiaCopie={cambiaCopie}
+            />
           </li>
         ))}
       </ul>

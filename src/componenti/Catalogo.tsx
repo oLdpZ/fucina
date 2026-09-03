@@ -22,8 +22,20 @@ import { SchedaCarta } from "./SchedaCarta.js";
 
 const NUMERI = new Intl.NumberFormat("it-IT");
 
-export function Catalogo({ pool }: { pool: Pool }) {
-  const [filtri, setFiltri] = useState<Filtri>(FILTRI_VUOTI);
+export function Catalogo({
+  pool,
+  filtri,
+  cambiaFiltri,
+  copiePerNome,
+  cambiaCopie,
+}: {
+  pool: Pool;
+  /** I filtri stanno fuori: passando al mazzo e tornando, non si perdono. */
+  filtri: Filtri;
+  cambiaFiltri: (filtri: Filtri) => void;
+  copiePerNome: ReadonlyMap<string, number>;
+  cambiaCopie: (carta: Carta, delta: number) => void;
+}) {
   const [filtriAperti, setFiltriAperti] = useState(false);
   const [aperta, setAperta] = useState<Carta | null>(null);
 
@@ -67,7 +79,7 @@ export function Catalogo({ pool }: { pool: Pool }) {
           <h2 class="conteggio-filtri">Filtri</h2>
           <div class="azioni-filtri">
             {attivi > 0 ? (
-              <button type="button" class="azzera" onClick={() => setFiltri(FILTRI_VUOTI)}>
+              <button type="button" class="azzera" onClick={() => cambiaFiltri(FILTRI_VUOTI)}>
                 Azzera ({attivi})
               </button>
             ) : null}
@@ -84,7 +96,7 @@ export function Catalogo({ pool }: { pool: Pool }) {
 
         <PannelloFiltri
           filtri={filtri}
-          cambia={setFiltri}
+          cambia={cambiaFiltri}
           tipi={tipi}
           sottotipi={sottotipi}
         />
@@ -113,7 +125,7 @@ export function Catalogo({ pool }: { pool: Pool }) {
               // dice invece la cosa che non si immagina: si può sbagliare.
               placeholder="Scrivi il nome, anche sbagliato"
               value={filtri.nome}
-              onInput={(evento) => setFiltri({ ...filtri, nome: evento.currentTarget.value })}
+              onInput={(evento) => cambiaFiltri({ ...filtri, nome: evento.currentTarget.value })}
             />
           </label>
           <p class="conteggio" aria-live="polite">
@@ -123,7 +135,12 @@ export function Catalogo({ pool }: { pool: Pool }) {
           </p>
         </div>
 
-        <GrigliaCarte carte={risultati} apri={setAperta} />
+        <GrigliaCarte
+          carte={risultati}
+          apri={setAperta}
+          copiePerNome={copiePerNome}
+          cambiaCopie={cambiaCopie}
+        />
       </div>
 
       {filtriAperti ? (
@@ -140,7 +157,14 @@ export function Catalogo({ pool }: { pool: Pool }) {
         </button>
       </div>
 
-      {aperta ? <SchedaCarta carta={aperta} chiudi={() => setAperta(null)} /> : null}
+      {aperta ? (
+        <SchedaCarta
+          carta={aperta}
+          chiudi={() => setAperta(null)}
+          copie={copiePerNome.get(aperta.nome) ?? 0}
+          cambiaCopie={cambiaCopie}
+        />
+      ) : null}
     </div>
   );
 }

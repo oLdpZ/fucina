@@ -9,7 +9,7 @@
  * Vive fuori dai file `.test.ts` perché lo condividono più test.
  */
 
-import type { Carta, Colore, Tag } from "../dati/pool.js";
+import type { Carta, Colore, ColoreMana, Tag } from "../dati/pool.js";
 
 type Abbozzo = {
   nome: string;
@@ -141,4 +141,60 @@ export const POOL_FINTO: readonly Carta[] = [
     tipi: ["Enchantment"],
     testo: "Creatures you control get +0/+1.",
   }),
+];
+
+/**
+ * Le terre finte: le sei base più qualche terra a due colori scelta apposta per
+ * i casi che contano — una che entra dritta, una che entra girata sempre, una
+ * che entra girata solo a volte, e una terra incolore che non fa nessun colore
+ * del mazzo.
+ *
+ * I nomi delle terre base sono quelli veri perché sono gli unici nomi di carta
+ * che non ruotano mai; gli altri sono inventati, come nel resto del pool finto.
+ */
+function terra(
+  nome: string,
+  coloriProdotti: ColoreMana[],
+  extra: {
+    base?: boolean;
+    entraGirata?: boolean;
+    condizione?: string | null;
+    identita?: Colore[];
+    euro?: number | null;
+  } = {},
+): Carta {
+  const identita = extra.identita ?? (coloriProdotti.filter((c) => c !== "C") as Colore[]);
+  return {
+    ...carta({
+      nome,
+      tipi: extra.base === true ? ["Basic", "Land"] : ["Land"],
+      identitaDiColore: identita,
+      euro: extra.euro ?? 0.05,
+    }),
+    terra: {
+      coloriProdotti,
+      entraGirata: extra.entraGirata ?? false,
+      condizione: extra.condizione ?? null,
+    },
+  };
+}
+
+export const TERRE_FINTE: readonly Carta[] = [
+  terra("Plains", ["W"], { base: true }),
+  terra("Island", ["U"], { base: true }),
+  terra("Swamp", ["B"], { base: true }),
+  terra("Mountain", ["R"], { base: true }),
+  terra("Forest", ["G"], { base: true }),
+  terra("Wastes", ["C"], { base: true }),
+  terra("Cinder Crossing", ["B", "R"], { euro: 6 }),
+  terra("Ashen Waystation", ["B", "R"], { entraGirata: true, euro: 0.1 }),
+  terra("Sootfall Gate", ["B", "R"], { entraGirata: true, euro: 0.03 }),
+  terra("Pyre Threshold", ["B", "R"], {
+    entraGirata: true,
+    condizione: "you control two or fewer other lands",
+    euro: 0.4,
+  }),
+  terra("Tideglass Steps", ["U", "W"], { entraGirata: true }),
+  // Una terra che non fa nessun colore: nel conto vale come terra e basta.
+  terra("Hollow Quarry", ["C"], { identita: [] }),
 ];

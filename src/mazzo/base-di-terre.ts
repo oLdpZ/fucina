@@ -1,0 +1,387 @@
+/**
+ * La base di terre di un mazzo, e le probabilità reali che ne discendono.
+ *
+ * È la cucitura della schermata «Mazzo» (ticket 06): si dà il gruppo di carte
+ * non-terra che l'utente ha messo insieme a mano, e si riceve **quante** terre
+ * servono, **quali**, e per ogni carta la probabilità di poterla lanciare al
+ * suo turno con quella base. Funzione pura: niente rete, niente orologio,
+ * niente caso. Stesso mazzo, stessi numeri.
+ *
+ * Le tre decisioni che prende, tutte con i numeri in chiaro:
+ *
+ * 1. **Quante terre** — dalla curva del mazzo, non da una tabella per
+ *    archetipo (`taratura.ts`).
+ * 2. **Quali terre** — le terre a due colori legali che producono i colori
+ *    chiesti, con una penalità dichiarata per quelle che entrano girate; il
+ *    resto in terre base, divise secondo quanto ogni colore è chiesto.
+ * 3. **Le probabilità** — calcolate in `probabilita.ts`, non stimate.
+ */
+
+import type { Carta, ColoreMana } from "../dati/pool.js";
+import { simboliDiColore } from "./costo.js";
+import { probabilitaDiLanciare, type GruppoDiTerre, type Pip } from "./probabilita.js";
+import {
+  COPIE_MASSIME,
+  DIMENSIONE_MAZZO,
+  PENALITA_ENTRA_GIRATA,
+  PENALITA_ENTRA_GIRATA_A_VOLTE,
+  PERDITA_MASSIMA_PER_I_COLORI,
+  TERRE_A_COSTO_ZERO,
+  TERRE_MASSIME,
+  TERRE_MINIME,
+  TERRE_NON_BASE_PER_COLORE_IN_PIU,
+  TERRE_PER_COSTO_MEDIO,
+} from "./taratura.js";
+
+/** Una carta e quante copie ne stanno nel mazzo. */
+export type CopieDiCarta = { carta: Carta; copie: number };
+
+export type Opzioni = {
+  /** Quante terre vuole l'utente; `null` per lasciar decidere alla curva. */
+  terreVolute: number | null;
+};
+
+/** Quanto un colore è chiesto dal mazzo, in simboli contati sulle copie vere. */
+export type RichiestaDiColore = { colore: ColoreMana; simboli: number; fonti: number };
+
+/** Una carta del mazzo con la sua probabilità di partire al turno giusto. */
+export type RigaDelMazzo = {
+  carta: Carta;
+  copie: number;
+  /** Il turno a cui si prova a lanciarla: il suo valore di mana. */
+  turno: number;
+  probabilita: number;
+  /**
+   * La stessa probabilità per una carta che costasse lo stesso **senza simboli
+   * colorati**: è il tetto che il numero di terre da solo permette, e la
+   * distanza fra i due numeri è quanto costano i colori.
+   */
+  probabilitaSenzaColori: number;
+  /**
+   * Vera quando i colori costano più di quanto `taratura.ts` dichiari
+   * accettabile: è la carta che questa **base** non regge, distinta da quella
+   * che costa semplicemente tanto.
+   */
+  difficile: boolean;
+};
+
+export type BaseDiTerre = {
+  /** Le terre effettivamente messe, a mano o dalla curva. */
+  numeroTerre: number;
+  /** Quante ne direbbe la curva: resta in vista anche quando si scavalca. */
+  numeroTerreDallaCurva: number;
+  /** Il costo medio delle carte non-terra, che è ciò da cui viene il numero. */
+  costoMedio: number;
+  terre: CopieDiCarta[];
+  copieNonTerra: number;
+  dimensioneMazzo: number;
+  coloriRichiesti: RichiestaDiColore[];
+  terreCheEntranoGirate: number;
+  /** Di quelle girate, quante entrano girate **solo a certe condizioni**. */
+  terreGirateSoloAVolte: number;
+  righe: RigaDelMazzo[];
+  /** Le righe difficili, dalla più difficile in giù: l'avviso all'utente. */
+  difficili: RigaDelMazzo[];
+};
+
+/** L'ordine dei colori è quello delle carte, non l'alfabeto. */
+const ORDINE_COLORI: readonly ColoreMana[] = ["W", "U", "B", "R", "G", "C"];
+
+export function analizzaBaseDiTerre(
+  mazzo: readonly CopieDiCarta[],
+  terreDelPool: readonly Carta[],
+  opzioni: Opzioni,
+): BaseDiTerre {
+  // Le terre non entrano nel conto delle carte da lanciare: la base la sceglie
+  // l'app, ed è il senso di questa schermata.
+  const nonTerre = mazzo.filter((voce) => voce.carta.terra === null && voce.copie > 0);
+  const copieNonTerra = nonTerre.reduce((somma, voce) => somma + voce.copie, 0);
+
+  const costoMedio =
+    copieNonTerra === 0
+      ? 0
+      : nonTerre.reduce((somma, voce) => somma + voce.carta.valoreDiMana * voce.copie, 0) /
+        copieNonTerra;
+
+  const numeroTerreDallaCurva = terreDallaCurva(costoMedio);
+  const numeroTerre =
+    opzioni.terreVolute === null
+      ? numeroTerreDallaCurva
+      : Math.max(0, Math.min(DIMENSIONE_MAZZO, Math.round(opzioni.terreVolute)));
+
+  const simboliPerCarta = new Map<Carta, Pip[]>();
+  const simboliPerColore = new Map<ColoreMana, number>();
+  for (const voce of nonTerre) {
+    const pips = simboliDiColore(voce.carta.costoDiMana);
+    simboliPerCarta.set(voce.carta, pips);
+    for (const pip of pips) {
+      // Un simbolo ibrido chiede l'uno **o** l'altro: pesa su entrambi i
+      // colori, ma per metà ciascuno, così non gonfia la richiesta.
+      for (const colore of pip) {
+        simboliPerColore.set(
+          colore,
+          (simboliPerColore.get(colore) ?? 0) + voce.copie / pip.length,
+        );
+      }
+    }
+  }
+
+  const coloriRichiesti = [...simboliPerColore.entries()]
+    .filter(([, simboli]) => simboli > 0)
+    .sort(
+      ([coloreA, a], [coloreB, b]) =>
+        b - a || ORDINE_COLORI.indexOf(coloreA) - ORDINE_COLORI.indexOf(coloreB),
+    )
+    .map(([colore]) => colore);
+
+  const terre = scegliTerre(terreDelPool, coloriRichiesti, simboliPerColore, numeroTerre);
+  const gruppi = raggruppa(terre, coloriRichiesti);
+
+  const dimensioneMazzo = Math.max(DIMENSIONE_MAZZO, copieNonTerra + numeroTerre);
+
+  // Due carte con lo stesso costo hanno la stessa probabilità: il conto è
+  // pesante e non va rifatto per ognuna.
+  const gia = new Map<string, number>();
+  const conto = (pips: readonly Pip[], valoreDiMana: number, turno: number): number => {
+    const chiave = `${valoreDiMana}|${turno}|${pips.map((pip) => pip.join("/")).join(",")}`;
+    let probabilita = gia.get(chiave);
+    if (probabilita === undefined) {
+      probabilita = probabilitaDiLanciare({
+        dimensioneMazzo,
+        terre: gruppi,
+        pips,
+        valoreDiMana,
+        turno,
+      });
+      gia.set(chiave, probabilita);
+    }
+    return probabilita;
+  };
+
+  const righe: RigaDelMazzo[] = nonTerre.map((voce) => {
+    const turno = Math.max(1, voce.carta.valoreDiMana);
+    const pips = simboliPerCarta.get(voce.carta) ?? [];
+    const probabilita = conto(pips, voce.carta.valoreDiMana, turno);
+    // Lo stesso costo senza simboli colorati: è quel che il solo numero di
+    // terre concede, e serve a separare «i colori non ci sono» da «questa carta
+    // costa tanto», che sono due problemi diversi con due rimedi diversi.
+    const probabilitaSenzaColori = conto([], voce.carta.valoreDiMana, turno);
+    return {
+      carta: voce.carta,
+      copie: voce.copie,
+      turno,
+      probabilita,
+      probabilitaSenzaColori,
+      difficile: probabilitaSenzaColori - probabilita > PERDITA_MASSIMA_PER_I_COLORI,
+    };
+  });
+
+  const fontiPerColore = new Map<ColoreMana, number>();
+  for (const voce of terre) {
+    for (const colore of voce.carta.terra?.coloriProdotti ?? []) {
+      fontiPerColore.set(colore, (fontiPerColore.get(colore) ?? 0) + voce.copie);
+    }
+  }
+
+  return {
+    numeroTerre,
+    numeroTerreDallaCurva,
+    costoMedio,
+    terre,
+    copieNonTerra,
+    dimensioneMazzo,
+    coloriRichiesti: coloriRichiesti.map((colore) => ({
+      colore,
+      simboli: simboliPerColore.get(colore) ?? 0,
+      fonti: fontiPerColore.get(colore) ?? 0,
+    })),
+    terreCheEntranoGirate: terre
+      .filter((voce) => voce.carta.terra?.entraGirata === true)
+      .reduce((somma, voce) => somma + voce.copie, 0),
+    terreGirateSoloAVolte: terre
+      .filter((voce) => voce.carta.terra?.condizione != null)
+      .reduce((somma, voce) => somma + voce.copie, 0),
+    righe,
+    difficili: righe
+      .filter((riga) => riga.difficile)
+      .sort((a, b) => a.probabilita - b.probabilita),
+  };
+}
+
+/**
+ * Quante terre, dalla curva. Nessuna tabella per archetipo: il costo medio del
+ * mazzo è l'unica cosa che entra nel conto, e i tre numeri che lo governano
+ * stanno tutti in `taratura.ts`.
+ */
+export function terreDallaCurva(costoMedio: number): number {
+  const grezzo = TERRE_A_COSTO_ZERO + TERRE_PER_COSTO_MEDIO * costoMedio;
+  return Math.max(TERRE_MINIME, Math.min(TERRE_MASSIME, Math.round(grezzo)));
+}
+
+/**
+ * La scelta delle terre: prima quelle a due colori che il mazzo chiede davvero,
+ * poi le terre base a riempire.
+ */
+function scegliTerre(
+  terreDelPool: readonly Carta[],
+  coloriRichiesti: readonly ColoreMana[],
+  simboliPerColore: ReadonlyMap<ColoreMana, number>,
+  numeroTerre: number,
+): CopieDiCarta[] {
+  if (numeroTerre <= 0) return [];
+
+  const base = new Map<ColoreMana, Carta>();
+  for (const carta of terreDelPool) {
+    const terra = carta.terra;
+    if (terra === null || !carta.tipi.includes("Basic")) continue;
+    if (terra.coloriProdotti.length !== 1) continue;
+    const colore = terra.coloriProdotti[0]!;
+    if (!base.has(colore)) base.set(colore, carta);
+  }
+
+  // Un mazzo senza nessun simbolo colorato (o un mazzo ancora vuoto) non ha un
+  // colore da servire: gli si dà la terra incolore, o la prima base che c'è.
+  const coloriDaServire =
+    coloriRichiesti.length > 0
+      ? coloriRichiesti
+      : base.has("C")
+        ? (["C"] as ColoreMana[])
+        : [...base.keys()].slice(0, 1);
+  if (coloriDaServire.length === 0) return [];
+
+  // Le terre base esistono per tutti e sei i colori, ma il pool arriva dai dati
+  // e i dati possono sempre sorprendere. I colori che una terra base non ce
+  // l'hanno restano ai duali: quel che conta è non restituire **meno** terre di
+  // quante se ne sono promesse, che sarebbe una bugia nei numeri.
+  const coloriConBase = coloriDaServire.filter((colore) => base.has(colore));
+  const perRiempire =
+    coloriConBase.length > 0 ? coloriConBase : [...base.keys()].slice(0, 1);
+  if (perRiempire.length === 0) return [];
+
+  const scelte: CopieDiCarta[] = [];
+  let restanti = numeroTerre;
+
+  // 1. Le terre a due colori. Il tetto è dichiarato: nessuna per un mazzo di un
+  //    colore solo, poi tanti posti per ogni colore in più. Si lascia comunque
+  //    almeno una terra base per colore, altrimenti la base non farebbe i suoi
+  //    stessi colori nei casi limite.
+  const tetto = Math.max(
+    0,
+    Math.min(
+      (coloriDaServire.length - 1) * TERRE_NON_BASE_PER_COLORE_IN_PIU,
+      numeroTerre - perRiempire.length,
+    ),
+  );
+
+  if (tetto > 0) {
+    const candidate = terreDelPool
+      .filter((carta) => utileComeTerraDoppia(carta, coloriDaServire))
+      .map((carta) => ({ carta, punteggio: punteggioTerra(carta, coloriDaServire) }))
+      .sort(
+        (a, b) =>
+          b.punteggio - a.punteggio ||
+          prezzo(a.carta) - prezzo(b.carta) ||
+          a.carta.nome.localeCompare(b.carta.nome, "en"),
+      );
+
+    let messe = 0;
+    for (const { carta } of candidate) {
+      if (messe >= tetto) break;
+      const quante = Math.min(COPIE_MASSIME, tetto - messe, restanti - perRiempire.length);
+      if (quante <= 0) break;
+      scelte.push({ carta, copie: quante });
+      messe += quante;
+      restanti -= quante;
+    }
+  }
+
+  // 2. Il resto in terre base, divise secondo quanto ogni colore è chiesto. Il
+  //    metodo del resto più grande: deterministico, e non perde né inventa
+  //    terre per colpa degli arrotondamenti.
+  const pesi = perRiempire.map((colore) => Math.max(0, simboliPerColore.get(colore) ?? 1));
+  const totalePesi = pesi.reduce((somma, peso) => somma + peso, 0);
+  const quote = perRiempire.map((colore, i) => {
+    const esatta =
+      totalePesi > 0 ? (restanti * pesi[i]!) / totalePesi : restanti / perRiempire.length;
+    return { colore, intera: Math.floor(esatta), resto: esatta - Math.floor(esatta) };
+  });
+
+  let assegnate = quote.reduce((somma, quota) => somma + quota.intera, 0);
+  const perResto = [...quote].sort(
+    (a, b) => b.resto - a.resto || ORDINE_COLORI.indexOf(a.colore) - ORDINE_COLORI.indexOf(b.colore),
+  );
+  for (let i = 0; assegnate < restanti; i = (i + 1) % perResto.length) {
+    perResto[i]!.intera += 1;
+    assegnate += 1;
+  }
+
+  for (const quota of quote) {
+    if (quota.intera <= 0) continue;
+    // `perRiempire` contiene solo colori che una terra base ce l'hanno: se
+    // questa carta mancasse, le terre elencate sarebbero meno di quelle
+    // promesse in cima alla schermata, e ogni probabilità sotto sarebbe
+    // calcolata su un mazzo che non esiste.
+    scelte.push({ carta: base.get(quota.colore)!, copie: quota.intera });
+  }
+
+  return scelte;
+}
+
+/**
+ * Una terra è utile come terra doppia se la sua **identità di colore** sta
+ * dentro i colori del mazzo e ne produce almeno due.
+ *
+ * L'identità, e non i soli colori prodotti: le terre che «producono un mana di
+ * un colore qualsiasi» hanno identità incolore, e nei dati risultano produrre
+ * tutti e cinque i colori. Prenderle per terre doppie vorrebbe dire contarle
+ * per quello che **non** sono, perché quel mana ha quasi sempre una condizione
+ * che i dati non raccontano.
+ */
+function utileComeTerraDoppia(carta: Carta, colori: readonly ColoreMana[]): boolean {
+  const terra = carta.terra;
+  if (terra === null || carta.tipi.includes("Basic")) return false;
+  if (carta.identitaDiColore.length < 2) return false;
+  if (!carta.identitaDiColore.every((colore) => colori.includes(colore))) return false;
+  return terra.coloriProdotti.filter((colore) => colori.includes(colore)).length >= 2;
+}
+
+/** I colori utili che produce, meno la penalità dichiarata per l'entrata girata. */
+function punteggioTerra(carta: Carta, colori: readonly ColoreMana[]): number {
+  const terra = carta.terra!;
+  const utili = terra.coloriProdotti.filter((colore) => colori.includes(colore)).length;
+  if (!terra.entraGirata) return utili;
+  return utili - (terra.condizione === null ? PENALITA_ENTRA_GIRATA : PENALITA_ENTRA_GIRATA_A_VOLTE);
+}
+
+/** Le terre senza prezzo vanno in fondo a parità di punteggio, non in cima. */
+function prezzo(carta: Carta): number {
+  return carta.prezzo.euro ?? Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Le terre scelte, raggruppate come le vuole il calcolo: contano solo i colori
+ * che il mazzo chiede davvero e se la terra entra girata.
+ *
+ * Le terre che entrano girate **solo a volte** contano come girate: è la
+ * lettura pessimistica, ed è la sola che non può promettere all'utente più di
+ * quel che avrà.
+ */
+function raggruppa(
+  terre: readonly CopieDiCarta[],
+  coloriRichiesti: readonly ColoreMana[],
+): GruppoDiTerre[] {
+  const gruppi = new Map<string, GruppoDiTerre>();
+  for (const voce of terre) {
+    const terra = voce.carta.terra;
+    if (terra === null) continue;
+    const produce = ORDINE_COLORI.filter(
+      (colore) => coloriRichiesti.includes(colore) && terra.coloriProdotti.includes(colore),
+    );
+    const girata = terra.entraGirata;
+    const chiave = `${produce.join("")}|${girata ? "girata" : "dritta"}`;
+    const gia = gruppi.get(chiave);
+    if (gia) gia.copie += voce.copie;
+    else gruppi.set(chiave, { copie: voce.copie, produce, girata });
+  }
+  return [...gruppi.values()];
+}

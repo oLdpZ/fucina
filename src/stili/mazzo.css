@@ -1,0 +1,410 @@
+/*
+ * Il mazzo: base di terre, probabilità reali, carte del mazzo (ticket 06).
+ *
+ * Nessun colore letterale — solo le variabili di `tema.css`, come nel resto
+ * dell'app: la direzione visiva resta una costante da cambiare, non una
+ * riscrittura.
+ *
+ * Prima il telefono: una colonna sola, numeri grandi abbastanza da leggersi in
+ * negozio, e i comandi che si toccano larghi almeno 44px per lato.
+ */
+
+/* --- le due schermate --- */
+
+.schede {
+  display: flex;
+  gap: calc(var(--passo) * 2);
+  width: 100%;
+  order: 3;
+}
+
+.scheda-nav {
+  flex: 1 1 auto;
+  padding: calc(var(--passo) * 2.5) calc(var(--passo) * 3);
+  min-height: 44px;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  font: inherit;
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+  cursor: pointer;
+}
+
+.scheda-nav[aria-current="page"] {
+  background: var(--superficie-alta);
+  border-color: var(--accento);
+  color: var(--inchiostro);
+  font-weight: 600;
+}
+
+/* --- il comando delle copie --- */
+
+.passi {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 2);
+}
+
+.passi button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  font: inherit;
+  font-size: var(--titolo-scheda);
+  line-height: 1;
+  color: var(--inchiostro);
+  cursor: pointer;
+}
+
+.passi.piccoli button {
+  min-width: 32px;
+  min-height: 32px;
+  font-size: var(--testo-piccolo);
+}
+
+.passi button:disabled {
+  color: var(--inchiostro-debole);
+  cursor: default;
+}
+
+.passi button:not(:disabled):hover,
+.passi button:focus-visible {
+  border-color: var(--accento);
+}
+
+.passi .copie {
+  flex: 1 1 auto;
+  text-align: center;
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+}
+
+.passi[data-nel-mazzo="true"] .copie {
+  color: var(--accento);
+  font-weight: 600;
+}
+
+.griglia .passi {
+  margin-top: calc(var(--passo) * 1);
+}
+
+.terra-non-si-aggiunge {
+  margin: calc(var(--passo) * 1) 0 0;
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+  text-align: center;
+}
+
+/* --- la schermata del mazzo --- */
+
+.mazzo {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 7);
+}
+
+.mazzo h2 {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-pagina);
+  line-height: 1.15;
+}
+
+.mazzo h3 {
+  margin: 0 0 calc(var(--passo) * 3);
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+}
+
+.mazzo p {
+  margin: calc(var(--passo) * 2) 0 0;
+  font-size: var(--testo-normale);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.mazzo.vuoto p {
+  color: var(--inchiostro-tenue);
+  max-width: var(--larghezza-colonna);
+}
+
+.riepilogo .conta-carte strong {
+  font-family: var(--carattere-dati);
+}
+
+.riepilogo .spiegazione {
+  color: var(--inchiostro-tenue);
+  font-size: var(--testo-piccolo);
+  max-width: var(--larghezza-colonna);
+}
+
+/* --- la manopola delle terre --- */
+
+.manopola-terre {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--passo) * 3);
+  margin-top: calc(var(--passo) * 4);
+  padding: calc(var(--passo) * 3);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.etichetta-manopola {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+.numero-terre {
+  min-width: 2.5rem;
+  text-align: center;
+  font-family: var(--carattere-dati);
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+}
+
+.manopola-terre .torna {
+  padding: calc(var(--passo) * 2);
+  min-height: 44px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: var(--testo-piccolo);
+  color: var(--accento);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.nota-manopola {
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-debole);
+}
+
+/* --- le terre scelte --- */
+
+.elenco-terre {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 1);
+}
+
+.elenco-terre li {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--passo) * 2);
+  flex-wrap: wrap;
+}
+
+.nome-terra {
+  padding: calc(var(--passo) * 1) 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: var(--testo-normale);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nome-terra:hover,
+.nome-terra:focus-visible {
+  color: var(--accento);
+}
+
+.nome-terra .copie {
+  font-family: var(--carattere-dati);
+  color: var(--inchiostro-tenue);
+}
+
+.girata {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+}
+
+.fonti {
+  margin-top: calc(var(--passo) * 4);
+  border-collapse: collapse;
+  font-size: var(--testo-piccolo);
+}
+
+.fonti caption {
+  text-align: left;
+  padding-bottom: calc(var(--passo) * 2);
+  color: var(--inchiostro-tenue);
+  font-size: var(--dati-minuscolo);
+}
+
+.fonti th,
+.fonti td {
+  padding: calc(var(--passo) * 1.5) calc(var(--passo) * 4)
+    calc(var(--passo) * 1.5) 0;
+  text-align: left;
+  border-bottom: 1px solid var(--bordo);
+}
+
+.fonti td {
+  font-family: var(--carattere-dati);
+}
+
+.fonti thead th {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--inchiostro-debole);
+  font-weight: 400;
+}
+
+/* --- l'avviso sulle carte difficili --- */
+
+.avviso-difficili {
+  padding: calc(var(--passo) * 4);
+  background: var(--superficie-alta);
+  border: 1px solid var(--accento);
+  border-radius: var(--raggio);
+}
+
+.avviso-difficili p {
+  margin-top: 0;
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+  max-width: var(--larghezza-colonna);
+}
+
+.avviso-difficili ul {
+  margin: calc(var(--passo) * 3) 0 0;
+  padding-left: calc(var(--passo) * 5);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+}
+
+/* --- le carte del mazzo, con la loro probabilità --- */
+
+.righe-mazzo {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 1);
+}
+
+.riga-mazzo {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: calc(var(--passo) * 2) calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 2);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.riga-mazzo[data-difficile="true"] {
+  border-left: 3px solid var(--accento);
+  padding-left: calc(var(--passo) * 2);
+}
+
+.nome-nel-mazzo {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 2);
+  flex-wrap: wrap;
+  padding: calc(var(--passo) * 1) 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: var(--testo-normale);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nome-nel-mazzo:hover,
+.nome-nel-mazzo:focus-visible {
+  color: var(--accento);
+}
+
+.probabilita {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 3);
+}
+
+.barra {
+  flex: 1 1 auto;
+  height: 6px;
+  background: var(--superficie-alta);
+  border: 1px solid var(--bordo);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.barra span {
+  display: block;
+  height: 100%;
+  background: var(--accento-secondario);
+}
+
+.riga-mazzo[data-difficile="true"] .barra span {
+  background: var(--accento);
+}
+
+.probabilita .valore {
+  flex: 0 0 auto;
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-piccolo);
+}
+
+.probabilita .al-turno {
+  color: var(--inchiostro-debole);
+  font-size: var(--dati-minuscolo);
+}
+
+.segnale {
+  grid-column: 1 / -1;
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accento);
+}
+
+/* --- schermo grande: le sezioni stanno affiancate --- */
+
+@media (min-width: 48rem) {
+  .schede {
+    order: 0;
+    width: auto;
+  }
+
+  .scheda-nav {
+    flex: 0 0 auto;
+  }
+
+  .riga-mazzo {
+    grid-template-columns: auto minmax(12rem, 1fr) minmax(10rem, 2fr) auto;
+  }
+
+  .riga-mazzo .probabilita,
+  .riga-mazzo .segnale {
+    grid-column: auto;
+  }
+}
