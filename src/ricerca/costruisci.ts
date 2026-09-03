@@ -8,9 +8,29 @@
  * carte con la sua base di terre.
  *
  * È la **cucitura di test principale** di tutto il progetto:
- * `costruisciMazzo(richiesta, pool) → frontiera`. A questo ticket la frontiera
- * contiene un mazzo solo; i quattro o cinque allineati da puro a forte
- * arriveranno dal ticket 12, facendo scorrere il peso della purezza.
+ * `costruisciMazzo(richiesta, pool) → frontiera`.
+ *
+ * ## La frontiera (ticket 12)
+ *
+ * La stessa ricerca si ripete con **pesi diversi dati alla purezza del tema**,
+ * dal peso che rende il tema inviolabile a quello che lo ignora quasi del
+ * tutto (`PESI_DELLA_PUREZZA`). Ne escono quattro o cinque mazzi allineati dal
+ * più fedele al più forte, e con loro il numero che è il fulcro dichiarato del
+ * progetto: non la lista, ma il **tasso di cambio** fra originalità e potenza —
+ * quanto tema costa il passo successivo, e quanta potenza rende.
+ *
+ * Due cose tengono in piedi quella lettura, e sono scritte nel codice più sotto:
+ *
+ * - i **duplicati si scartano**: due pesi vicini che trovano lo stesso mazzo
+ *   compaiono una volta sola, se no la frontiera direbbe che c'è un passo dove
+ *   non c'è;
+ * - i mazzi **dominati si scartano**: resta solo chi, cedendo tema, guadagna
+ *   davvero potenza. Così purezza e potenza si muovono in direzioni opposte
+ *   lungo tutta la frontiera, e la differenza fra un mazzo e il precedente è
+ *   sempre un baratto vero.
+ *
+ * Il tetto di tempo vale per la **frontiera intera** e non per ogni mazzo: se
+ * scade si torna con i mazzi trovati fin lì, dichiarando il troncamento.
  *
  * ## Come questa funzione resta pura
  *
@@ -74,12 +94,25 @@ export type Richiesta = {
 
 /** Quel che la ricerca racconta di sé mentre lavora, per chi mostra una barra. */
 export type Avanzamento = {
-  /** La partenza in corso, contata da zero. */
+  /** Il mazzo della frontiera in corso, contato da zero. */
+  passo: number;
+  /** Quanti mazzi la frontiera prova a cercare: uno per peso della purezza. */
+  passi: number;
+  /** La partenza in corso, dentro il passo, contata da zero. */
   partenza: number;
   partenze: number;
-  /** I mazzi provati finora, da tutte le partenze insieme. */
+  /**
+   * I mazzi provati finora, dalla **frontiera intera**: tutte le partenze di
+   * tutti i passi, sommate. Sale e non torna mai indietro — un contatore che
+   * ricominciasse a ogni passo direbbe a chi guarda la barra che il lavoro
+   * fatto si è perso.
+   */
   valutazioni: number;
-  /** Il punteggio del migliore trovato finora: sale e non scende mai. */
+  /**
+   * Il punteggio del migliore trovato finora **in questo passo**: sale finché
+   * il passo dura, e riparte da capo al passo dopo. Non si confronta fra passi
+   * diversi — ognuno pesa il tema a modo suo, e sono due scale diverse.
+   */
   migliore: number;
 };
 
@@ -119,11 +152,39 @@ export type MazzoCostruito = {
   base: BaseDiTerre;
   simulazione: EsitoDellaSimulazione;
   /**
-   * Il numero solo con cui la ricerca ha ordinato i mazzi: le cinque componenti
-   * combinate più la purezza per il suo peso. Sta qui perché sia verificabile,
-   * non perché si mostri — quel che si mostra sono le componenti.
+   * Le cinque componenti combinate in un numero: la **potenza**, l'asse contro
+   * cui si legge la purezza lungo la frontiera. Si mostra accanto alle
+   * componenti, non al posto loro — è la componente separata che spiega, questo
+   * numero serve solo a dire quale mazzo è più forte di quale.
+   */
+  potenza: number;
+  /**
+   * Il peso della purezza con cui **questo** mazzo è stato cercato. Sta qui
+   * perché la frontiera sia verificabile: è la manopola che l'ha prodotto.
+   */
+  peso: number;
+  /**
+   * Quanto costa il passo dal mazzo precedente della frontiera: tema ceduto e
+   * potenza guadagnata. `null` sul primo, che un precedente non ce l'ha.
+   *
+   * Sono le due differenze già fatte, e non due numeri da rifare a mano nella
+   * schermata: il ticket chiede che l'utente le legga, e si leggono da qui.
+   */
+  passo: PassoDellaFrontiera | null;
+  /**
+   * Il numero solo con cui la ricerca ha ordinato i mazzi: la potenza più la
+   * purezza per il suo peso. Sta qui perché sia verificabile, non perché si
+   * mostri — quel che si mostra sono le componenti.
    */
   totale: number;
+};
+
+/** Il baratto fra un mazzo della frontiera e quello prima di lui. */
+export type PassoDellaFrontiera = {
+  /** Il tema ceduto: quota di copie non-terra, sempre maggiore di zero. */
+  purezzaCeduta: number;
+  /** La potenza guadagnata in cambio: sempre maggiore di zero. */
+  potenzaGuadagnata: number;
 };
 
 export type Frontiera = {
@@ -132,11 +193,22 @@ export type Frontiera = {
   motivo: string;
   /** Il verdetto sul tema, lo stesso che la schermata dei vincoli ha mostrato. */
   ampiezza: Ampiezza;
-  /** A questo ticket, zero mazzi o uno solo. */
+  /**
+   * I mazzi, **dal più fedele al tema al più forte**: purezza che scende e
+   * potenza che sale, passo dopo passo. Vuota quando non c'è niente da
+   * costruire; mai più lunga dei pesi provati, e più corta quando due pesi
+   * hanno trovato lo stesso mazzo o quando il tempo è scaduto per strada.
+   */
   mazzi: MazzoCostruito[];
   allargamentiApplicati: readonly Allargamento[];
   troncataPerTempo: boolean;
-  /** Le partenze provate: la ricerca si rifà da più parti e tiene la migliore. */
+  /**
+   * Le partenze di **ogni passo** della frontiera: dentro un passo la ricerca
+   * si rifà da più parti e tiene la migliore. Le partenze davvero provate sono
+   * queste per il numero di mazzi cercati, e quel numero è `mazzi.length` solo
+   * quando nessun passo è stato scartato — per questo qui ce n'è una sola, ed è
+   * quella di un passo.
+   */
   partenze: number;
   scambiProvati: number;
   scambiTenuti: number;
@@ -230,23 +302,26 @@ export function costruisciMazzo(
   }
 
   const risolto = risolviTema(tema, pool);
-  const candidati = scegliCandidati(giocabili, risolto, taratura);
 
   /* --- La ricerca ------------------------------------------------------- */
 
-  const semi = caso(richiesta.seme);
   let scambiProvati = 0;
   let scambiTenuti = 0;
   let valutazioni = 0;
   let troncata = false;
-  let migliore: { selezione: Selezione; posti: number; totale: number } | null = null;
 
-  const valuta = (selezione: Selezione, posti: number): number => {
-    valutazioni += 1;
-    return punteggioDi(selezione, posti, taratura.partiteInRicerca).totale;
-  };
-
-  const punteggioDi = (selezione: Selezione, posti: number, partite: number | undefined) => {
+  /**
+   * Il punteggio di una selezione **col peso che questo passo dà al tema**.
+   *
+   * `totale` è il numero solo con cui la ricerca ordina i mazzi: la potenza più
+   * la purezza per il suo peso. Far scorrere quel peso è tutta la frontiera.
+   */
+  const punteggioDi = (
+    selezione: Selezione,
+    posti: number,
+    peso: number,
+    partite: number | undefined,
+  ) => {
     const carte = voci(selezione);
     const valutato = valutaMazzo(carte, terreDelPool, {
       seme: richiesta.seme,
@@ -257,123 +332,187 @@ export function costruisciMazzo(
       ...(partite === undefined ? {} : { partite }),
     });
     const pura = purezza(carte, risolto);
+    const potenza = combina(valutato.punteggio);
+    return { carte, valutato, purezza: pura, potenza, totale: potenza + peso * pura };
+  };
+
+  /**
+   * Una ricerca intera con **un** peso: le partenze, gli scambi, e il mazzo
+   * migliore che ne esce, rivalutato per intero.
+   *
+   * Il seme riparte da capo a ogni peso, e non prosegue da dove il peso prima
+   * l'aveva lasciato: due passi della frontiera devono partire dagli stessi
+   * posti, se no la differenza che l'utente legge fra un mazzo e il precedente
+   * sarebbe in parte la differenza fra due mescolate.
+   */
+  const cerca = (peso: number, passo: number, passi: number): MazzoCostruito | null => {
+    const semi = caso(richiesta.seme);
+    const candidati = scegliCandidati(giocabili, risolto, taratura, peso);
+    let migliore: { selezione: Selezione; posti: number; totale: number } | null = null;
+
+    const valuta = (selezione: Selezione, posti: number): number => {
+      valutazioni += 1;
+      return punteggioDi(selezione, posti, peso, taratura.partiteInRicerca).totale;
+    };
+
+    const racconta = (partenza: number): void => {
+      opzioni.avanzamento?.({
+        passo,
+        passi,
+        partenza,
+        partenze: taratura.partenze,
+        valutazioni,
+        migliore: migliore?.totale ?? 0,
+      });
+    };
+
+    for (let partenza = 0; partenza < taratura.partenze; partenza++) {
+      // Ogni partenza ha il suo generatore, derivato dal seme della richiesta:
+      // partenze diverse, ma nessuna casuale.
+      const generatore = caso(semi.intero(0x100000000));
+      const ordine = ordinaPerPartenza(candidati, risolto, peso, partenza, generatore);
+      // I posti non-terra non sono liberi: sono sessanta meno le terre che la
+      // curva chiede, e non possono superare le copie che il pool sa dare.
+      let posti = assestaIPosti(ordine, capienza);
+      let selezione = riempi(ordine, posti);
+
+      // La prima valutazione si fa **sempre**, anche col tempo già scaduto:
+      // senza di lei non ci sarebbe nessun mazzo da restituire, e restituire un
+      // mazzo c'è scritto nel ticket.
+      let corrente = valuta(selezione, posti);
+      if (migliore === null || corrente > migliore.totale + PARI) {
+        migliore = { selezione, posti, totale: corrente };
+      }
+      racconta(partenza);
+
+      if (scaduto()) {
+        troncata = true;
+        break;
+      }
+
+      let valutazioniQui = 1;
+      let assestamenti = 0;
+      let migliorato = true;
+      while (migliorato) {
+        migliorato = false;
+        for (const scambio of scambi(selezione, candidati, generatore)) {
+          if (valutazioniQui >= taratura.valutazioniMassimePerPartenza) break;
+          if (scaduto()) {
+            troncata = true;
+            break;
+          }
+
+          const prova = conLoScambio(selezione, scambio);
+          if (prova === null) continue;
+
+          scambiProvati += 1;
+          valutazioniQui += 1;
+          const totale = valuta(prova, posti);
+          if (totale > corrente + PARI) {
+            selezione = prova;
+            corrente = totale;
+            scambiTenuti += 1;
+            migliorato = true;
+            if (corrente > migliore.totale + PARI) {
+              migliore = { selezione, posti, totale: corrente };
+            }
+            racconta(partenza);
+            // Primo miglioramento: si riparte a guardare gli scambi dal mazzo
+            // nuovo, invece di finire un giro su un mazzo che non c'è più.
+            break;
+          }
+        }
+        if (troncata || valutazioniQui >= taratura.valutazioniMassimePerPartenza) break;
+
+        // Quando nessuno scambio migliora più, le terre tornano a seguire la
+        // curva, e se cambiano la ricerca riprende sul mazzo nuovo.
+        //
+        // Si fa **qui** e non dentro la passata di proposito: durante la
+        // passata la base non si tocca, se no quel che si misura fra due mazzi
+        // è il cambio di terre e non il cambio di carte. Ma un mazzo che ha
+        // finito di migliorare e che nel frattempo ha spostato il suo costo
+        // medio vuole un altro numero di terre, e consegnarlo con quelle
+        // vecchie vorrebbe dire consegnare un mazzo che l'app stessa direbbe
+        // sbagliato.
+        if (migliorato || assestamenti >= ASSESTAMENTI_PER_PARTENZA) continue;
+        const nuoviPosti = postiPerLaCurva(voci(selezione), capienza);
+        if (nuoviPosti === posti) break;
+        assestamenti += 1;
+        selezione = adatta(selezione, ordine, nuoviPosti);
+        posti = nuoviPosti;
+        corrente = valuta(selezione, posti);
+        migliorato = true;
+        if (corrente > migliore.totale + PARI) {
+          migliore = { selezione, posti, totale: corrente };
+        }
+      }
+
+      if (troncata) break;
+    }
+
+    // `migliore` non è mai nullo qui: il ciclo delle partenze gira almeno una
+    // volta e la sua prima valutazione non è sotto nessuna condizione. Se un
+    // giorno lo diventasse, questo sarebbe il posto in cui accorgersene.
+    if (migliore === null) return null;
+
+    // Il mazzo che vince si rivaluta **per intero**, con le partite piene: i
+    // numeri che l'utente legge non sono quelli sbrigativi della ricerca. E si
+    // rivaluta qui, dentro il passo, non alla fine: purezza e potenza dei mazzi
+    // della frontiera si confrontano fra loro, e confrontare una misura piena
+    // con una sbrigativa direbbe che un passo ha guadagnato quando invece ha
+    // solo misurato meglio.
+    const finale = punteggioDi(migliore.selezione, migliore.posti, peso, undefined);
     return {
-      carte,
-      valutato,
-      purezza: pura,
-      totale: combina(valutato.punteggio) + taratura.pesoDellaPurezza * pura,
+      carte: [...finale.carte].sort(
+        (a, b) =>
+          a.carta.valoreDiMana - b.carta.valoreDiMana ||
+          a.carta.nome.localeCompare(b.carta.nome, "en"),
+      ),
+      terre: finale.valutato.base.terre,
+      purezza: finale.purezza,
+      punteggio: finale.valutato.punteggio,
+      base: finale.valutato.base,
+      simulazione: finale.valutato.simulazione,
+      potenza: finale.potenza,
+      peso,
+      passo: null,
+      totale: finale.totale,
     };
   };
 
-  for (let partenza = 0; partenza < taratura.partenze; partenza++) {
-    // Ogni partenza ha il suo generatore, derivato dal seme della richiesta:
-    // partenze diverse, ma nessuna casuale.
-    const generatore = caso(semi.intero(0x100000000));
-    const ordine = ordinaPerPartenza(candidati, risolto, taratura, partenza, generatore);
-    // I posti non-terra non sono liberi: sono sessanta meno le terre che la
-    // curva chiede, e non possono superare le copie che il pool sa dare.
-    let posti = assestaIPosti(ordine, capienza);
-    let selezione = riempi(ordine, posti);
+  /* --- La frontiera ----------------------------------------------------- */
 
-    // La prima valutazione si fa **sempre**, anche col tempo già scaduto: senza
-    // di lei non ci sarebbe nessun mazzo da restituire, e restituire un mazzo
-    // c'è scritto nel ticket.
-    let corrente = valuta(selezione, posti);
-    if (migliore === null || corrente > migliore.totale + PARI) {
-      migliore = { selezione, posti, totale: corrente };
-    }
-    opzioni.avanzamento?.({
-      partenza,
-      partenze: taratura.partenze,
-      valutazioni,
-      migliore: migliore.totale,
-    });
-
-    if (scaduto()) {
-      troncata = true;
-      break;
-    }
-
-    let valutazioniQui = 1;
-    let assestamenti = 0;
-    let migliorato = true;
-    while (migliorato) {
-      migliorato = false;
-      for (const scambio of scambi(selezione, candidati, generatore)) {
-        if (valutazioniQui >= taratura.valutazioniMassimePerPartenza) break;
-        if (scaduto()) {
-          troncata = true;
-          break;
-        }
-
-        const prova = conLoScambio(selezione, scambio);
-        if (prova === null) continue;
-
-        scambiProvati += 1;
-        valutazioniQui += 1;
-        const totale = valuta(prova, posti);
-        if (totale > corrente + PARI) {
-          selezione = prova;
-          corrente = totale;
-          scambiTenuti += 1;
-          migliorato = true;
-          if (corrente > migliore.totale + PARI) {
-            migliore = { selezione, posti, totale: corrente };
-          }
-          opzioni.avanzamento?.({
-            partenza,
-            partenze: taratura.partenze,
-            valutazioni,
-            migliore: migliore.totale,
-          });
-          // Primo miglioramento: si riparte a guardare gli scambi dal mazzo
-          // nuovo, invece di finire un giro su un mazzo che non c'è più.
-          break;
-        }
-      }
-      if (troncata || valutazioniQui >= taratura.valutazioniMassimePerPartenza) break;
-
-      // Quando nessuno scambio migliora più, le terre tornano a seguire la
-      // curva, e se cambiano la ricerca riprende sul mazzo nuovo.
-      //
-      // Si fa **qui** e non dentro la passata di proposito: durante la passata
-      // la base non si tocca, se no quel che si misura fra due mazzi è il
-      // cambio di terre e non il cambio di carte. Ma un mazzo che ha finito di
-      // migliorare e che nel frattempo ha spostato il suo costo medio vuole un
-      // altro numero di terre, e consegnarlo con quelle vecchie vorrebbe dire
-      // consegnare un mazzo che l'app stessa direbbe sbagliato.
-      if (migliorato || assestamenti >= ASSESTAMENTI_PER_PARTENZA) continue;
-      const nuoviPosti = postiPerLaCurva(voci(selezione), capienza);
-      if (nuoviPosti === posti) break;
-      assestamenti += 1;
-      selezione = adatta(selezione, ordine, nuoviPosti);
-      posti = nuoviPosti;
-      corrente = valuta(selezione, posti);
-      migliorato = true;
-      if (corrente > migliore.totale + PARI) {
-        migliore = { selezione, posti, totale: corrente };
-      }
-    }
-
+  // Un passo per peso, dal tema inviolabile al tema quasi ignorato. Il tetto di
+  // tempo è quello della **frontiera intera** — `inizio` è stato letto una
+  // volta sola, prima di tutto — e quando scade si esce con i mazzi trovati fin
+  // lì, che è quel che il ticket chiede.
+  const pesi = taratura.pesiDellaPurezza;
+  const trovati: MazzoCostruito[] = [];
+  for (let passo = 0; passo < pesi.length; passo++) {
+    const mazzo = cerca(pesi[passo]!, passo, pesi.length);
+    if (mazzo !== null) trovati.push(mazzo);
     if (troncata) break;
   }
 
-  // `migliore` non è mai nullo qui: il ciclo delle partenze gira almeno una
-  // volta e la sua prima valutazione non è sotto nessuna condizione. Se un
-  // giorno lo diventasse, questo sarebbe il posto in cui accorgersene.
-  if (migliore === null) {
+  const mazzi = allineaLaFrontiera(trovati);
+  const primo = mazzi[0];
+  if (primo === undefined) {
     return niente("niente-da-costruire", "La ricerca non ha potuto provare nemmeno un mazzo.");
   }
 
-  // Il mazzo che vince si rivaluta **per intero**, con le partite piene: i
-  // numeri che l'utente legge non sono quelli sbrigativi della ricerca.
-  const finale = punteggioDi(migliore.selezione, migliore.posti, undefined);
-  const nelTema = finale.carte.filter((voce) => appartiene(voce.carta, risolto));
+  /* --- L'esito, che si legge dal mazzo più puro -------------------------- */
+
+  // La domanda «il tema bastava?» si fa sul **primo** mazzo della frontiera,
+  // quello cercato col tema inviolabile: se nemmeno lì il tema ha riempito i
+  // posti, non li riempirà da nessun'altra parte. Negli altri mazzi le carte
+  // fuori tema ci sono per scelta, ed è la frontiera stessa a dire quanto
+  // costano: chiamarle una mancanza sarebbe dire il falso.
+  const nelTema = primo.carte.filter((voce) => appartiene(voce.carta, risolto));
   const copieNelTema = nelTema.reduce((somma, voce) => somma + voce.copie, 0);
-  const copieTotali = finale.carte.reduce((somma, voce) => somma + voce.copie, 0);
+  const copieTotali = primo.carte.reduce((somma, voce) => somma + voce.copie, 0);
   // Le terre si contano da quelle **scelte**, non da quante se ne erano
   // chieste: la frase deve dire il mazzo che c'è, non quello che si sperava.
-  const copieDiTerra = finale.valutato.base.terre.reduce((somma, voce) => somma + voce.copie, 0);
+  const copieDiTerra = primo.base.terre.reduce((somma, voce) => somma + voce.copie, 0);
 
   // Il tema bastava a riempire **questo** mazzo? La domanda si fa sui posti
   // che il mazzo ha davvero, non sui trentatre del verdetto di `ampiezza.ts`,
@@ -382,34 +521,80 @@ export function costruisciMazzo(
   const fuoriTema = capienzaDelTema < copieTotali;
   const esito: Esito = fuoriTema ? "costruito-fuori-tema" : "costruito";
   const motivo = fuoriTema
-    ? `Il tema prende ${ampiezza.carteDisponibili} carte dal pool, buone per ${capienzaDelTema} posti sui ${copieTotali} da riempire: il mazzo è stato completato con carte fuori tema.`
-    : `${copieTotali + copieDiTerra} carte, di cui ${copieDiTerra} terre: ${copieNelTema} delle ${copieTotali} carte non-terra sono del tema.`;
+    ? `Il tema prende ${ampiezza.carteDisponibili} carte dal pool, buone per ${capienzaDelTema} posti sui ${copieTotali} da riempire: nemmeno il mazzo più fedele si è potuto finire senza carte fuori tema.`
+    : `Il mazzo più fedele: ${copieTotali + copieDiTerra} carte, di cui ${copieDiTerra} terre, e ${copieNelTema} delle ${copieTotali} carte non-terra sono del tema.`;
 
   return {
     esito,
     motivo,
     ampiezza,
-    mazzi: [
-      {
-        carte: [...finale.carte].sort(
-          (a, b) =>
-            a.carta.valoreDiMana - b.carta.valoreDiMana ||
-            a.carta.nome.localeCompare(b.carta.nome, "en"),
-        ),
-        terre: finale.valutato.base.terre,
-        purezza: finale.purezza,
-        punteggio: finale.valutato.punteggio,
-        base: finale.valutato.base,
-        simulazione: finale.valutato.simulazione,
-        totale: finale.totale,
-      },
-    ],
+    mazzi,
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: troncata,
     partenze: taratura.partenze,
     scambiProvati,
     scambiTenuti,
   };
+}
+
+/* --- L'allineamento della frontiera --------------------------------------- */
+
+/**
+ * I mazzi trovati, messi in fila **dal più puro al più forte**, con i duplicati
+ * e i dominati tolti di mezzo e il passo calcolato per ognuno.
+ *
+ * Due tagli, e ognuno risponde a una promessa del ticket:
+ *
+ * - **il duplicato**: due pesi vicini che convergono sullo stesso mazzo
+ *   compaiono una volta sola. Mostrarlo due volte direbbe che fra i due c'è un
+ *   passo, e un passo che non costa e non rende non è un passo.
+ * - **il dominato**: un mazzo che cede tema senza guadagnare potenza non sta
+ *   nella lista. È quel taglio a rendere vera la lettura promessa — purezza che
+ *   scende e potenza che sale — invece di lasciarla alla fortuna: senza,
+ *   la frontiera sarebbe l'elenco di quel che la ricerca ha trovato, e non il
+ *   tasso di cambio che l'utente è venuto a leggere.
+ *
+ * Il mazzo più puro sopravvive sempre a entrambi i tagli: è il primo della fila
+ * e non ha nessuno prima di sé che possa dominarlo.
+ */
+function allineaLaFrontiera(trovati: readonly MazzoCostruito[]): MazzoCostruito[] {
+  const visti = new Set<string>();
+  const distinti = trovati.filter((mazzo) => {
+    const impronta = improntaDelMazzo(mazzo);
+    if (visti.has(impronta)) return false;
+    visti.add(impronta);
+    return true;
+  });
+
+  // Purezza in giù; a parità di purezza, il più forte per primo — così che il
+  // gemello più debole cada subito dopo, come un dominato qualunque.
+  const ordinati = [...distinti].sort((a, b) => b.purezza - a.purezza || b.potenza - a.potenza);
+
+  const frontiera: MazzoCostruito[] = [];
+  for (const mazzo of ordinati) {
+    const prima = frontiera[frontiera.length - 1];
+    if (prima === undefined) {
+      frontiera.push(mazzo);
+      continue;
+    }
+    if (mazzo.potenza <= prima.potenza + PARI) continue;
+    frontiera.push({
+      ...mazzo,
+      passo: {
+        purezzaCeduta: prima.purezza - mazzo.purezza,
+        potenzaGuadagnata: mazzo.potenza - prima.potenza,
+      },
+    });
+  }
+  return frontiera;
+}
+
+/** Due mazzi sono lo stesso mazzo quando hanno le stesse copie degli stessi nomi. */
+function improntaDelMazzo(mazzo: MazzoCostruito): string {
+  return [...mazzo.carte, ...mazzo.terre]
+    .map((voce) => `${voce.carta.nome} × ${voce.copie}`)
+    .sort()
+    .join(" | ");
 }
 
 /* --- Le candidate --------------------------------------------------------- */
@@ -423,19 +608,26 @@ export function costruisciMazzo(
  * non può portare. Serve a non far cominciare la ricerca da un mazzo a caso,
  * che con un tetto di tempo addosso vorrebbe dire finire su un mazzo a caso.
  */
-function merito(carta: Carta, risolto: TemaRisolto, taratura: TaraturaDellaRicerca): number {
-  return qualitaDiCarta(carta) + (appartiene(carta, risolto) ? taratura.pesoDellaPurezza : 0);
+function merito(carta: Carta, risolto: TemaRisolto, peso: number): number {
+  return qualitaDiCarta(carta) + (appartiene(carta, risolto) ? peso : 0);
 }
 
+/**
+ * Le candidate si scelgono **col peso di questo passo**, non una volta per
+ * tutta la frontiera: col tema inviolabile le carte del tema devono entrare
+ * tutte nel giro, col tema quasi ignorato devono entrarci le più forti. Un
+ * elenco solo, scelto a un peso di mezzo, taglierebbe fuori proprio le carte su
+ * cui i due estremi della frontiera si giocano.
+ */
 function scegliCandidati(
   giocabili: readonly Carta[],
   risolto: TemaRisolto,
   taratura: TaraturaDellaRicerca,
+  peso: number,
 ): Carta[] {
   const ordinate = [...giocabili].sort(
     (a, b) =>
-      merito(b, risolto, taratura) - merito(a, risolto, taratura) ||
-      a.nome.localeCompare(b.nome, "en"),
+      merito(b, risolto, peso) - merito(a, risolto, peso) || a.nome.localeCompare(b.nome, "en"),
   );
 
   // Il tetto vale se resta comunque di che riempire un mazzo: meglio una
@@ -458,14 +650,14 @@ function scegliCandidati(
 function ordinaPerPartenza(
   candidati: readonly Carta[],
   risolto: TemaRisolto,
-  taratura: TaraturaDellaRicerca,
+  peso: number,
   partenza: number,
   generatore: ReturnType<typeof caso>,
 ): Carta[] {
   if (partenza === 0) return [...candidati];
   const conRumore = candidati.map((carta) => ({
     carta,
-    voto: merito(carta, risolto, taratura) + generatore.frazione() * RUMORE_DELLE_PARTENZE,
+    voto: merito(carta, risolto, peso) + generatore.frazione() * RUMORE_DELLE_PARTENZE,
   }));
   return conRumore
     .sort((a, b) => b.voto - a.voto || a.carta.nome.localeCompare(b.carta.nome, "en"))

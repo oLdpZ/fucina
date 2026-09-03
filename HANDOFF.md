@@ -12,7 +12,7 @@ L'intervista di progettazione è **chiusa**: 32 decisioni prese, tutte scritte i
 esiste, è pubblicato, ed è stato corretto sui dati reali di Scryfall.
 
 La specifica e i quattordici ticket delle tappe 1-2 sono scritti, sotto
-`.scratch/fondamenta-e-motore/`. **I ticket dal 01 al 09 sono implementati**:
+`.scratch/fondamenta-e-motore/`. **I ticket dal 01 al 12 sono implementati**:
 l'app si apre, si installa, funziona senza rete e mostra le note legali; il pool
 delle carte esiste, costruito dai dati veri di Scryfall; ogni carta porta i suoi
 tag di sinergia; e l'app ora **serve a qualcosa** — si cercano le carte per nome
@@ -43,11 +43,16 @@ la giustificano, perché saranno le spiegazioni a citarli. E adesso **l'app
 costruisce**: si dichiara il tema, si preme un tasto, e in qualche secondo esce
 un mazzo legale da sessanta carte con la sua base di terre. La ricerca parte da
 un mazzo ragionevole, prova a cambiare una carta alla volta, tiene lo scambio se
-il punteggio sale, e si rifà da quattro partenze diverse tenendo la migliore.
+il punteggio sale, e si rifà da tre partenze diverse tenendo la migliore.
 Gira in un web worker, dice a che punto è, e ha un tetto di tempo: superato,
-torna il meglio che ha trovato dichiarando di essersi fermata prima. Il prossimo
-è il ticket 12, la frontiera: gli stessi scambi ripetuti con pesi diversi dati
-al tema, per allineare quattro o cinque mazzi da purissimo a più forte.
+torna il meglio che ha trovato dichiarando di essersi fermata prima. E adesso
+non ne costruisce uno ma **quattro o cinque**: la stessa ricerca ripetuta con
+pesi diversi dati al tema, dal peso che lo rende inviolabile a quello che lo
+ignora quasi del tutto, e i mazzi affiancati dal più fedele al più forte. Per
+ognuno si legge quanto tema ha ceduto e quanta potenza ha guadagnato rispetto al
+precedente: è il **tasso di cambio**, che è il fulcro dichiarato del progetto, e
+dove fermarsi lo sceglie l'utente. Il prossimo è il ticket 13, le spiegazioni:
+ogni scelta detta a parole, da modelli di frase riempiti coi numeri veri.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -85,8 +90,8 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 12
-   (`.scratch/fondamenta-e-motore/issues/12-la-frontiera.md`),
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 13
+   (`.scratch/fondamenta-e-motore/issues/13-le-spiegazioni.md`),
    e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
@@ -216,10 +221,11 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   rispetto alla stessa carta senza simboli colorati: è la stessa lettura
   dell'avviso «carta difficile» del ticket 06, e per la stessa ragione — la
   probabilità assoluta parlerebbe del costo, non dei colori.
-- La ricerca a scambi singoli sul pool vero, tema Goblin, con le manopole di
-  `src/ricerca/taratura.ts` (quattro partenze da quattrocento valutazioni):
+- La ricerca a scambi singoli sul pool vero, tema Goblin, misurata al ticket 11
+  con le manopole di allora (quattro partenze da quattrocento valutazioni):
   **milleseicento scambi provati, un centinaio tenuti, sei secondi** su un
-  computer da tavolo. Ne esce un mazzo da sessanta carte con purezza 1. Il tetto
+  computer da tavolo. Ne esce un mazzo da sessanta carte con purezza 1. Le
+  manopole sono scese al ticket 12 e il numero va rimisurato alla sosta. Il tetto
   che si tocca per primo è quello delle **valutazioni**, non quello del tempo, ed
   è apposta: il tetto di tempo può solo fermare prima, e il determinismo regge
   solo finché a fermare è il conto delle valutazioni.
@@ -230,9 +236,47 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
 - Tutte le valutazioni di una ricerca usano **lo stesso seme**: due mazzi vanno
   confrontati sulle stesse partite, se no quel che si misura è la differenza fra
   due mescolate e non quella fra due mazzi.
-- Durante la ricerca si simulano **sessanta** partite per mazzo provato, non le
+- Durante la ricerca si simulano **quaranta** partite per mazzo provato, non le
   cinquecento della schermata: lì serve solo dire quale di due mazzi è meglio. Il
   vincitore si rivaluta per intero, ed è quello il numero che l'utente legge.
+  Erano sessanta fino al ticket 11: dal 12 il tetto di tempo paga **cinque**
+  ricerche invece di una, e le manopole sono scese di conseguenza (partenze 4→3,
+  partite 60→40, valutazioni per partenza 400→260).
+- **La frontiera si ottiene facendo scorrere un solo numero**: il peso dato alla
+  purezza accanto alle cinque componenti. `PESI_DELLA_PUREZZA` ne elenca cinque,
+  da 200 a 0,05. Duecento non è un peso ma un divieto: una copia in più nel tema
+  vale circa tre centesimi di purezza, e tre centesimi per duecento battono
+  qualunque guadagno di potenza esista — è così che il primo mazzo ha la purezza
+  massima raggiungibile, senza che nessuna riga di codice la imponga.
+- **Un mazzo che cede tema senza guadagnare potenza non entra nella frontiera.**
+  Senza quel taglio la frontiera sarebbe l'elenco di quel che la ricerca ha
+  trovato; con quel taglio è il tasso di cambio, e la promessa «purezza e
+  potenza si muovono in direzioni opposte» è vera per costruzione e non per
+  fortuna. Vale anche per i duplicati: due pesi che convergono sullo stesso
+  mazzo lo mostrano una volta sola, se no la frontiera direbbe che c'è un passo
+  dove non c'è.
+- Ogni mazzo della frontiera si **rivaluta per intero dentro il suo passo**, non
+  alla fine: purezza e potenza dei mazzi si confrontano fra loro, e confrontare
+  una misura piena con una sbrigativa direbbe che un passo ha guadagnato quando
+  invece ha solo misurato meglio.
+- Le **candidate si riscelgono a ogni peso**: col tema inviolabile devono entrare
+  nel giro le carte del tema, col tema quasi ignorato le più forti. Un elenco
+  solo, scelto a un peso di mezzo, taglierebbe fuori proprio le carte su cui i
+  due estremi della frontiera si giocano.
+- Sul pool finto, tema Goblin, **seme 7**, con le manopole spedite: la frontiera
+  intera costa **circa sette secondi** su un computer da tavolo e conta
+  **quattro** mazzi — purezza 1,0000 → 0,9737 → 0,8684 → 0,6410, potenza
+  0,7922 → 0,8067 → 0,8182 → 0,8296. La ricerca è tutta seminata: questi numeri
+  si rifanno identici, e se un giorno non tornano è cambiato qualcosa. Quanti
+  mazzi conti sul **pool vero**, e quanto ci metta su un telefono, sono due
+  delle misure della sosta.
+- Il tetto di tempo predefinito è salito da **otto a quindici secondi**: dal
+  ticket 12 paga cinque ricerche invece di una, e otto secondi la troncavano a
+  uno o due mazzi su un telefono di fascia media. Il troncamento si dichiara
+  sempre — è onesto — ma consegnare un pezzo di frontiera per difendere
+  l'attesa vuol dire difendere la cosa sbagliata: la frontiera è il fulcro del
+  progetto. L'attesa si sopporta perché **si vede**: la riga dell'avanzamento
+  dice a che mazzo è arrivata, e il tasto «Ferma» c'è.
 - Le coppie di tag che «si attivano a vicenda» sono **quattro**, e l'elenco è
   corto di proposito come le regole dei tag: `accelerazione-di-mana` non
   compare perché accelera le carte care, che non sono un tag, e `spazza-via`
@@ -272,8 +316,10 @@ src/punteggio/punteggio.ts `valutaMazzo(...)`: le cinque componenti tenute
                          separate, ognuna coi suoi valori grezzi
 src/punteggio/taratura.ts tutti i pesi del punteggio, in un punto solo
 src/ricerca/costruisci.ts `costruisciMazzo(richiesta, pool)`: **la cucitura
-                         principale** — la ricerca a scambi singoli, pura, col
-                         caso e l'orologio che arrivano tutti e due da fuori
+                         principale** — la ricerca a scambi singoli e la
+                         frontiera che ne nasce facendo scorrere il peso del
+                         tema; pura, col caso e l'orologio che arrivano tutti e
+                         due da fuori
 src/ricerca/taratura.ts  le manopole della ricerca, sovrascrivibili da fuori
 src/ricerca/protocollo.ts le poche frasi fra interfaccia e worker: solo tipi
 src/ricerca/motore.worker.ts il motore in un thread suo: nessuna decisione,
@@ -294,7 +340,8 @@ src/stili/catalogo.css   lo stile del catalogo, tutto a variabili del tema
 src/stili/mazzo.css      lo stile della schermata del mazzo, stesse variabili
 src/stili/salvati.css    lo stile della schermata dei mazzi salvati
 src/stili/vincoli.css    lo stile della schermata del tema, stesse variabili
-src/stili/costruzione.css lo stile del tasto che costruisce e del suo esito
+src/stili/costruzione.css lo stile del tasto che costruisce, del suo esito e
+                         della striscia dei mazzi affiancati
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano

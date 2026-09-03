@@ -172,3 +172,93 @@
   flex: 0 0 auto;
   align-self: flex-start;
 }
+
+/*
+ * La frontiera (ticket 12): i quattro o cinque mazzi **affiancati**, dal più
+ * fedele al tema al più forte.
+ *
+ * Affiancati e non impilati perché è il confronto la cosa da leggere: il fulcro
+ * del progetto non è la lista di un mazzo, è il tasso di cambio fra un mazzo e
+ * il successivo. Sul telefono non ci stanno in riga, e allora scorrono in
+ * orizzontale invece di rimpicciolirsi fino a non dire più niente.
+ */
+.nota-frontiera {
+  margin: 0;
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+}
+
+.frontiera {
+  display: flex;
+  gap: calc(var(--passo) * 2);
+  margin: 0;
+  padding: 0 0 calc(var(--passo));
+  list-style: none;
+  overflow-x: auto;
+  /* Il dito si ferma su un mazzo alla volta, non a metà fra due. */
+  scroll-snap-type: x proximity;
+}
+
+.frontiera > li {
+  flex: 1 0 11rem;
+  scroll-snap-align: start;
+}
+
+.passo-frontiera {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo));
+  width: 100%;
+  height: 100%;
+  padding: calc(var(--passo) * 2);
+  text-align: left;
+  color: var(--inchiostro);
+  background: var(--superficie-alta);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  cursor: pointer;
+}
+
+/*
+ * Il mazzo che si sta guardando: bordo d'accento e non solo un fondo diverso —
+ * il fondo da solo sparisce a chi non distingue bene i colori.
+ */
+.passo-frontiera[data-scelto] {
+  border-color: var(--accento);
+  box-shadow: inset 0 0 0 1px var(--accento);
+}
+
+.passo-frontiera .posizione {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--inchiostro-debole);
+}
+
+/* Etichetta e numero a coppie: due righe di due, e si leggono in colonna. */
+.passo-frontiera .numeri {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: calc(var(--passo)) calc(var(--passo) * 2);
+  align-items: baseline;
+}
+
+.passo-frontiera .etichetta-numero {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+}
+
+.passo-frontiera .numeri strong {
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-normale);
+  color: var(--inchiostro);
+}
+
+/* Il baratto rispetto al mazzo prima: è la frase per cui la striscia esiste. */
+.passo-frontiera .passo {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-tenue);
+}

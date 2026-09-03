@@ -20,6 +20,7 @@ import type { Carta } from "../dati/pool.js";
 import { COPIE_MASSIME, DIMENSIONE_MAZZO } from "../mazzo/taratura.js";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import { costruisciMazzo, type Frontiera, type Opzioni, type Richiesta } from "./costruisci.js";
+import { PESI_DELLA_PUREZZA } from "./taratura.js";
 
 const POOL: readonly Carta[] = [...POOL_DEL_MOTORE, ...TERRE_FINTE];
 
@@ -77,10 +78,10 @@ function lista(frontiera: Frontiera): string {
 }
 
 describe("il primo mazzo costruito dall'app", () => {
-  it("torna un mazzo solo: a questo ticket la frontiera non è ancora una frontiera", () => {
+  it("torna una frontiera di mazzi, e il primo è quello che l'utente ha chiesto", () => {
     const frontiera = costruisci();
     expect(frontiera.esito).toBe("costruito");
-    expect(frontiera.mazzi).toHaveLength(1);
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
   });
 
   it("è legale: sessanta carte, mai più di quattro copie salvo le terre base", () => {
@@ -103,7 +104,7 @@ describe("il primo mazzo costruito dall'app", () => {
     const poche = [...POOL_DEL_MOTORE.slice(0, 9), ...TERRE_FINTE];
     const frontiera = costruisciMazzo(richiesta(), poche, SVELTA);
 
-    expect(frontiera.mazzi).toHaveLength(1);
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
     expect(carteTotali(frontiera)).toBe(DIMENSIONE_MAZZO);
   });
 
@@ -308,5 +309,111 @@ describe("i temi degeneri, che devono dare un esito e mai un crollo", () => {
     const frontiera = costruisciMazzo(richiesta(), [], SVELTA);
     expect(frontiera.esito).toBe("niente-da-costruire");
     expect(frontiera.mazzi).toHaveLength(0);
+  });
+});
+
+describe("la frontiera: il tasso di cambio fra tema e potenza", () => {
+  it("torna più mazzi, uno per peso della purezza, mai più dei pesi provati", () => {
+    const frontiera = costruisci();
+    expect(frontiera.mazzi.length).toBeGreaterThan(1);
+    expect(frontiera.mazzi.length).toBeLessThanOrEqual(PESI_DELLA_PUREZZA.length);
+  });
+
+  it("nessun mazzo compare due volte: pesi diversi che danno lo stesso mazzo valgono uno", () => {
+    const liste = costruisci().mazzi.map(
+      (mazzo) =>
+        JSON.stringify(
+          [...mazzo.carte, ...mazzo.terre].map((voce) => [voce.carta.nome, voce.copie]),
+        ),
+    );
+    expect(new Set(liste).size).toBe(liste.length);
+  });
+
+  it("è ordinata per purezza decrescente", () => {
+    const purezze = costruisci().mazzi.map((mazzo) => mazzo.purezza);
+    for (let i = 1; i < purezze.length; i++) {
+      expect(purezze[i]!).toBeLessThan(purezze[i - 1]!);
+    }
+  });
+
+  it("purezza e potenza si muovono in direzioni opposte", () => {
+    // È il fulcro del progetto: scendendo lungo la frontiera si cede tema e si
+    // guadagna potenza. Un mazzo che cedesse tema **senza** guadagnare niente
+    // non avrebbe ragione di stare nella lista, e infatti non ci sta.
+    const mazzi = costruisci().mazzi;
+    for (let i = 1; i < mazzi.length; i++) {
+      expect(mazzi[i]!.potenza).toBeGreaterThan(mazzi[i - 1]!.potenza);
+    }
+    const primo = mazzi[0]!;
+    const ultimo = mazzi[mazzi.length - 1]!;
+    expect(ultimo.potenza).toBeGreaterThanOrEqual(primo.potenza);
+    expect(ultimo.purezza).toBeLessThanOrEqual(primo.purezza);
+  });
+
+  it("il primo mazzo è il più puro che il tema permetta", () => {
+    // Nel pool finto i Goblin bastano a riempire tutti i posti non-terra: la
+    // purezza massima raggiungibile è uno, e la frontiera parte da lì.
+    expect(costruisci().mazzi[0]!.purezza).toBe(1);
+  });
+
+  it("quando il tema non basta, il primo mazzo è comunque il più puro possibile", () => {
+    // Un sottotipo che tocca una carta sola: quattro copie, e non di più. La
+    // purezza massima è quella, e il primo mazzo della frontiera la raggiunge.
+    const unaSola = tema({ inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Sphinx"] } });
+    const mazzo = costruisci({ tema: unaSola }).mazzi[0]!;
+    const copie = mazzo.carte.reduce((somma, voce) => somma + voce.copie, 0);
+    const nelTema = mazzo.carte
+      .filter((voce) => voce.carta.sottotipi.includes("Sphinx"))
+      .reduce((somma, voce) => somma + voce.copie, 0);
+
+    expect(nelTema).toBe(COPIE_MASSIME);
+    expect(mazzo.purezza).toBeCloseTo(COPIE_MASSIME / copie, 10);
+  });
+
+  it("ogni mazzo dice quanto costa il passo dal precedente, e il primo non ha passo", () => {
+    const mazzi = costruisci().mazzi;
+    expect(mazzi[0]!.passo).toBeNull();
+    for (let i = 1; i < mazzi.length; i++) {
+      const passo = mazzi[i]!.passo;
+      expect(passo).not.toBeNull();
+      expect(passo!.purezzaCeduta).toBeCloseTo(mazzi[i - 1]!.purezza - mazzi[i]!.purezza, 10);
+      expect(passo!.potenzaGuadagnata).toBeCloseTo(mazzi[i]!.potenza - mazzi[i - 1]!.potenza, 10);
+      expect(passo!.purezzaCeduta).toBeGreaterThan(0);
+      expect(passo!.potenzaGuadagnata).toBeGreaterThan(0);
+    }
+  });
+
+  it("ogni mazzo della frontiera è legale, non solo il primo", () => {
+    for (const mazzo of costruisci().mazzi) {
+      const voci = [...mazzo.carte, ...mazzo.terre];
+      expect(voci.reduce((somma, voce) => somma + voce.copie, 0)).toBe(DIMENSIONE_MAZZO);
+      expect(new Set(voci.map((voce) => voce.carta.nome)).size).toBe(voci.length);
+      expect(mazzo.base.numeroTerre).toBe(mazzo.base.numeroTerreDallaCurva);
+    }
+  });
+
+  it("il tetto di tempo vale per la frontiera intera, non per ogni mazzo", () => {
+    // Un orologio che salta di cento millisecondi a ogni sguardo, con un tetto
+    // di cinquanta: se il tetto fosse per mazzo, ogni peso ne consegnerebbe uno
+    // lo stesso e la frontiera sarebbe piena. Vale per tutta la frontiera, e
+    // infatti quel che torna è il primo mazzo e il troncamento dichiarato.
+    let quando = 0;
+    const frontiera = costruisci(
+      { tempoMassimoMs: 50 },
+      { ...SVELTA, orologio: () => (quando += 100) },
+    );
+
+    expect(frontiera.troncataPerTempo).toBe(true);
+    expect(frontiera.mazzi).toHaveLength(1);
+    expect(frontiera.mazzi.length).toBeLessThan(PESI_DELLA_PUREZZA.length);
+    expect(carteTotali(frontiera)).toBe(DIMENSIONE_MAZZO);
+  });
+
+  it("stessa richiesta due volte, stessa frontiera intera", () => {
+    const uno = costruisci();
+    const altro = costruisci();
+    expect(uno.mazzi.map((mazzo) => [mazzo.purezza, mazzo.potenza])).toEqual(
+      altro.mazzi.map((mazzo) => [mazzo.purezza, mazzo.potenza]),
+    );
   });
 });

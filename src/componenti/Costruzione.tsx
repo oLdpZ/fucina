@@ -16,7 +16,21 @@
  * è la cosa che rende ripetibile quel che l'app fa. Stesso tema e stesso seme,
  * stesso mazzo, sempre; cambiando seme si chiede alla ricerca di ripartire da
  * un'altra parte.
+ *
+ * ## La frontiera (ticket 12)
+ *
+ * Quel che torna non è un mazzo ma **quattro o cinque**, allineati dal più
+ * fedele al tema al più forte, e sono affiancati apposta: il fulcro del
+ * progetto non è la lista, è il **tasso di cambio** fra originalità e potenza.
+ * Ogni mazzo porta scritto quanto tema ha ceduto e quanta potenza ha guadagnato
+ * rispetto a quello prima di lui — numeri che la ricerca ha già calcolato
+ * (`MazzoCostruito.passo`), non differenze rifatte qui.
+ *
+ * Dove fermarsi lo sceglie l'utente, ed è il senso di tutto: il primo mazzo è
+ * selezionato perché è quello che ha chiesto, non perché sia il consigliato.
  */
+
+import { useEffect, useState } from "preact/hooks";
 
 import type { Pool } from "../dati/pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
@@ -27,6 +41,19 @@ import { temaDichiarato, type Tema } from "../tema/tema.js";
 
 const NUMERI = new Intl.NumberFormat("it-IT");
 const PERCENTO = new Intl.NumberFormat("it-IT", { style: "percent", maximumFractionDigits: 0 });
+/**
+ * La differenza fra un mazzo e il precedente: le stesse due percentuali di
+ * sopra, sottratte, **col segno sempre in vista**. «−8% di tema, +2% di
+ * potenza» dice il baratto in due numeri, e il segno è metà di quel che dice.
+ */
+const PUNTI = new Intl.NumberFormat("it-IT", {
+  // Un decimale, e non zero: i guadagni di potenza veri stanno intorno all'uno
+  // per cento, e arrotondarli all'intero scriverebbe «+0% di potenza» proprio
+  // sul numero per cui questa schermata esiste.
+  maximumFractionDigits: 1,
+  style: "percent",
+  signDisplay: "always",
+});
 
 /** Il seme sta in trentadue bit, come lo vuole `caso.ts`. */
 const SEME_MASSIMO = 0xffffffff;
@@ -48,7 +75,16 @@ export function Costruzione({
   mettiInMano: (carte: readonly CopieDiCarta[], terre: number) => void;
 }) {
   const dichiarato = temaDichiarato(tema);
-  const mazzo = motore.frontiera?.mazzi[0] ?? null;
+  const mazzi = motore.frontiera?.mazzi ?? [];
+  // Quale mazzo della frontiera si sta guardando. Zero è il più fedele al tema:
+  // si parte da lì perché è quello che l'utente ha chiesto, e scendere lungo la
+  // frontiera è una scelta che fa lui, non un consiglio che gli si dà.
+  const [scelto, scegli] = useState(0);
+  // Una frontiera nuova riporta la scelta sul primo: lasciare il dito dov'era
+  // mostrerebbe, dopo una ricerca diversa, il mazzo di una posizione che in
+  // quella nuova frontiera vuol dire un'altra cosa.
+  useEffect(() => scegli(0), [motore.frontiera]);
+  const mazzo = mazzi[Math.min(scelto, mazzi.length - 1)] ?? null;
 
   const costruisci = () => {
     const richiesta: Richiesta = {
@@ -115,9 +151,11 @@ export function Costruzione({
         <p class="avanzamento" aria-live="polite">
           {motore.avanzamento === null
             ? "Preparo le carte…"
-            : `Partenza ${motore.avanzamento.partenza + 1} di ${
-                motore.avanzamento.partenze
-              }, ${NUMERI.format(motore.avanzamento.valutazioni)} mazzi provati.`}
+            : `Mazzo ${motore.avanzamento.passo + 1} di ${motore.avanzamento.passi}, partenza ${
+                motore.avanzamento.partenza + 1
+              } di ${motore.avanzamento.partenze}, ${NUMERI.format(
+                motore.avanzamento.valutazioni,
+              )} ${motore.avanzamento.valutazioni === 1 ? "mazzo provato" : "mazzi provati"}.`}
         </p>
       ) : null}
 
@@ -133,6 +171,60 @@ export function Costruzione({
               Il tempo concesso è finito prima che la ricerca si fermasse da sé: questo è il meglio
               che ha trovato, non il meglio che c&rsquo;è.
             </p>
+          ) : null}
+
+          {mazzi.length > 0 ? (
+            <>
+              {mazzi.length > 1 ? (
+                <p class="nota-frontiera">
+                  {mazzi.length} mazzi, dal più fedele al tema al più forte. Ogni passo dice quanto
+                  tema costa e quanta potenza rende: dove fermarsi lo scegli tu.
+                </p>
+              ) : motore.frontiera.troncataPerTempo ? (
+                <p class="nota-frontiera">
+                  Un mazzo solo: il tempo è finito prima che l&rsquo;app potesse cercare gli altri.
+                  Non vuol dire che un baratto non ci sia — vuol dire che non è stato cercato.
+                </p>
+              ) : (
+                <p class="nota-frontiera">
+                  Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.
+                </p>
+              )}
+              <ol class="frontiera">
+                {mazzi.map((voce, indice) => (
+                  <li key={voce.peso}>
+                    <button
+                      type="button"
+                      aria-pressed={indice === scelto}
+                      class="passo-frontiera"
+                      data-scelto={indice === scelto ? "" : undefined}
+                      onClick={() => scegli(indice)}
+                    >
+                      <span class="posizione">
+                        {indice === 0
+                          ? "il più fedele"
+                          : indice === mazzi.length - 1
+                            ? "il più forte"
+                            : `${indice + 1}º`}
+                      </span>
+                      <span class="numeri">
+                        <span class="etichetta-numero">tema</span>
+                        <strong>{PERCENTO.format(voce.purezza)}</strong>
+                        <span class="etichetta-numero">potenza</span>
+                        <strong>{PERCENTO.format(voce.potenza)}</strong>
+                      </span>
+                      <span class="passo">
+                        {voce.passo === null
+                          ? "il mazzo più puro che il tema permetta"
+                          : `${PUNTI.format(-voce.passo.purezzaCeduta)} di tema, ${PUNTI.format(
+                              voce.passo.potenzaGuadagnata,
+                            )} di potenza`}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </>
           ) : null}
 
           {mazzo !== null ? (
