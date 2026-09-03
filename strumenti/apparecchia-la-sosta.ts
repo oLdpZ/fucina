@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import type { Carta, Pool } from "../src/dati/pool.ts";
 import { costruisciMazzo, type Frontiera, type MazzoCostruito } from "../src/ricerca/costruisci.ts";
+import { DENSITA_DI_SINERGIA_PIENA } from "../src/punteggio/taratura.ts";
 import { spiegaFrontiera, type SpiegazioniDelMazzo } from "../src/spiegazioni/spiegazioni.ts";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, eTerra, type Tema } from "../src/tema/tema.ts";
 
@@ -161,15 +162,37 @@ function elencoCarte(voci: MazzoCostruito["carte"] | MazzoCostruito["terre"]): s
   return voci.map((v) => `${v.copie}× ${v.carta.nome}`).join(" · ");
 }
 
-function componenti(mazzo: MazzoCostruito): string {
+/**
+ * Le cinque componenti **coi loro valori grezzi**.
+ *
+ * I grezzi non sono un di più: sono la ragione per cui il punteggio li tiene, e
+ * senza di loro una componente satura è indistinguibile da una guadagnata. Un
+ * `1,000` da solo non si può ritarare — serve sapere *quanto* sopra il tetto sta
+ * il mazzo, e il tetto è precisamente ciò che la sosta deve rimettere a posto.
+ */
+function componenti(mazzo: MazzoCostruito): string[] {
   const p = mazzo.punteggio;
+  const v = p.velocita.grezzi;
+  const c = p.curva.grezzi;
+  const col = p.colori.grezzi;
+  const s = p.sinergia.grezzi;
+  const q = p.qualita.grezzi;
+
+  const tetto = (valore: number, grezzo: number, soglia: number) =>
+    valore >= 1 ? ` ⚠️ **al tetto** (${conDecimali(grezzo, 3)} contro una soglia di ${soglia})` : "";
+
   return [
-    `velocità ${conDecimali(p.velocita.valore, 3)}`,
-    `curva ${conDecimali(p.curva.valore, 3)}`,
-    `colori ${conDecimali(p.colori.valore, 3)}`,
-    `sinergia ${conDecimali(p.sinergia.valore, 3)}`,
-    `qualità ${conDecimali(p.qualita.valore, 3)}`,
-  ].join(" · ");
+    `- **velocità ${conDecimali(p.velocita.valore, 3)}** — voto di chiusura ${conDecimali(v.votoDiChiusura, 3)}; mani tenibili ${perCento(v.quotaManiTenibili)}; partenze impiantate ${perCento(v.quotaPartenzeImpiantate)}`,
+    `- **curva ${conDecimali(p.curva.valore, 3)}** — distanza dalla forma attesa ${conDecimali(c.distanza, 3)}, presa sul turno di riferimento ${c.turnoDiRiferimento.toFixed(1)}`,
+    `  - quote vere:   ${c.caselle.map((casella, i) => `${casella} ${perCento(c.quote[i] ?? 0)}`).join(" · ")}`,
+    `  - quote attese: ${c.caselle.map((casella, i) => `${casella} ${perCento(c.quoteAttese[i] ?? 0)}`).join(" · ")}`,
+    `- **colori ${conDecimali(p.colori.valore, 3)}** — ${col.carteDifficili} carte che questa base non regge, su ${col.numeroTerre} terre`,
+    `- **sinergia ${conDecimali(p.sinergia.valore, 3)}** — densità **${conDecimali(s.densita, 4)}** (${s.coppieAttive} coppie attive su ${s.coppieDiCopie})${tetto(p.sinergia.valore, s.densita, DENSITA_DI_SINERGIA_PIENA)}`,
+    ...(s.perCoppiaDiTag.length > 0
+      ? [`  - da: ${s.perCoppiaDiTag.map((c) => `${c.uno}+${c.altro} (${c.coppie})`).join(" · ")}`]
+      : []),
+    `- **qualità ${conDecimali(p.qualita.valore, 3)}** — efficienza media delle creature ${conDecimali(q.efficienzaMedia, 3)}; rimozioni ${q.rimozioniIncondizionate} incondizionate e ${q.rimozioniCondizionali} condizionali; ${q.carteDiVantaggio} copie di vantaggio in carte`,
+  ];
 }
 
 function scriviMazzo(
@@ -183,10 +206,14 @@ function scriviMazzo(
   righe.push(`### Mazzo ${indice + 1} — purezza ${conDecimali(mazzo.purezza)}, potenza ${conDecimali(mazzo.potenza)}`);
   righe.push("");
   righe.push(`- peso della purezza con cui è stato cercato: **${mazzo.peso}**`);
-  righe.push(`- componenti: ${componenti(mazzo)}`);
   righe.push(
-    `- simulazione: chiude al turno **${sim.turnoMedioDiChiusura === null ? "mai" : sim.turnoMedioDiChiusura.toFixed(1)}** nel ${perCento(sim.quotaPartiteChiuse)} delle ${sim.partite} partite; mani tenibili ${perCento(sim.quotaManiTenibili)}; partenze impiantate ${perCento(sim.quotaPartenzeImpiantate)}`,
+    `- simulazione: chiude al turno **${sim.turnoMedioDiChiusura === null ? "mai" : sim.turnoMedioDiChiusura.toFixed(1)}** nel ${perCento(sim.quotaPartiteChiuse)} delle ${sim.partite} partite`,
   );
+  righe.push("");
+  righe.push("**Le cinque componenti, coi numeri che le giustificano**");
+  righe.push("");
+  righe.push(...componenti(mazzo));
+  righe.push("");
 
   if (mazzo.passo !== null) {
     righe.push(

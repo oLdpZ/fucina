@@ -480,10 +480,14 @@ telefono vero resta da misurare**, ed è la casella aperta del ticket 14.
   hanno **entrambi i tipi** e la forza della faccia creatura. Purezza 1,0000 —
   l'app dichiara «100% del tema» per quello che in partita è un mazzo di
   creature. Dai numeri non si vede: si vede solo leggendo la lista.
-- **La densità di sinergia vale 1,000 su nove mazzi da sei temi diversi.** Un
-  numero che non cambia mai non porta informazione: sono quindici centesimi del
-  punteggio che non distinguono niente, e una delle cinque frasi che le
-  spiegazioni citano non dice nulla di quel mazzo in particolare.
+- **La densità di sinergia vale 1,000 su nove mazzi da sei temi diversi**, e i
+  grezzi dicono perché: le densità vere sono 0,1508 · 0,1606 · 0,1636 · 0,1711 ·
+  0,1765 · 0,1987 · 0,2168 · 0,2773 · 0,2773 contro un tetto di **0,15**. Cinque
+  su nove si accalcano **appena sopra** il tetto — la più bassa otto
+  diecimillesimi sopra — perché oltre non paga più: la ricerca ci arriva e si
+  ferma. Il tetto non misura i mazzi, li **plasma**, e alzarlo cambierebbe le
+  liste e non solo i voti. Quindici centesimi di punteggio che oggi non
+  distinguono niente.
 - **Dentro un `FiltroTema` le categorie si sommano in *and*.** Escludere
   «Creature» e «produce-pedine» insieme esclude le sole creature che fanno
   pedine, non le creature. Per le esclusioni è probabilmente la semantica
