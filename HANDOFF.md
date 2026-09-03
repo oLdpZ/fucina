@@ -90,7 +90,8 @@ spiegazioni mai inventate.
 ## Cosa manca per partire — tre cose, tutte dell'utente
 
 1. ~~Il nome dell'app.~~ **Fatto: si chiama «Fucina»** (`src/identita.ts`).
-   Resta tuo il nome della **cartella** sul disco e dell'**indirizzo web**.
+   ~~L'indirizzo web.~~ **Fatto: `https://oldpz.github.io/fucina/`.** Resta tuo
+   il nome della **cartella** sul disco, e un dominio tuo se lo vorrai.
 2. **La direzione visiva.** Quattro candidate, tutte già disegnate e visibili
    nella tela pubblicata:
    - lo stile **chiaro e blu** dell'artboard importato da Claude Design (attuale);
@@ -109,41 +110,78 @@ negozio?*, *le spiegazioni si capiscono lette a voce alta?*. Un agente può
 apparecchiarlo (generare le frontiere di cinque temi veri in un file da leggere)
 ma non risponderci.
 
-Il discorso aperto quando la sessione si è chiusa era **dove pubblicare l'app**.
-Vedi «La pubblicazione» qui sotto.
+**Il ticket 14 porta una casella nuova, ed è la più grossa: la potenza oggi è
+una misura da aggro.** Il ticket sta in `.scratch/`, che è fuori da git, quindi
+il riassunto va tenuto qui — è l'unico posto pubblico dove si legge.
+
+La simulazione goldfish, di ogni carta, legge **quattro cose**: se è una terra,
+il costo, la forza, il valore di mana. **Il testo non lo legge**, e nemmeno i
+tag. Dentro la simulazione un mazzo che vince a fulmini fa zero danno, una carta
+che pesca non pesca, un controllo risulta lentissimo, un combo è invisibile. E
+la simulazione non è un angolo del punteggio: è la velocità (peso **0,30**) ed è
+il turno di chiusura da cui la curva (0,15) ricava la sua forma attesa — cioè
+**quarantacinque centesimi** del punteggio che, fuori dall'aggro a creature,
+misurano la cosa sbagliata. Non è un guasto ma una conseguenza di Q4 (niente
+motore di regole) che nessuno aveva ancora scritto per intero.
+
+Regge il resto, e limita quanto c'è da aggiustare: la curva **non impone un
+archetipo** (si confronta con la forma attesa per la velocità misurata di *quel*
+mazzo), la qualità (0,20) premia già rimozione e vantaggio in carte per tag, la
+sinergia (0,15) dice qualcosa di come il mazzo vuole funzionare. Un controllo
+prende credito parziale su 0,35 ed è penalizzato in struttura sullo 0,45: non è
+ignorato, è **sottovalutato in modo sistematico**, che è peggio — la ricerca a
+scambi singoli ottimizza contro quella sottovalutazione e va a cercarsi le
+creature.
+
+Perché è roba da sosta e non da adesso: se i cinque temi provati sono tutti temi
+a creature, **la sosta passa senza accorgersene**. Per questo il ticket ora
+chiede un tema che non vinca con le creature. Le tre strade — dichiararlo e
+basta; dare un danno alle magie per tag; togliere la velocità dal conto quando
+il mazzo non chiude — stanno scritte nel ticket coi loro costi. Nessuna va
+implementata prima della sosta, ma **la prima va fatta comunque**: oggi l'app
+darebbe a quel mazzo una lista peggiore di quella che poteva dargli senza
+dirlo, e le spiegazioni citerebbero numeri veri su una misura che non c'entra.
+
+Il discorso aperto quando la sessione si è chiusa era **dove pubblicare l'app**:
+è fatto. Fucina sta su **https://oldpz.github.io/fucina/**, repo pubblico
+`oLdpZ/fucina`, e si ripubblica da sola a ogni spinta su `main` — ma solo se i
+test passano e i tipi tornano (`.github/workflows/pubblica.yml`).
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
 **sosta e prova reale** → galleria e budget → ciclo iterativo → meta → sideboard.
 
-## La pubblicazione — dove eravamo arrivati
+## La pubblicazione — fatta il 3 settembre 2026
 
-La domanda aperta: **dove si pubblica Fucina**, perché l'amico dell'utente possa
-installarsela sul telefono. Oggi non c'è **nessun remote git**: il progetto vive
-solo su questo computer, e una PWA si installa solo da https.
+Fucina è online: **https://oldpz.github.io/fucina/**, repo pubblico
+`oLdpZ/fucina`. È l'indirizzo da dare all'amico dell'utente, e da lì la PWA si
+installa sul telefono.
 
-Quel che è già misurato e verificato (3 settembre 2026):
+Come sta messa:
 
-- il primo caricamento pesa **640 KB compressi** — `pool.json` è 4,2 MB grezzi
-  ma è JSON, e ogni host statico serio lo comprime. Il resto dell'app sono
-  ~150 KB fra codice e stile;
-- il service worker **precarica anche il pool**, quindi dalla seconda visita
-  l'app va senza rete;
-- l'app servita da un **sottopercorso** (`http://host/fucina/`) si apre senza un
-  errore in console: `base: "./"` in `vite.config.ts` fa il suo lavoro, e questo
-  è il caso di un «project site» di GitHub Pages;
-- il controllo di freschezza del ticket 05 era **già stato verificato contro le
-  regole di GitHub Pages** (ETag, Last-Modified, 304): è la ragione più forte
-  per scegliere quello e non un altro host.
+- `.github/workflows/pubblica.yml` compila a ogni spinta su `main`, ma **solo se
+  i test passano e i tipi tornano**. Quel che sta online non si può caricare a
+  mano. Per ripubblicare senza un commit finto: `gh workflow run pubblica.yml`;
+- GitHub Pages è configurato con sorgente **workflow**, non «da branch»: il
+  ramo `main` non contiene `dist/`, che resta in `.gitignore`;
+- il `README.md` porta con sé le **note legali** dell'app. Su un repo pubblico
+  servono lì quanto dentro la schermata: sono la condizione che rende legittimo
+  l'uso dei dati delle carte, e la gratuità è parte di quella condizione.
 
-La proposta, da confermare: **GitHub Pages**, repo pubblico, indirizzo
-`https://<utente>.github.io/fucina/`. Gratis per sempre, https compreso, niente
-build da pagare, dominio suo quando vorrà. L'alternativa è **Cloudflare Pages**,
-ugualmente gratis, se il repo deve restare **privato** (su GitHub Pages i repo
-privati vogliono un piano a pagamento).
+Verificato dal vivo sull'indirizzo pubblico, non dedotto:
 
-Le decisioni che restano all'utente: repo pubblico o privato, il nome del repo
-(diventa l'indirizzo), e se vuole un dominio suo. Poi serve **lui** per creare
-il repo e collegare l'account: è lavoro da `/wizard`, non da agente.
+- `pool.json` è 4,2 MB grezzi e GitHub Pages lo serve **compresso a 674 KB**: la
+  stima di 640 KB reggeva;
+- **il controllo di freschezza del ticket 05 funziona sull'host vero**, ed era
+  la ragione dichiarata per scegliere Pages e non un altro: richiesta
+  condizionale col suo ETag, risposta **304 con corpo di zero byte**. Non i
+  4,2 MB. È il pezzo che decide se un'app installata continua a servire carte
+  bandite;
+- `sw.js` e `manifest.webmanifest` rispondono 200 dal sottopercorso: `base:
+  "./"` fa il suo lavoro e l'app si installa.
+
+Resta all'utente, se vorrà: un **dominio suo** (Pages lo regge, https compreso),
+e il nome del repo, che oggi è `fucina` e determina l'indirizzo — cambiarlo dopo
+che qualcuno ha installato l'app costa caro, perché la PWA si lega all'origine.
 
 ## Fatti verificati da non ri-cercare
 
@@ -373,6 +411,13 @@ telefono vero resta da misurare**, ed è la casella aperta del ticket 14.
   una volta arrotondato. La frase del passo sceglie perciò il numero che dice
   qualcosa — turno medio, poi quota di partite chiuse, poi nessuno dei due — e
   non scrive mai «al turno 5,7 invece che al turno 5,7».
+- **La simulazione non legge il testo delle carte.** `leggi()` in
+  `mazzo/simulazione.ts` ricava di ogni carta quattro cose sole: terra o no,
+  costo di mana, forza, valore di mana. Nessun tag, nessuna riga di oracolo. È
+  la ragione per cui la potenza è oggi una misura da aggro, ed è la casella
+  aperta più grossa del ticket 14 — vedi «Prossimi comandi» qui sopra.
+- Sul repo pubblico **`.scratch/` non c'è**: i quattordici ticket vivono solo su
+  questo computer. Quel che deve sopravvivere a un clone va scritto qui dentro.
 - Le coppie di tag che «si attivano a vicenda» sono **quattro**, e l'elenco è
   corto di proposito come le regole dei tag: `accelerazione-di-mana` non
   compare perché accelera le carte care, che non sono un tag, e `spazza-via`
@@ -382,6 +427,9 @@ telefono vero resta da misurare**, ed è la casella aperta del ticket 14.
 
 ```
 PROGETTO.md              documento d'intesa, le 32 decisioni
+README.md                la porta del repo pubblico, e le note legali con lui
+.github/workflows/pubblica.yml  compila e pubblica su Pages, ma solo se i test
+                         passano: quel che sta online non si carica a mano
 index.html               guscio della pagina
 src/identita.ts          il nome dell'app: il solo punto in cui cambiarlo
 src/dati/pool.ts         la forma del pool: solo tipi, nessun peso a runtime
