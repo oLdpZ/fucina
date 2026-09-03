@@ -150,6 +150,63 @@ test passano e i tipi tornano (`.github/workflows/pubblica.yml`).
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
 **sosta e prova reale** → galleria e budget → ciclo iterativo → meta → sideboard.
 
+## La tappa 3, decisa il 3 settembre 2026 — strategia e avversario
+
+Da un'intervista con l'utente. **Le decisioni stanno in `docs/adr/` e il
+vocabolario in `CONTEXT.md`, che sono in git**; i sei ticket stanno in
+`.scratch/strategia-e-avversario/`, che non lo è.
+
+L'utente ha chiesto tre cose: poter legare il mazzo a una **strategia di
+vittoria** e non solo alle creature; **battere un mazzo del meta** con un mazzo
+inedito; e che il sistema **capisca le regole del gioco**. Le ultime due sono la
+stessa richiesta — per dire «questo mazzo batte il mono-rosso» bisogna far
+giocare i due mazzi, cioè sapere cosa fa ogni carta — ed è un motore di regole.
+
+Che cosa si è deciso, in breve:
+
+- **La strategia si dichiara, l'archetipo si misura** (ADR-0001). Quattro
+  etichette all'ingresso — aggro, controllo, midrange, combo — trattate come
+  **vincolo duro**, mai come peso: un peso creerebbe un secondo tasso di cambio
+  invisibile, e la frontiera esiste per rendere visibile l'unico che c'è. La
+  verifica è **per comportamento misurato, mai per composizione**: il ticket 10
+  **non è ribaltato**. Un conto grossolano — la **guardia** — parla prima di
+  costruire, e solo quando è certo.
+- **L'avversario è un orologio** (ADR-0002): tre numeri compilati a mano, e la
+  **corsa** come sesta componente del punteggio. Gli orologi li scrive
+  **l'utente**, perché il meta del suo negozio non è il meta di internet.
+- **Il motore di regole è rimandato, non escluso.** Q4 resta in piedi, e l'ADR
+  scrive a quali condizioni si riaprirebbe.
+- **I tag di Scryfall si affiancano ai nove** (ADR-0003), congelati nel pool a
+  compilazione: l'app non li interroga a runtime e il determinismo non si tocca.
+- **Il destinatario è un giocatore esperto** — Q7 di `PROGETTO.md` era sbagliata
+  ed è corretta. La sua seconda metà regge: *ogni scelta va motivata a parole*
+  non era una concessione ai principianti.
+
+### Perché niente motore di regole — i numeri, da non ri-cercare
+
+Verificati il 3 settembre 2026 contro fonti vive; per esteso in ADR-0002.
+
+- **Magic è dimostrato indecidibile** (arXiv:1904.09828, LIPIcs FUN 2021):
+  l'esito di una partita a mosse forzate equivale al problema della fermata.
+- **Nessun motore maturo esiste in JavaScript.** L'unico percorso vivo verso il
+  browser è **Manabrew** (Forge portato in Rust → WebAssembly): repo del 18
+  maggio 2026, pre-release, copertura carte parziale, AGPL-3.0+.
+- **Nessun port di Forge o XMage nel browser.** *Forge Web* è solo spettatore,
+  col motore Java su un server.
+- Il costo: XMage 19.200 carte in **quindici anni** di comunità; Argentum, una
+  persona nel 2026, **41.000 righe di Kotlin + 12.000 di TypeScript** partendo
+  da *Portal* e con copertura ancora parziale.
+- **Non esiste alcun formato pubblico che dica cosa fa una carta**: Scryfall e
+  MTGJSON danno metadati più `oracle_text` in inglese. Le sole approssimazioni
+  sono gli script carta di Forge (DSL, GPL-3.0) e i tag di Scryfall Tagger.
+- Il costo di calcolo: ~5 s per 300 partite con IA proxy (Q-DeckRec,
+  arXiv:1806.09771) diventa **~43 minuti per una frontiera** contro i 17 secondi
+  di oggi — ~150 volte più lento, e sul telefono peggio.
+- **Quel che l'utente ha chiesto esiste già**: Grim.Cards fa giocare i mazzi
+  contro un gauntlet del meta con una build custom di Forge **su un server**. La
+  loro avvertenza: quel che si misura è *«AI engine behavior»*, non come gioca
+  una persona.
+
 ## La pubblicazione — fatta il 3 settembre 2026
 
 Fucina è online: **https://oldpz.github.io/fucina/**, repo pubblico
@@ -427,6 +484,10 @@ telefono vero resta da misurare**, ed è la casella aperta del ticket 14.
 
 ```
 PROGETTO.md              documento d'intesa, le 32 decisioni
+CONTEXT.md               il vocabolario: tema, strategia, archetipo, guardia,
+                         orologio, corsa, purezza — e le parole da non usare
+docs/adr/                le decisioni difficili da tornare indietro, ognuna con
+                         le sue condizioni di riapertura
 README.md                la porta del repo pubblico, e le note legali con lui
 .github/workflows/pubblica.yml  compila e pubblica su Pages, ma solo se i test
                          passano: quel che sta online non si carica a mano
@@ -504,7 +565,6 @@ strumenti/               manifest e icone, generati a ogni compilazione
 CLAUDE.md                contesto + vincoli non negoziabili + config skill
 HANDOFF.md               questo file
 docs/agents/             dove vivono ticket, etichette, documenti di dominio
-docs/adr/                vuota, si riempirà da sola
 design/                  la tela di design (15 artboard)
   Mazzi.dc.html          artboard interattivo importato da Claude Design,
                          con carte e prezzi corretti su Scryfall

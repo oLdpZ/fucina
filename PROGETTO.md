@@ -25,7 +25,7 @@ la mette l'utente, la letalità la mette il motore.
 | Q4 | Misura dell'efficacia | Euristiche + simulazione statistica (goldfish). Nessun motore di regole |
 | Q5 | Destinazione | Strumento per un amico, non un prodotto commerciale |
 | Q6 | Tecnologia | A discrezione dello sviluppatore |
-| Q7 | Utente | Giocatore poco esperto: ogni scelta va motivata a parole |
+| Q7 | Utente | Giocatore **esperto**: ogni scelta va motivata a parole lo stesso (corretto il 2026-09-03 — vedi ADR-0001) |
 | Q8 | Espressione del tema | Filtri strutturati + carta-seme + vincoli negativi |
 | Q9 | Budget | Tetto di spesa in euro. Nessuna collezione registrata |
 | Q10 | Meta | L'app conosce 5-8 mazzi di riferimento e ci si confronta |
@@ -80,10 +80,14 @@ la mette l'utente, la letalità la mette il motore.
    turno giusto. Già utile da solo.
 2. **Motore** — Ricerca locale a scambi singoli, punteggio, simulazione
    statistica delle mani, spiegazioni a parole. **← sosta e prova reale**
-3. Galleria dei temi, tetto di spesa, lista della spesa.
-4. Ciclo iterativo blocca/escludi/rigenera.
-5. Confronto col meta locale.
-6. Sideboard con guida agli scambi per avversario.
+3. **Strategia e avversario** — La strategia di vittoria dichiarata dall'utente
+   e verificata dal comportamento; l'avversario come orologio; la corsa come
+   sesta componente del punteggio. Aggiunta il 2026-09-03: vedi ADR-0001 e
+   ADR-0002, e `CONTEXT.md` per il vocabolario.
+4. Galleria dei temi, tetto di spesa, lista della spesa.
+5. Ciclo iterativo blocca/escludi/rigenera.
+6. Confronto col meta locale.
+7. Sideboard con guida agli scambi per avversario.
 
 Il rischio serio dell'intero progetto è **uno solo**: che il motore non abbia buon
 gusto nel costruire mazzi. È il motivo della sosta dopo la tappa 2 — si scopre
@@ -102,5 +106,7 @@ nessun abbonamento, nessun link d'acquisto remunerato.
 
 ## 6. Rimasto in sospeso
 
-- **Nome dell'app** e indirizzo web.
+- ~~**Nome dell'app** e indirizzo web.~~ Fatto: **Fucina**, su
+  `https://oldpz.github.io/fucina/`.
+- **La direzione visiva**: quattro candidate disegnate, la scelta è dell'utente.
 - Nessuna scadenza dichiarata.
