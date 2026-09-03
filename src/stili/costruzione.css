@@ -262,3 +262,74 @@
   font-size: var(--dati-minuscolo);
   color: var(--inchiostro-tenue);
 }
+
+/*
+ * Le spiegazioni (ticket 13): la frase che dice perché una scelta è stata
+ * fatta, sotto la scelta stessa.
+ *
+ * Sono testo lungo in mezzo a numeri corti, e vanno lette come si legge una
+ * spiegazione: riga stretta, colore un poco più tenue del titolo che spiegano,
+ * e mai in colonne — una frase spezzata in due colonne si smette di leggere.
+ */
+.spiegazione {
+  max-width: 60ch;
+  margin: calc(var(--passo)) 0 0;
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  color: var(--inchiostro-debole);
+}
+
+/* Il passo rispetto al mazzo prima: è la frase per cui la frontiera esiste. */
+.spiegazione-passo {
+  color: var(--inchiostro);
+}
+
+/*
+ * Le carte del mazzo, una per riga e apribili. La lista resta una lista finché
+ * non si tocca: chi vuole solo i nomi non deve scorrere per pagine di frasi.
+ */
+.lista-spiegata {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-spiegata li {
+  border-bottom: 1px solid var(--bordo);
+}
+
+.lista-spiegata summary {
+  padding: calc(var(--passo) * 1.5) 0;
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro);
+  cursor: pointer;
+}
+
+.lista-spiegata .copie {
+  display: inline-block;
+  min-width: 1.6em;
+  font-family: var(--carattere-dati);
+  color: var(--inchiostro-debole);
+}
+
+.lista-spiegata details[open] {
+  padding-bottom: calc(var(--passo) * 1.5);
+}
+
+/* Le carte del tema che nel mazzo non sono entrate, col loro perché. */
+.rimaste-fuori {
+  margin: 0;
+  padding: 0 0 0 calc(var(--passo) * 3);
+}
+
+.rimaste-fuori li {
+  margin-top: calc(var(--passo));
+}
+
+/* I titoletti che separano le carte dalle terre e dalle rimaste fuori. */
+.esito-costruzione h3 {
+  margin: calc(var(--passo) * 4) 0 calc(var(--passo) * 2);
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  color: var(--inchiostro);
+}

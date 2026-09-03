@@ -303,7 +303,15 @@ function etichettaDellaCasella(indice: number): string {
   return String(indice + 1);
 }
 
-function casellaDi(valoreDiMana: number): number {
+/**
+ * In quale casella della curva cade una carta, dal suo valore di mana.
+ *
+ * È esportata perché le spiegazioni (ticket 13) devono poter dire «di carte che
+ * costano così il mazzo ne ha già il tanto per cento» leggendo `quote` e
+ * `quoteAttese` **alla stessa casella** in cui questa componente le ha messe.
+ * Rifare quel conto altrove vorrebbe dire poterlo sbagliare altrove.
+ */
+export function casellaDellaCurva(valoreDiMana: number): number {
   const costo = Math.max(1, Math.round(valoreDiMana));
   return Math.min(costo, CASELLE) - 1;
 }
@@ -316,7 +324,7 @@ function curva(
 
   const quote = new Array<number>(CASELLE).fill(0);
   for (const voce of nonTerre) {
-    const casella = casellaDi(voce.carta.valoreDiMana);
+    const casella = casellaDellaCurva(voce.carta.valoreDiMana);
     quote[casella] = quote[casella]! + voce.copie;
   }
   if (copieNonTerra > 0) {

@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { probabilitaDiLanciare } from "./probabilita.js";
+import { probabilitaDiLanciare, probabilitaDiPescarne } from "./probabilita.js";
 
 /** C(n, k) esatto per i numeri piccoli dei test: nessun logaritmo, nessun dubbio. */
 function combinazioni(n: number, k: number): bigint {
@@ -205,5 +205,30 @@ describe("provare a lanciarla più tardi del suo turno", () => {
     });
 
     expect(avuta).toBeCloseTo(attesa, 12);
+  });
+});
+
+describe("probabilitaDiPescarne", () => {
+  it("le quattro copie in mano al primo turno: il conto noto a penna", () => {
+    // Sette carte viste, quattro copie su sessanta: uno meno la probabilità che
+    // le sette vengano tutte dalle cinquantasei che non sono lei.
+    const attesa = 1 - rapporto(combinazioni(56, 7), combinazioni(60, 7));
+
+    expect(probabilitaDiPescarne(60, 4, 1)).toBeCloseTo(attesa, 12);
+    // È il numero che ogni giocatore conosce: quattro copie si aprono in mano
+    // due volte su cinque.
+    expect(probabilitaDiPescarne(60, 4, 1)).toBeCloseTo(0.399, 3);
+  });
+
+  it("più copie e più turni la fanno salire, e non scende mai", () => {
+    expect(probabilitaDiPescarne(60, 4, 1)).toBeGreaterThan(probabilitaDiPescarne(60, 2, 1));
+    expect(probabilitaDiPescarne(60, 2, 4)).toBeGreaterThan(probabilitaDiPescarne(60, 2, 1));
+  });
+
+  it("i casi estremi rispondono senza inventare", () => {
+    expect(probabilitaDiPescarne(60, 0, 3)).toBe(0);
+    expect(probabilitaDiPescarne(60, 60, 1)).toBe(1);
+    // Viste tutte le carte del mazzo, la copia c'è di sicuro.
+    expect(probabilitaDiPescarne(10, 1, 20)).toBeCloseTo(1, 12);
   });
 });

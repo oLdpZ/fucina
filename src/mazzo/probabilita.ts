@@ -78,6 +78,32 @@ function logCombinazioni(n: number, k: number): number {
 }
 
 /**
+ * La probabilità di **averne pescata almeno una copia** entro un turno.
+ *
+ * È l'altra metà della domanda «quante copie?»: `probabilitaDiLanciare` dice se
+ * il mana ci sarà, questa dice se la carta ci sarà. Non dipende dalle terre —
+ * dipende solo da quante copie ce ne sono e da quante carte si sono viste — ed
+ * è il numero che le spiegazioni (ticket 13) citano per dire perché quattro
+ * copie e non due.
+ *
+ * È un conto esatto, come l'altro: uno meno la probabilità ipergeometrica di
+ * non vederne nemmeno una.
+ */
+export function probabilitaDiPescarne(
+  dimensioneMazzo: number,
+  copie: number,
+  turno: number,
+): number {
+  if (copie <= 0 || dimensioneMazzo <= 0) return 0;
+  if (copie >= dimensioneMazzo) return 1;
+  const viste = Math.min(carteViste(turno), dimensioneMazzo);
+  const nessuna = Math.exp(
+    logCombinazioni(dimensioneMazzo - copie, viste) - logCombinazioni(dimensioneMazzo, viste),
+  );
+  return 1 - nessuna;
+}
+
+/**
  * La probabilità di poter lanciare la carta al turno chiesto.
  *
  * Si enumerano tutti i modi in cui le terre pescate possono distribuirsi fra i

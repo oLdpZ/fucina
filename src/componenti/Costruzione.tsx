@@ -28,15 +28,28 @@
  *
  * Dove fermarsi lo sceglie l'utente, ed è il senso di tutto: il primo mazzo è
  * selezionato perché è quello che ha chiesto, non perché sia il consigliato.
+ *
+ * ## Le spiegazioni (ticket 13)
+ *
+ * Ogni carta del mazzo si apre e dice perché è lì e perché in tante copie; sotto
+ * le terre c'è come sono state scelte; e chiude l'elenco delle carte del tema
+ * rimaste fuori, col motivo. Le frasi non si scrivono qui: arrivano già fatte da
+ * `spiegazioni/spiegazioni.ts`, che le riempie di numeri già calcolati.
+ *
+ * Le carte si aprono una per volta e non stanno aperte tutte: chi vuole la
+ * lista la legge come una lista, e chi vuole capire tocca la carta. È l'unico
+ * modo di dare una spiegazione lunga a ogni carta senza che la lista smetta di
+ * essere leggibile.
  */
 
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 
 import type { Pool } from "../dati/pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
 import type { Richiesta } from "../ricerca/costruisci.js";
 import { TEMPO_MASSIMO_PREDEFINITO_MS } from "../ricerca/taratura.js";
 import type { Motore } from "../ricerca/usa-motore.js";
+import { spiegaFrontiera } from "../spiegazioni/spiegazioni.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
 
 const NUMERI = new Intl.NumberFormat("it-IT");
@@ -85,6 +98,16 @@ export function Costruzione({
   // quella nuova frontiera vuol dire un'altra cosa.
   useEffect(() => scegli(0), [motore.frontiera]);
   const mazzo = mazzi[Math.min(scelto, mazzi.length - 1)] ?? null;
+
+  // Le spiegazioni si rifanno solo quando cambia la frontiera, il tema o il
+  // pool: sono un passaggio sul pool per mazzo, e rifarle a ogni battito di
+  // cursore sul seme non servirebbe a niente.
+  const spiegazioni = useMemo(
+    () =>
+      motore.frontiera === null ? [] : spiegaFrontiera(motore.frontiera, tema, pool.carte),
+    [motore.frontiera, tema, pool.carte],
+  );
+  const spiegato = spiegazioni[Math.min(scelto, spiegazioni.length - 1)] ?? null;
 
   const costruisci = () => {
     const richiesta: Richiesta = {
@@ -242,13 +265,56 @@ export function Costruzione({
                 ))}
               </ul>
 
+              {spiegato !== null && spiegato.passo !== null ? (
+                <p class="spiegazione spiegazione-passo">{spiegato.passo.frase}</p>
+              ) : null}
+
+              <h3>Le carte</h3>
+              <ol class="lista-spiegata">
+                {mazzo.carte.map((voce, indice) => {
+                  const detta = spiegato?.carte[indice] ?? null;
+                  return (
+                    <li key={voce.carta.nome}>
+                      <details>
+                        <summary>
+                          <span class="copie">{voce.copie}</span> {voce.carta.nome}
+                        </summary>
+                        {detta === null ? null : (
+                          <>
+                            <p class="spiegazione">{detta.perche.frase}</p>
+                            <p class="spiegazione">{detta.quante.frase}</p>
+                          </>
+                        )}
+                      </details>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <h3>Le terre</h3>
               <ul class="lista-costruita">
-                {[...mazzo.carte, ...mazzo.terre].map((voce) => (
+                {mazzo.terre.map((voce) => (
                   <li key={voce.carta.nome}>
                     <span class="copie">{voce.copie}</span> {voce.carta.nome}
                   </li>
                 ))}
               </ul>
+              {spiegato === null ? null : (
+                <p class="spiegazione">{spiegato.terre.frase}</p>
+              )}
+
+              {spiegato !== null && spiegato.esclusioni.length > 0 ? (
+                <>
+                  <h3>Rimaste fuori</h3>
+                  <ul class="rimaste-fuori">
+                    {spiegato.esclusioni.map((esclusione) => (
+                      <li key={esclusione.grezzi.nome} class="spiegazione">
+                        {esclusione.frase}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
 
               <button
                 type="button"

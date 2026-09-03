@@ -51,8 +51,15 @@ pesi diversi dati al tema, dal peso che lo rende inviolabile a quello che lo
 ignora quasi del tutto, e i mazzi affiancati dal più fedele al più forte. Per
 ognuno si legge quanto tema ha ceduto e quanta potenza ha guadagnato rispetto al
 precedente: è il **tasso di cambio**, che è il fulcro dichiarato del progetto, e
-dove fermarsi lo sceglie l'utente. Il prossimo è il ticket 13, le spiegazioni:
-ogni scelta detta a parole, da modelli di frase riempiti coi numeri veri.
+dove fermarsi lo sceglie l'utente. E adesso l'app **spiega**: ogni carta del
+mazzo si apre e dice perché è lì e perché in tante copie, sotto le terre c'è
+com'è stata scelta la base, chiude l'elenco delle carte del tema rimaste fuori
+col loro motivo, e fra un mazzo e il precedente c'è scritto in parole che cosa
+si è comprato cedendo tema. Sono modelli di frase riempiti con numeri già
+calcolati — nessun testo inventato, nessun modello linguistico — e stanno tutti
+in un file solo, che si legge come si legge una pagina. Il prossimo è il
+ticket 14: la **sosta e prova reale**, dove le tarature provvisorie si misurano
+sui dati veri.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -90,8 +97,8 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 13
-   (`.scratch/fondamenta-e-motore/issues/13-le-spiegazioni.md`),
+1. `/clear`, poi `/mattpocock-skills:implement` sul ticket 14
+   (`.scratch/fondamenta-e-motore/issues/14-sosta-prova-reale-e-taratura.md`),
    e così via un ticket alla volta.
 
 Ordine di realizzazione deciso (da `PROGETTO.md` §4): fondamenta → motore →
@@ -277,6 +284,22 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   l'attesa vuol dire difendere la cosa sbagliata: la frontiera è il fulcro del
   progetto. L'attesa si sopporta perché **si vede**: la riga dell'avanzamento
   dice a che mazzo è arrivata, e il tasto «Ferma» c'è.
+- La probabilità che il punteggio calcola per ogni carta è quella di **avere il
+  mana** per lanciarla al suo turno, e **non dipende da quante copie** ce ne
+  sono: due copie o quattro, il numero è lo stesso. Spiegare «perché quattro
+  copie e non due» con quel numero sarebbe falso, ed è per questo che
+  `mazzo/probabilita.ts` ha anche `probabilitaDiPescarne` — la probabilità
+  esatta di averne pescata almeno una entro un turno. Quattro copie su sessanta
+  carte al primo turno: **39,9%**, il numero che ogni giocatore conosce.
+- Sul pool vero, tema Goblin, seme 7, la frontiera conta **due** mazzi: il primo
+  con 40 carte non-terra tutte del tema e 20 terre, il secondo che cede 13 copie
+  al tema (fedeltà dal 100% al 62,9%) per guadagnare un punto di potenza
+  (86,0% → 87,0%) e che chiude **più tardi**, al turno 6,5 invece che al 5,8. Il
+  baratto non è sempre «più veloce»: è «più forte».
+- Due mazzi vicini della frontiera possono chiudere **allo stesso turno medio**
+  una volta arrotondato. La frase del passo sceglie perciò il numero che dice
+  qualcosa — turno medio, poi quota di partite chiuse, poi nessuno dei due — e
+  non scrive mai «al turno 5,7 invece che al turno 5,7».
 - Le coppie di tag che «si attivano a vicenda» sono **quattro**, e l'elenco è
   corto di proposito come le regole dei tag: `accelerazione-di-mana` non
   compare perché accelera le carte care, che non sono un tag, e `spazza-via`
@@ -315,6 +338,12 @@ src/mazzo/simulazione.ts la simulazione goldfish, con le regole del gioco finto
 src/punteggio/punteggio.ts `valutaMazzo(...)`: le cinque componenti tenute
                          separate, ognuna coi suoi valori grezzi
 src/punteggio/taratura.ts tutti i pesi del punteggio, in un punto solo
+src/spiegazioni/frasi.ts **tutti i modelli di frase**, in italiano e in un posto
+                         solo: si leggono di seguito senza aprire altro, ed è
+                         quel che il ticket 13 chiede
+src/spiegazioni/spiegazioni.ts `spiegaFrontiera(...)`: sceglie i numeri —
+                         sempre quelli già calcolati dal punteggio — e non
+                         scrive nemmeno una parola di italiano
 src/ricerca/costruisci.ts `costruisciMazzo(richiesta, pool)`: **la cucitura
                          principale** — la ricerca a scambi singoli e la
                          frontiera che ne nasce facendo scorrere il peso del
