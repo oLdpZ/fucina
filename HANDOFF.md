@@ -1,4 +1,4 @@
-# Ripresa del lavoro — stato al 3 settembre 2026 (sera)
+# Ripresa del lavoro — stato al 4 settembre 2026
 
 Documento di passaggio: aprendo un nuovo terminale, leggi questo per primo,
 poi `PROGETTO.md`.
@@ -65,7 +65,11 @@ si apriva la schermata e si trovava un mazzo solo e una riga di scuse, cioè
 l'app senza il suo fulcro. La causa non era la ricerca ma lo stesso conto esatto
 rifatto migliaia di volte; ora le risposte si ricordano, e la frontiera è **sei
 volte più veloce senza cedere un decimale**. E l'app **ha un nome**: si chiama
-**Fucina**.
+**Fucina**. E dal 4 settembre l'utente può **nominare una combo**: le carte che
+secondo lui vincono se stanno insieme entrano nel mazzo al massimo delle copie,
+la ricerca non le scambia via mai, e l'app dice la probabilità esatta di averle
+in mano tutte al quinto turno — dichiarando per iscritto che non giudica se
+quelle carte vincano, perché a dirlo è stato l'utente.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -103,6 +107,33 @@ spiegazioni mai inventate.
 3. **L'approvazione di `PROGETTO.md`**, o le righe da cambiare.
 
 ## Prossimi comandi, in ordine
+
+**Il fronte è fermo, e per una ragione sola: la sosta.** Al 4 settembre 2026 i
+sei ticket della tappa 3 stanno così — `01` (i tag di Scryfall nel pool) e `05`
+(la combo dichiarata) sono **fatti**, ed erano gli unici due che non
+dipendevano da una taratura; `02`, `03`, `04` e `06` sono **bloccati**, tutti a
+valle del ticket 14. La catena è
+`sosta → 02 orologio e corsa → 03 archetipo misurato → 04 la strategia come
+vincolo`, e non si può accorciare: il «controllo» non è misurabile senza
+l'orologio, e il peso della corsa — sesta componente — va messo in mezzo ai
+cinque che la sosta sta per ritarare.
+
+**Che cosa un agente ha già apparecchiato** (4 settembre, in `.scratch/`, fuori
+da git):
+
+- `la-sosta.md` **rigenerato sul pool del 3 settembre** — quello sul disco
+  veniva dal pool del 2, e diversi numeri si erano mossi;
+- `guida-alla-sosta.md`, **nuovo**: l'ordine in cui guardare le tarature e
+  perché quell'ordine, dove abita ogni numero (file e riga), e la domanda a cui
+  la lettura deve rispondere. Non decide niente;
+- il **punto 9** del ticket 14: il divario dei temi senza creature non si è
+  mosso di un centesimo col pool nuovo, ma **il punto 3 va riletto** — le
+  densità di sinergia non sono più accalcate sul tetto, e l'ipotesi che il tetto
+  *plasmi* le liste va verificata prima di sceglierci sopra un numero.
+
+Quel che resta è di una persona: leggere le liste con l'occhio di chi gioca al
+negozio, leggere le spiegazioni a voce alta, e **cronometrare sul telefono
+vero** — la sola misura che nessuno ha ancora fatto.
 
 Il ticket 13 è chiuso. **Il 14 non è per un agente**: porta scritto
 `Status: ready-for-human` ed è un giudizio — *questo mazzo lo porterei al
