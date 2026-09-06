@@ -12,11 +12,17 @@
  * rotazione, bando — esce dal mazzo da solo, ed è quel che deve succedere:
  * quella carta non è più giocabile.
  *
+ * Un mazzo salvato dice anche **di che formato è**: quale gioco lo ha prodotto.
+ * Serve al giorno in cui il formato cambia — e cambierà, perché è un documento
+ * che si corregge — così che un mazzo di un altro gioco si riconosca come tale
+ * invece di aprirsi mezzo vuoto senza dire perché.
+ *
  * Le terre non si salvano: le sceglie l'app dalla curva del mazzo (ticket 06),
  * e ricalcolarle sui dati di oggi è più giusto che ripescare quelle di ieri.
  * Della base si salva la sola cosa che l'utente ha deciso: quante terre voleva.
  */
 
+import { identitaSeSiLegge, type IdentitaDiFormato } from "../dati/ambito.js";
 import { DIMENSIONE_MAZZO } from "./taratura.js";
 
 /** Una carta del mazzo, per nome, e quante copie. */
@@ -44,6 +50,20 @@ export type ContenutoMazzo = {
   /** La data dei dati con cui è stato costruito: la legalità e i prezzi di allora. */
   datiDel: string;
   richiesta: Richiesta;
+  /**
+   * Il formato che ha prodotto il mazzo.
+   *
+   * **Manca** nei mazzi salvati prima che l'app lo scrivesse, e non è un
+   * guasto: quei mazzi si aprono lo stesso, e chi li apre sa che il formato non
+   * lo dichiarano. Perciò è un campo facoltativo e non un campo che a volte è
+   * nullo — un mazzo che dicesse «formato: nessuno» direbbe una cosa che nessuno
+   * ha mai scritto.
+   */
+  // Scritto `| undefined` e non solo col punto interrogativo: il progetto
+  // distingue il campo assente dal campo scritto assente
+  // (`exactOptionalPropertyTypes`), e qui vanno bene tutti e due — un mazzo
+  // vecchio non ha la voce, uno riletto ce l'ha vuota, e sono la stessa cosa.
+  formato?: IdentitaDiFormato | undefined;
   carte: VoceSalvata[];
 };
 
@@ -103,11 +123,12 @@ export function interpretaContenuto(dati: unknown): ContenutoMazzo {
   if (typeof dati !== "object" || dati === null) {
     throw new Error("Questo mazzo non si legge.");
   }
-  const { nome, salvatoIl, datiDel, richiesta, carte } = dati as {
+  const { nome, salvatoIl, datiDel, richiesta, formato, carte } = dati as {
     nome?: unknown;
     salvatoIl?: unknown;
     datiDel?: unknown;
     richiesta?: unknown;
+    formato?: unknown;
     carte?: unknown;
   };
 
@@ -126,6 +147,12 @@ export function interpretaContenuto(dati: unknown): ContenutoMazzo {
     salvatoIl,
     datiDel,
     richiesta: interpretaRichiesta(richiesta),
+    // Letto **con indulgenza**: un formato scritto a metà vale come assente. Da
+    // qui passa anche quel che si rilegge dal deposito, e chi lo rilegge lascia
+    // fuori dall'elenco i mazzi che non si leggono — un campo storto qui
+    // farebbe sparire il mazzo intero, senza dirlo a nessuno. Il testo che
+    // arriva da fuori è severo dove deve, cioè prima di arrivare qui.
+    formato: identitaSeSiLegge(formato),
     carte: interpretaCarte(carte),
   };
 }

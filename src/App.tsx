@@ -9,7 +9,10 @@ import { NoteLegali } from "./componenti/NoteLegali.js";
 import { SchedaCarta } from "./componenti/SchedaCarta.js";
 import { Vincoli } from "./componenti/Vincoli.js";
 import { aggiornaInSottofondo, poolDaAprire } from "./dati/aggiornamento.js";
+import { identitaDelFormato } from "./dati/ambito.js";
+import { caricaFormato } from "./dati/carica-formato.js";
 import { dataInItaliano } from "./dati/carica-pool.js";
+import type { Formato } from "./dati/formato.js";
 import type { Carta, Pool } from "./dati/pool.js";
 import { FILTRI_VUOTI, type Filtri } from "./catalogo/filtri.js";
 import type { CopieDiCarta } from "./mazzo/base-di-terre.js";
@@ -19,15 +22,21 @@ import type { MazzoSalvato } from "./mazzo/salvato.js";
 import { usaMotore } from "./ricerca/usa-motore.js";
 import { COMBO_VUOTA, type Combo as CarteDellaCombo } from "./combo/combo.js";
 import { TEMA_VUOTO, type Tema } from "./tema/tema.js";
-import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
+import { NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 
 /**
- * Le quattro schermate dell'app: il catalogo delle carte legali in Standard
- * cartaceo (ticket 04), i vincoli — il tema che l'utente dichiara, con
+ * Le quattro schermate dell'app: il catalogo delle carte legali nel formato che
+ * si sta giocando (ticket 04), i vincoli — il tema che l'utente dichiara, con
  * l'avviso quando è troppo stretto (ticket 08) —, il mazzo che se ne mette
  * insieme, con la base di terre e le probabilità reali (ticket 06), e i mazzi
  * salvati sul dispositivo, che si riaprono, si scambiano per iscritto e si
  * esportano per l'arbitro (ticket 07).
+ *
+ * **Quale** formato si stia giocando l'app non lo sa da sé: lo legge dal
+ * documento di formato, insieme alle carte e prima di disegnare qualunque cosa
+ * (ADR-0004). Senza quel documento non si apre — e deve essere così: un'app che
+ * mostrasse un catalogo senza saper dire di che gioco parla direbbe all'utente
+ * che sono carte sue da giocare, e potrebbero non esserlo.
  *
  * Il pool sta nel pacchetto e il service worker lo tiene in cache, quindi
  * l'app si apre anche senza rete (storia 15); solo le immagini arrivano da
@@ -44,6 +53,8 @@ import { AMBITO_APP, NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
  */
 export function App() {
   const [pool, setPool] = useState<Pool | null>(null);
+  /** Il gioco che si sta giocando, letto dal documento di formato. */
+  const [formato, setFormato] = useState<Formato | null>(null);
   const [guasto, setGuasto] = useState<string | null>(null);
   const [pagina, setPagina] = useState<"catalogo" | "tema" | "mazzo" | "salvati">("catalogo");
 
@@ -96,6 +107,20 @@ export function App() {
    */
   const motore = usaMotore();
 
+  /**
+   * L'ambito: il formato ridotto a quel che ne esce di qui — il nome da
+   * mostrare e l'impronta da confrontare.
+   *
+   * Ricavato **una volta**, e non nel disegno: sarebbe un oggetto nuovo a ogni
+   * respiro dell'app, e chi lo riceve lo tiene fra le dipendenze dei propri
+   * conti. Mentre il motore cerca, l'app si ridisegna di continuo, e la base di
+   * terre della lista da torneo si rifarebbe a ogni giro per niente.
+   */
+  const ambito = useMemo(
+    () => (formato === null ? null : identitaDelFormato(formato)),
+    [formato],
+  );
+
   // Un mazzo costruito per un tema — o per una combo — che nel frattempo è stato
   // riscritto risponde a una domanda che non gli è più stata fatta: si butta,
   // invece di restare lì col suo tasto «mettilo in mano» a dire una piccola bugia.
@@ -114,9 +139,14 @@ export function App() {
 
   useEffect(() => {
     let vivo = true;
-    poolDaAprire().then(
-      (letto) => {
-        if (vivo) setPool(letto);
+    // Le carte e il formato si aprono **insieme**, e insieme falliscono: le
+    // carte senza il formato sarebbero un catalogo di un gioco che non si sa
+    // quale sia, e il formato senza le carte non ha niente da governare.
+    Promise.all([poolDaAprire(), caricaFormato()]).then(
+      ([lettoPool, lettoFormato]) => {
+        if (!vivo) return;
+        setPool(lettoPool);
+        setFormato(lettoFormato);
       },
       (errore: unknown) => {
         if (vivo) setGuasto(errore instanceof Error ? errore.message : String(errore));
@@ -193,9 +223,9 @@ export function App() {
    * Quel che rientra passa dagli **stessi limiti** di quel che si aggiunge a
    * mano dal catalogo: un mazzo può arrivare da un file scritto a mano, e non
    * deve poter mettere nell'app uno stato che l'app da sola non produrrebbe
-   * mai. Le carte che nel frattempo sono uscite dallo Standard non rientrano
-   * affatto — una rotazione, un bando — ed è quel che deve succedere: non sono
-   * più giocabili.
+   * mai. Le carte che nel frattempo sono uscite dal formato non rientrano
+   * affatto — una carta bandita, un'edizione che esce — ed è quel che deve
+   * succedere: non sono più giocabili.
    */
   const apriMazzo = (salvato: MazzoSalvato, vaiAlMazzo: boolean) => {
     const perNome = new Map(pool?.carte.map((carta) => [carta.nome, carta]) ?? []);
@@ -241,7 +271,7 @@ export function App() {
     <div class="guscio">
       <header class="testata">
         <span class="marchio">{NOME_APP}</span>
-        <span class="ambito">{AMBITO_APP}</span>
+        {ambito !== null ? <span class="ambito">{ambito.nome}</span> : null}
         {pool !== null && guasto === null ? (
           <nav class="schede" aria-label="Le schermate">
             <button
@@ -284,11 +314,11 @@ export function App() {
         {guasto !== null ? (
           <section class="avviso">
             <p>
-              <strong>Le carte non si caricano.</strong> {guasto} Prova a chiudere e riaprire
+              <strong>L&rsquo;app non si apre.</strong> {guasto} Prova a chiudere e riaprire
               l&rsquo;app: se il guasto resta, va rifatta l&rsquo;installazione.
             </p>
           </section>
-        ) : pool === null ? (
+        ) : pool === null || ambito === null ? (
           <p class="attesa">Carico le carte…</p>
         ) : pagina === "catalogo" ? (
           <Catalogo
@@ -321,6 +351,7 @@ export function App() {
         ) : pagina === "salvati" ? (
           <MazziSalvati
             pool={pool}
+            formato={ambito}
             mazzo={mazzo}
             terreVolute={terreVolute}
             aperto={aperto}

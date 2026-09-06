@@ -132,3 +132,42 @@ describe("la lista da consegnare all'arbitro", () => {
     expect(listaDaTorneo(carte, [])).toBe(["4 Prima Carta", "2 Seconda Carta"].join("\n"));
   });
 });
+
+describe("il formato scritto nel testo da scambiare", () => {
+  const FORMATO = { nome: "Formato di prova", impronta: "una-regola/aaa+bbb" };
+  const DEL_FORMATO: ContenutoMazzo = { ...MAZZO, formato: FORMATO };
+
+  it("dice a parole di che formato è il mazzo", () => {
+    expect(scriviScambio(DEL_FORMATO)).toContain("Formato di prova");
+  });
+
+  it("riletto, ricostruisce anche il formato", () => {
+    expect(leggiScambio(scriviScambio(DEL_FORMATO))).toEqual(DEL_FORMATO);
+  });
+
+  it("porta l'impronta, non solo il nome: è quella che si confronta", () => {
+    // Il nome del formato è la voce del documento più esposta a cambiare. Un
+    // testo che portasse solo quello direbbe «altro formato» il giorno che il
+    // gruppo decide come si chiama il proprio.
+    const rinominato = leggiScambio(
+      scriviScambio(DEL_FORMATO).replace("Formato di prova", "Come lo chiamano al tavolo"),
+    );
+
+    expect(rinominato.formato?.impronta).toBe(FORMATO.impronta);
+  });
+
+  it("regge un testo che il formato non lo dichiara: è un mazzo di prima", () => {
+    expect(leggiScambio(scriviScambio(MAZZO)).formato).toBeUndefined();
+  });
+});
+
+describe("il formato sulla lista da consegnare all'arbitro", () => {
+  const carte = [{ nome: "Prima Carta", copie: 4 }];
+
+  it("nomina il formato quando lo si conosce, perché l'arbitro deve leggerlo", () => {
+    const lista = listaDaTorneo(carte, [], { nome: "Formato di prova", impronta: "r/aaa" });
+
+    expect(lista.split("\n")[0]).toContain("Formato di prova");
+    expect(lista).toContain("4 Prima Carta");
+  });
+});

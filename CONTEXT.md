@@ -190,6 +190,32 @@ errore che aspetta.
 
 ---
 
+## Ambito
+
+**Quale gioco si sta giocando**, e da dove l'app lo sa.
+
+È la riga che l'utente legge sotto il nome dell'app, e non è una costante del
+sorgente: è il **nome** che il documento di formato dichiara. Da lì passa in
+interfaccia, in testa alla lista da consegnare all'arbitro, e dentro ogni mazzo
+che si salva o si esporta.
+
+Il nome però si mostra e non si confronta. Per sapere se due mazzi appartengono
+allo stesso gioco c'è l'**impronta del formato**: il criterio del pool e i
+codici delle edizioni ammesse, in ordine. È quel che un mazzo salvato si porta
+dietro insieme al nome, e la ragione dei due campi è che cambiano per motivi
+diversi — il nome del formato è dichiarato *da confermare*, e un mazzo salvato
+non deve chiudersi il giorno che il gruppo decide come chiamare il proprio
+gioco.
+
+Cambiano le edizioni o il criterio, l'impronta cambia: è un altro gioco, e i
+mazzi di prima non si giocano più. Cambiano le limitate o le bandite, no: è lo
+stesso gioco con una riga in più, al più con una carta da togliere dal mazzo.
+
+Un mazzo che **non** dichiara il formato — salvato prima che l'app lo scrivesse
+— non è del formato corrente: «non si sa» non è «è il mio».
+
+---
+
 ## Criterio del pool
 
 **La regola che decide quali carte esistono**, contrapposta all'elenco.

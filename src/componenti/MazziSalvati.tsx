@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useState } from "preact/hooks";
 
+import type { IdentitaDiFormato } from "../dati/ambito.js";
 import { dataInItaliano } from "../dati/carica-pool.js";
 import { dimenticaMazzo, elencaMazziSalvati, salvaMazzo } from "../dati/mazzi-salvati.js";
 import type { Pool } from "../dati/pool.js";
@@ -28,6 +29,7 @@ export type MazzoAperto = { id: string; nome: string; salvatoIl: string } | null
 
 export function MazziSalvati({
   pool,
+  formato,
   mazzo,
   terreVolute,
   aperto,
@@ -35,6 +37,12 @@ export function MazziSalvati({
   chiudiMazzo,
 }: {
   pool: Pool;
+  /**
+   * Il gioco che si sta giocando. Entra da fuori e non si legge qui: il mazzo
+   * che si salva e quello che si esporta devono dichiarare lo **stesso**
+   * formato che l'app ha aperto, non uno riletto per conto proprio.
+   */
+  formato: IdentitaDiFormato;
   mazzo: readonly CopieDiCarta[];
   terreVolute: number | null;
   aperto: MazzoAperto;
@@ -100,6 +108,13 @@ export function MazziSalvati({
       salvatoIl,
       datiDel: pool.generatoIl,
       richiesta: { origine: "a-mano", terreVolute },
+      // Di che gioco è questo mazzo. Un mazzo salvato dura più a lungo del
+      // formato che l'ha prodotto — il documento si corregge — e senza questa
+      // riga, il giorno che il formato cambia, il mazzo si riaprirebbe mezzo
+      // vuoto senza che nessuno sappia dire perché. Scriverla è tutto quel che
+      // si fa oggi: **leggerla** — la sola lettura, il file rifiutato con la
+      // sua ragione — è il ticket 10, che aspettava proprio questo.
+      formato,
       carte,
     };
   };
@@ -120,8 +135,9 @@ export function MazziSalvati({
     return listaDaTorneo(
       base.righe.map((riga) => ({ nome: riga.carta.nome, copie: riga.copie })),
       base.terre.map((voce) => ({ nome: voce.carta.nome, copie: voce.copie })),
+      formato,
     );
-  }, [mazzo, terreDelPool, terreVolute]);
+  }, [mazzo, terreDelPool, terreVolute, formato]);
 
   const salva = async () => {
     // L'orologio si legge qui: è adesso che l'utente sta salvando.
@@ -262,8 +278,8 @@ export function MazziSalvati({
           />
           <Testo
             titolo="La lista da consegnare all’arbitro"
-            spiegazione="Solo copie e nomi in inglese, terre comprese, come le vuole una lista
-              da torneo."
+            spiegazione="Il formato in testa, poi solo copie e nomi in inglese, terre
+              comprese, come le vuole una lista da torneo."
             testo={daTorneo}
             nomeFile={`${nomeFile(contenuto.nome)}-torneo.txt`}
           />

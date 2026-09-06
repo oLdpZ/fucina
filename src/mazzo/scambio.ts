@@ -18,8 +18,15 @@
  * Il numero di formato in intestazione serve al giorno in cui la richiesta
  * conterrà il tema e il seme del motore: un'app vecchia deve poter dire «questo
  * mazzo viene da una versione più recente» invece di leggerlo male.
+ *
+ * Da non confondere con il **formato di gioco**, che il testo adesso dichiara e
+ * che è tutt'altra cosa: uno dice come è scritto il testo, l'altro a quale gioco
+ * appartiene il mazzo. Il primo non cresce per il secondo — due righe in più che
+ * un'app vecchia semplicemente non guarda non le impediscono di leggere la
+ * lista, e alzare il numero le farebbe rifiutare mazzi che sa leggere benissimo.
  */
 
+import { interpretaIdentita, type IdentitaDiFormato } from "../dati/ambito.js";
 import {
   interpretaContenuto,
   type ContenutoMazzo,
@@ -33,6 +40,16 @@ const FORMATO = 1;
 const INTESTAZIONE = `Mazzi fuori meta — mazzo da scambiare (formato ${FORMATO})`;
 const CHIUSURA = "Fine del mazzo.";
 const RICHIESTA_A_MANO = "costruito a mano dal catalogo";
+/**
+ * Le due righe del formato di gioco, e sono due apposta.
+ *
+ * Il **nome** è per chi legge il testo, l'**impronta** per l'app che lo rilegge:
+ * scritti su una riga sola — il nome, e la sigla fra parentesi — un nome di
+ * formato con una parentesi dentro li rimescolerebbe, e a rimescolarli si
+ * scambia il gioco di un mazzo per un altro.
+ */
+const RIGA_FORMATO = "Formato";
+const RIGA_IMPRONTA = "Impronta del formato";
 const TERRE_DALLA_CURVA = "decise dalla curva del mazzo";
 
 /** Il mazzo come testo: la lista, la richiesta, e di che dati era fatto. */
@@ -44,6 +61,15 @@ export function scriviScambio(mazzo: ContenutoMazzo): string {
     `Nome: ${mazzo.nome}`,
     `Salvato il: ${mazzo.salvatoIl}`,
     `Carte del: ${mazzo.datiDel}`,
+    // Il mazzo di un altro gioco non è un mazzo rotto: è un mazzo che qui non
+    // si può giocare, ed è una cosa che chi lo riceve deve poter leggere invece
+    // di scoprirla carta per carta.
+    ...(mazzo.formato === undefined
+      ? []
+      : [
+          `${RIGA_FORMATO}: ${mazzo.formato.nome}`,
+          `${RIGA_IMPRONTA}: ${mazzo.formato.impronta}`,
+        ]),
     `Richiesta: ${RICHIESTA_A_MANO}`,
     `Terre: ${
       mazzo.richiesta.terreVolute === null
@@ -136,6 +162,7 @@ export function leggiScambio(testo: string): ContenutoMazzo {
     salvatoIl: voci.get("Salvato il"),
     datiDel: voci.get("Carte del"),
     richiesta: leggiRichiesta(voci),
+    formato: leggiFormato(voci),
     carte,
   });
 }
@@ -160,19 +187,45 @@ function leggiRichiesta(voci: ReadonlyMap<string, string>): Richiesta | undefine
 }
 
 /**
+ * Il formato di gioco, dalle due righe che lo dichiarano.
+ *
+ * Assenti tutte e due, è un mazzo scritto prima che l'app dichiarasse il
+ * formato: si legge lo stesso. Presente una sola, il testo è stato maltrattato
+ * o scritto a mano, e `interpretaIdentita` lo dice invece di indovinare.
+ */
+function leggiFormato(voci: ReadonlyMap<string, string>): IdentitaDiFormato | undefined {
+  const nome = voci.get(RIGA_FORMATO);
+  const impronta = voci.get(RIGA_IMPRONTA);
+  if (nome === undefined && impronta === undefined) return undefined;
+  return interpretaIdentita({ nome, impronta });
+}
+
+/**
  * La lista da consegnare all'arbitro: copie e nomi inglesi, in ordine, e basta.
  *
- * Le terre in fondo, come si scrive una lista a mano. Nessuna intestazione:
- * ogni sito e ogni foglio ne vuole una diversa, e una riga in più da cancellare
- * è peggio di una riga in meno da aggiungere.
+ * Le terre in fondo, come si scrive una lista a mano.
+ *
+ * Una riga sola di intestazione, quando il formato si conosce: **quale gioco**
+ * è la prima cosa che un arbitro guarda su una lista, ed è anche la sola che la
+ * lista da sé non direbbe. Prima non ce n'era nessuna, ed era giusto finché
+ * l'app costruiva mazzi di un formato che tutti danno per scontato; adesso ne
+ * gioca uno che ogni gruppo scrive a modo proprio, e tacerlo costa più di una
+ * riga da cancellare.
+ *
+ * Il formato resta un argomento e non un dato interno per la ragione di sempre:
+ * questa funzione non conosce il gioco, glielo si dice. Chi la chiama senza
+ * ottiene la lista nuda — che è la stessa di prima, riga per riga.
  */
 export function listaDaTorneo(
   carte: readonly VoceSalvata[],
   terre: readonly VoceSalvata[],
+  formato?: IdentitaDiFormato,
 ): string {
-  return [...ordinate(carte), ...ordinate(terre)]
-    .map((voce) => `${voce.copie} ${voce.nome}`)
-    .join("\n");
+  const righe = [...ordinate(carte), ...ordinate(terre)].map(
+    (voce) => `${voce.copie} ${voce.nome}`,
+  );
+  if (formato === undefined) return righe.join("\n");
+  return [`${RIGA_FORMATO}: ${formato.nome}`, "", ...righe].join("\n");
 }
 
 function ordinate(voci: readonly VoceSalvata[]): VoceSalvata[] {

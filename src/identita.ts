@@ -33,8 +33,16 @@ export const NOME_APP = "Fucina";
  */
 export const NOME_APP_DA_DECIDERE = NOME_APP.startsWith("[");
 
-/** Riga di contesto sotto il nome: dice subito di cosa parla l'app. */
-export const AMBITO_APP = "Standard · cartaceo";
+/*
+ * L'**ambito** — la riga di contesto sotto il nome, che dice di quale gioco
+ * parla l'app — qui non c'è più, e non è una dimenticanza.
+ *
+ * Era una costante scritta accanto a queste, ed era una verità di formato nel
+ * sorgente: ADR-0004 dice che quelle si leggono dai dati. Adesso l'ambito è il
+ * nome che il documento di formato dichiara, e passa da `dati/ambito.ts`. Il
+ * nome dell'app resta qui perché è nostro; il nome del gioco no, è del gruppo
+ * che lo gioca.
+ */
 
 /** Una frase, quella di `PROGETTO.md` §1, ridotta a misura di schermo. */
 export const PROMESSA_APP =

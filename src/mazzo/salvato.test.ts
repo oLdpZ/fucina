@@ -87,3 +87,31 @@ describe("il nome interno di un mazzo", () => {
     expect(nomi.size).toBe(50);
   });
 });
+
+describe("il formato che ha prodotto il mazzo", () => {
+  const FORMATO = { nome: "Formato di prova", impronta: "una-regola/aaa+bbb" };
+
+  it("si rilegge com'era, così un'app futura sa con che gioco confrontarlo", () => {
+    const letto = interpretaMazzoSalvato(structuredClone({ ...SALVATO, formato: FORMATO }));
+
+    expect(letto.formato).toEqual(FORMATO);
+  });
+
+  it("manca, senza guasti, nei mazzi salvati prima che l'app lo scrivesse", () => {
+    // È la promessa di non distruggere niente alle spalle di chi ha già dei
+    // mazzi sul telefono: si aprono, e chi li apre sa che il formato non lo
+    // dichiarano.
+    expect(interpretaMazzoSalvato(structuredClone(SALVATO)).formato).toBeUndefined();
+  });
+
+  it("scritto storto vale assente, e non si porta via il mazzo intero", () => {
+    // Una scrittura interrotta, il browser che recupera spazio: il formato è il
+    // campo meno importante della scheda, e non deve essere l'unico capace di
+    // far sparire un mazzo dall'elenco — chi rilegge il deposito lascia fuori i
+    // mazzi che non si leggono, e questo si deve continuare a leggere.
+    const storto = interpretaMazzoSalvato({ ...SALVATO, formato: { nome: "Un formato" } });
+
+    expect(storto.formato).toBeUndefined();
+    expect(storto.carte).toEqual(SALVATO.carte);
+  });
+});
