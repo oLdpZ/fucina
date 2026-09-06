@@ -2,9 +2,9 @@
  * Gli allargamenti proposti quando il tema è troppo stretto (ticket 08, Q26).
  *
  * Sono generati da **regole sul tema stesso**, non da un elenco di idee scritto
- * a mano: le carte che producono pedine del sottotipo scelto, quelle che il
- * sottotipo lo nominano nel testo, il tag che il tema già fa più spesso, e il
- * passo più largo — tutte le carte dello stesso tipo nei colori del tema.
+ * a mano: le carte che il sottotipo scelto lo nominano nel testo, il tag che il
+ * tema già fa più spesso, e il passo più largo — tutte le carte dello stesso
+ * tipo nei colori del tema.
  *
  * Ogni proposta porta la sua frase, e la frase porta il suo numero: le carte
  * che entrerebbero. Sono modelli di frase riempiti con numeri veri, mai testo
@@ -55,8 +55,6 @@ function clausolaDiColore(colori: readonly Colore[]): string {
  */
 export function frasePerCriterio(criterio: CriterioAllargamento): string {
   switch (criterio.tipo) {
-    case "produce-pedine-del-sottotipo":
-      return `le carte che producono pedine ${criterio.sottotipo} pur non essendolo`;
     case "nomina-il-sottotipo":
       return `le carte che nominano ${criterio.sottotipo} nel loro testo`;
     case "tag-affine":
@@ -173,8 +171,11 @@ export function proponiAllargamenti(
 ): Allargamento[] {
   const criteri: CriterioAllargamento[] = [];
 
+  // Un tempo qui c'era anche «le carte che producono pedine del sottotipo»:
+  // è caduta col vocabolario nuovo del 6 settembre 2026, perché su questo pool
+  // le carte che producono pedine sono nove in tutto e la proposta non avrebbe
+  // mai portato dentro niente.
   for (const sottotipo of sottotipiDelTema(tema, seme)) {
-    criteri.push({ tipo: "produce-pedine-del-sottotipo", sottotipo });
     criteri.push({ tipo: "nomina-il-sottotipo", sottotipo });
   }
 

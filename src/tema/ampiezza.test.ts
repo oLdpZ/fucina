@@ -108,15 +108,12 @@ describe("gli allargamenti si propongono uno per uno, e nessuno si applica da so
     expect(new Set(descrizioni).size).toBe(descrizioni.length);
   });
 
-  it("propone di prendere le carte che fanno pedine del sottotipo", () => {
-    // «Krenko's Command» fa pedine Goblin senza essere un Goblin.
-    const conPedine = proposti.find((a) => a.criterio.tipo === "produce-pedine-del-sottotipo");
-    expect(conPedine).toBeDefined();
-    expect(conPedine?.carteAggiunte).toBe(1);
-  });
-
   it("propone di prendere le carte che nominano il sottotipo nel testo", () => {
-    expect(proposti.some((a) => a.criterio.tipo === "nomina-il-sottotipo")).toBe(true);
+    // «Krenko's Command» fa pedine Goblin senza essere un Goblin: il sottotipo
+    // lo nomina, ed è da lì che il tema se la prende.
+    const nomina = proposti.find((a) => a.criterio.tipo === "nomina-il-sottotipo");
+    expect(nomina).toBeDefined();
+    expect(nomina?.carteAggiunte).toBe(1);
   });
 
   it("propone di allargare ai colori e al tipo di carta del tema", () => {
@@ -133,8 +130,8 @@ describe("gli allargamenti si propongono uno per uno, e nessuno si applica da so
   });
 
   it("accettato l'allargamento, le carte nuove entrano nel tema", () => {
-    const pedine = proposti.find((a) => a.criterio.tipo === "produce-pedine-del-sottotipo");
-    if (pedine === undefined) throw new Error("manca la proposta sulle pedine");
+    const pedine = proposti.find((a) => a.criterio.tipo === "nomina-il-sottotipo");
+    if (pedine === undefined) throw new Error("manca la proposta sul sottotipo nominato");
 
     const prima = risolviTema(GOBLIN, TUTTE);
     const comando = TUTTE.find((c) => c.nome === "Krenko's Command") as Carta;
@@ -152,8 +149,8 @@ describe("gli allargamenti si propongono uno per uno, e nessuno si applica da so
   });
 
   it("le esclusioni vincono anche sugli allargamenti accettati", () => {
-    const pedine = proposti.find((a) => a.criterio.tipo === "produce-pedine-del-sottotipo");
-    if (pedine === undefined) throw new Error("manca la proposta sulle pedine");
+    const pedine = proposti.find((a) => a.criterio.tipo === "nomina-il-sottotipo");
+    if (pedine === undefined) throw new Error("manca la proposta sul sottotipo nominato");
 
     const tema = accetta(
       { ...GOBLIN, esclusioni: { ...FILTRO_TEMA_VUOTO, tipi: ["Sorcery"] } },
@@ -211,7 +208,7 @@ describe("gli allargamenti si propongono uno per uno, e nessuno si applica da so
     };
     const conSeme: Tema = { ...TEMA_VUOTO, seme: "Goblin Grotto" };
     const proposte = valutaTema([...TUTTE, terraCreatura], conSeme).allargamenti;
-    expect(proposte.some((a) => a.criterio.tipo === "produce-pedine-del-sottotipo")).toBe(true);
+    expect(proposte.some((a) => a.criterio.tipo === "nomina-il-sottotipo")).toBe(true);
   });
 
   it("un tema ormai ampio non ha più bisogno di proposte", () => {

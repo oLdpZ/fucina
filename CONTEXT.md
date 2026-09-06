@@ -142,14 +142,32 @@ rifiuta.
 
 Ce ne sono di due razze, e vanno tenute distinte:
 
-- i **nove nostri**, ricavati da regole meccaniche deterministiche scritte in
-  `strumenti/tag-di-sinergia.ts`, correggibili a mano una riga per volta;
+- i **quindici nostri**, ricavati da regole meccaniche deterministiche scritte
+  in `strumenti/tag-di-sinergia.ts`, correggibili a mano una riga per volta;
 - quelli di **Scryfall Tagger**, scaricati a compilazione e congelati dentro
   `pool.json`.
 
 L'app non interroga Scryfall a runtime: il determinismo non si tocca. Il perché
 di entrambe le razze sta in
-[ADR-0003](docs/adr/0003-tag-di-scryfall-affiancati-ai-nove.md).
+[ADR-0003](docs/adr/0003-tag-di-scryfall-affiancati-ai-nove.md), che parla di
+**nove** perché è del 3 settembre 2026: il vocabolario è stato riscritto col
+cambio di formato (ticket 06), la sostanza dell'ADR regge intera e solo il
+numero è cambiato.
+
+I quindici, nell'ordine in cui compaiono su una carta:
+
+    danno-diretto           rimozione-mirata       spazza-via
+    attacca-le-terre        colpisce-gli-artefatti controincantesimo
+    scarta                  imbriglia              previene-il-danno
+    potenzia                evasione               pesca
+    accelerazione-di-mana   si-cura-del-cimitero   rigenera
+
+Non sono i nove dello Standard con sei aggiunte: sono un elenco nuovo, scelto
+guardando le 778 carte una per una. Ne sono cadute tre — `produce-pedine`,
+`conta-le-creature` e `sacrifica` — perché nel 1994 valgono nove carte, nove
+carte e un costo che le carte pagano su se stesse. Insieme i quindici raccontano
+gli archetipi che questo formato produce davvero: l'aggressione, il controllo,
+la prigione, gli artefatti, il recupero e la difesa.
 
 ---
 

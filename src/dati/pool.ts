@@ -15,25 +15,49 @@ export type Colore = "W" | "U" | "B" | "R" | "G";
 export type ColoreMana = Colore | "C";
 
 /**
- * I tag di sinergia: le nove cose che una carta **fa** e che il motore sa far
- * lavorare insieme (`PROGETTO.md` Q13).
+ * I tag di sinergia: le quindici cose che una carta **fa** e che il motore sa
+ * far lavorare insieme (`PROGETTO.md` Q13).
  *
  * Sono un elenco chiuso e scritto qui una volta sola: il motore ci ragiona
  * sopra, l'interfaccia li mostra, e la preparazione dati li calcola. Vengono da
  * due sorgenti e mai una terza — regole meccaniche lette dal testo e dai tipi,
  * e un file di correzioni a mano. **Mai** dedotti dalle decklist vincenti:
  * riporterebbero al meta, cioè all'opposto dello scopo dell'app.
+ *
+ * Questo vocabolario è stato **riscritto** col cambio di formato del 6 settembre
+ * 2026 (`PROGETTO.md` §7, Q13) e non ereditato: i nove tag dello Standard
+ * descrivevano un altro gioco. Le voci qui sotto sono state scelte guardando le
+ * 778 carte del pool una per una — ognuna copre da una ventina di carte in su,
+ * e insieme raccontano gli archetipi che questo formato produce davvero:
+ * l'aggressione (`potenzia`, `evasione`, `danno-diretto`), il controllo
+ * (`controincantesimo`, `pesca`, `rimozione-mirata`, `spazza-via`), la prigione
+ * (`imbriglia`, `attacca-le-terre`), gli artefatti
+ * (`colpisce-gli-artefatti`, `accelerazione-di-mana`), il recupero
+ * (`si-cura-del-cimitero`, `scarta`) e la difesa (`previene-il-danno`,
+ * `rigenera`).
+ *
+ * Tre voci dello Standard sono cadute e non sono state sostituite:
+ * `produce-pedine` (nove carte in tutto), `conta-le-creature` (nove) e
+ * `sacrifica`, che nel 1994 è quasi sempre il costo che una carta paga su se
+ * stessa e non un tema. Un tag su nove carte è esattamente il difetto che
+ * questo vocabolario doveva togliere.
  */
 export type Tag =
-  | "produce-pedine"
-  | "sacrifica"
-  | "guadagna-punti-vita"
+  | "danno-diretto"
   | "rimozione-mirata"
   | "spazza-via"
+  | "attacca-le-terre"
+  | "colpisce-gli-artefatti"
+  | "controincantesimo"
+  | "scarta"
+  | "imbriglia"
+  | "previene-il-danno"
+  | "potenzia"
+  | "evasione"
   | "pesca"
   | "accelerazione-di-mana"
-  | "conta-le-creature"
-  | "si-cura-del-cimitero";
+  | "si-cura-del-cimitero"
+  | "rigenera";
 
 /**
  * Un tag di **Scryfall Tagger**, la seconda razza (ADR-0003): quel che la
@@ -170,13 +194,14 @@ export type Carta = {
   tag: Tag[];
   /**
    * I nomi dei tag di **Scryfall Tagger** che la carta porta, in ordine
-   * alfabetico. Sono un'altra razza dai nove qui sopra, e stanno in un campo
-   * diverso apposta: chi legge il pool deve sapere da dove viene un tag senza
-   * indovinarlo. I loro id stanno nel registro del pool.
+   * alfabetico. Sono un'altra razza dai quindici qui sopra, e stanno in un
+   * campo diverso apposta: chi legge il pool deve sapere da dove viene un tag
+   * senza indovinarlo. I loro id stanno nel registro del pool.
    *
    * Vuoto è uno stato legittimo, e non solo per le carte che Tagger non ha
-   * ancora guardato: nel pool del 2 settembre 2026 sono senza nemmeno uno dei
-   * nove 1.943 carte.
+   * ancora guardato. Su questo pool Tagger arriva quasi dappertutto — nove
+   * carte su 778 non ne hanno nemmeno uno — ma quel che dice è materiale
+   * grezzo: i tag nostri restano quelli calcolati qui e corretti a mano.
    */
   tagScryfall: string[];
   /** Le facce, annidate, quando la carta ne ha più di una. Altrimenti `null`. */

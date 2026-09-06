@@ -246,7 +246,7 @@ describe("passo 2 — cosa si mostra", () => {
     expect(goblin.identitaDiColore).toEqual(["R"]);
     expect(goblin.tipi).toEqual(["Creature"]);
     expect(goblin.sottotipi).toEqual(["Goblin", "Warrior"]);
-    expect(goblin.testo).toContain("create a 1/1 red Goblin creature token");
+    expect(goblin.testo).toContain("it deals 1 damage to target player");
     expect(goblin.forza).toBe("2");
     expect(goblin.costituzione).toBe("1");
     expect(goblin.terra).toBeNull();
@@ -366,13 +366,17 @@ describe("i buchi del pool", () => {
     // Scommessa, il Velo e l'Incanto sono descritti dalla loro stampa italiana.
     expect(buchi.senzaPrezzo).toBeGreaterThan(0);
     expect(buchi.senzaTag).toBeGreaterThan(0);
+    // Le carte senza tag nostri sono almeno quelle senza nessun tag: chi non ha
+    // niente non ha nemmeno i nostri (ticket 06).
+    expect(buchi.senzaTagNostri).toBeGreaterThanOrEqual(buchi.senzaTag);
   });
 
-  it("si racconta a schermo con tutti e tre i numeri", () => {
+  it("si racconta a schermo con tutti e quattro i numeri", () => {
     const racconto = raccontaBuchi(contaBuchi(preparazione().pool));
 
     expect(racconto).toContain("senza immagine");
     expect(racconto).toContain("senza prezzo");
+    expect(racconto).toContain("senza nessuno dei nostri tag");
     expect(racconto).toContain("senza nemmeno un tag");
   });
 });
@@ -381,17 +385,16 @@ describe("tag di sinergia", () => {
   const tag = (nome: string) => carta(preparazione().pool, nome).tag;
 
   it("legge dai testi noti i tag che quei testi dicono", () => {
-    expect(tag("Fixture Goblin")).toEqual(["produce-pedine"]);
-    expect(tag("Fixture Pauper")).toEqual(["guadagna-punti-vita"]);
+    expect(tag("Fixture Goblin")).toEqual(["danno-diretto"]);
+    expect(tag("Fixture Pauper")).toEqual(["previene-il-danno"]);
     expect(tag("Fixture Verdict")).toEqual(["spazza-via"]);
     expect(tag("Fixture Bolt")).toEqual(["rimozione-mirata"]);
     expect(tag("Fixture Altar")).toEqual([
-      "sacrifica",
       "pesca",
       "accelerazione-di-mana",
       "si-cura-del-cimitero",
     ]);
-    expect(tag("Fixture Druid")).toEqual(["accelerazione-di-mana", "conta-le-creature"]);
+    expect(tag("Fixture Druid")).toEqual(["accelerazione-di-mana"]);
   });
 
   it("non chiama accelerazione di mana una terra, che il mana lo produce per mestiere", () => {
@@ -399,13 +402,15 @@ describe("tag di sinergia", () => {
   });
 
   it("non legge il testo fra parentesi, che è un promemoria delle regole e non un effetto", () => {
-    // Il promemoria del Tesoro parla di sacrificare e di aggiungere mana: se lo
-    // si legge, ogni controincantesimo diventa una carta che sacrifica.
-    expect(tag("Fixture Refusal")).toEqual(["produce-pedine", "accelerazione-di-mana"]);
+    // Il promemoria del controincantesimo nomina il cimitero: se lo si legge,
+    // ogni risposta diventa una carta che si cura del cimitero.
+    expect(tag("Fixture Refusal")).toEqual(["controincantesimo"]);
   });
 
   it("non chiama rimozione un danno all'avversario, che non toglie di mezzo niente", () => {
-    expect(tag("Fixture Bluffs")).toEqual([]);
+    // Il danno addosso a chi gioca ha un tag suo — su questo formato è mezzo
+    // gioco — ma non è una rimozione: non c'è niente che tolga di mezzo.
+    expect(tag("Fixture Bluffs")).toEqual(["danno-diretto"]);
   });
 
   it("non chiama spazza-via chi esilia solo le proprie pedine", () => {
@@ -426,12 +431,10 @@ describe("tag di sinergia", () => {
     const { pool } = preparaPool(FRAMMENTO, {
       formato: FORMATO,
       aggiornatoIl: QUANDO,
-      correzioni: [
-        { nome: "Fixture Goblin", aggiunge: ["conta-le-creature"], toglie: ["produce-pedine"] },
-      ],
+      correzioni: [{ nome: "Fixture Goblin", aggiunge: ["evasione"], toglie: ["danno-diretto"] }],
     });
 
-    expect(carta(pool, "Fixture Goblin").tag).toEqual(["conta-le-creature"]);
+    expect(carta(pool, "Fixture Goblin").tag).toEqual(["evasione"]);
   });
 
   it("segnala la correzione che non trova più la sua carta, invece di ingoiarla", () => {
@@ -462,7 +465,7 @@ describe("tag di sinergia", () => {
       preparaPool(FRAMMENTO, {
         formato: FORMATO,
         aggiornatoIl: QUANDO,
-        correzioni: [{ nome: "Fixture Goblin", aggiunge: ["pesca"], toglie: ["produce-pedine"] }],
+        correzioni: [{ nome: "Fixture Goblin", aggiunge: ["pesca"], toglie: ["danno-diretto"] }],
       });
 
     expect(carta(giro().pool, "Fixture Goblin").tag).toEqual(["pesca"]);
@@ -587,7 +590,7 @@ describe("ripetibilità", () => {
   });
 });
 
-describe("i tag di Scryfall, accanto ai nove", () => {
+describe("i tag di Scryfall, accanto ai quindici", () => {
   /**
    * L'indice come lo consegnerebbe il file bulk: il Goblin e il Refusal
    * taggati, il Contratto pure — ma il Contratto è bandito e nel pool non entra.
@@ -625,12 +628,12 @@ describe("i tag di Scryfall, accanto ai nove", () => {
     expect(nomi).toEqual(["aggro-payoff", "counterspell", "token-generator"]);
   });
 
-  it("lascia i nove dove sono e come sono", () => {
+  it("lascia i quindici dove sono e come sono", () => {
     const senza = carta(preparazione().pool, "Fixture Goblin");
     const con = carta(conTag().pool, "Fixture Goblin");
 
     expect(con.tag).toEqual(senza.tag);
-    expect(con.tag).toContain("produce-pedine");
+    expect(con.tag).toContain("danno-diretto");
   });
 
   it("una carta senza tag di Scryfall resta legittima", () => {

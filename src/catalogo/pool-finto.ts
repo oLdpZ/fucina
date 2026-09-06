@@ -83,7 +83,7 @@ export const POOL_FINTO: readonly Carta[] = [
     tipi: ["Creature"],
     sottotipi: ["Goblin"],
     testo: "Sacrifice a Goblin: Add {R}.",
-    tag: ["sacrifica", "accelerazione-di-mana"],
+    tag: ["accelerazione-di-mana"],
   }),
   carta({
     nome: "Krenko's Command",
@@ -92,7 +92,7 @@ export const POOL_FINTO: readonly Carta[] = [
     identitaDiColore: ["R"],
     tipi: ["Sorcery"],
     testo: "Create two 1/1 red Goblin creature tokens.",
-    tag: ["produce-pedine"],
+    tag: ["potenzia"],
   }),
   carta({
     nome: "Lightning Strike",
@@ -249,7 +249,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "Other Goblins you control get +1/+0.",
     forza: "5",
     costituzione: "3",
-    tag: ["conta-le-creature"],
+    tag: ["potenzia"],
   }),
   carta({
     nome: "Torchbearer Goblin",
@@ -260,7 +260,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "When this creature enters, create a 1/1 red Goblin creature token.",
     forza: "3",
     costituzione: "3",
-    tag: ["produce-pedine"],
+    tag: ["danno-diretto"],
   }),
   carta({
     nome: "Cinder Skirmisher",
@@ -271,7 +271,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "Sacrifice another creature: This creature gets +2/+0 until end of turn.",
     forza: "2",
     costituzione: "3",
-    tag: ["sacrifica"],
+    tag: ["scarta"],
   }),
   carta({
     nome: "Ember Scrapper",
@@ -302,7 +302,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "When this creature enters, create two 1/1 red Goblin creature tokens.",
     forza: "3",
     costituzione: "4",
-    tag: ["produce-pedine"],
+    tag: ["potenzia"],
   }),
   carta({
     nome: "Scrapheap Bombardier",
@@ -313,7 +313,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "Sacrifice a creature: This creature deals 1 damage to any target.",
     forza: "3",
     costituzione: "3",
-    tag: ["sacrifica"],
+    tag: ["colpisce-gli-artefatti"],
   }),
   carta({
     nome: "Goblin Powdersmith",
@@ -324,7 +324,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "When this creature enters, it deals 2 damage to target creature an opponent controls.",
     forza: "2",
     costituzione: "2",
-    tag: ["rimozione-mirata"],
+    tag: ["previene-il-danno"],
   }),
   carta({
     nome: "Emberflock Scout",
@@ -355,7 +355,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     identitaDiColore: ["R"],
     tipi: ["Instant"],
     testo: "Scorch Bolt deals 3 damage to any target.",
-    tag: ["rimozione-mirata"],
+    tag: ["danno-diretto"],
   }),
   carta({
     nome: "Emberpact Ritual",
@@ -364,7 +364,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     identitaDiColore: ["R"],
     tipi: ["Sorcery"],
     testo: "Add {R}{R}{R}.",
-    tag: ["accelerazione-di-mana"],
+    tag: ["previene-il-danno"],
   }),
   carta({
     nome: "Molten Insight",
@@ -373,7 +373,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     identitaDiColore: ["R"],
     tipi: ["Instant"],
     testo: "Draw two cards.",
-    tag: ["pesca"],
+    tag: ["potenzia"],
   }),
   carta({
     nome: "Wildfire Sweep",
@@ -391,7 +391,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     identitaDiColore: ["R"],
     tipi: ["Enchantment"],
     testo: "At the beginning of your end step, create a 1/1 red Goblin creature token.",
-    tag: ["produce-pedine"],
+    tag: ["imbriglia"],
   }),
 
   /* --- Fuori tema, e più forti: il prezzo di restare puri ----------------- */
@@ -404,7 +404,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "Flying. Whenever this creature deals damage, you gain that much life.",
     forza: "5",
     costituzione: "5",
-    tag: ["guadagna-punti-vita"],
+    tag: ["rigenera"],
   }),
   carta({
     nome: "Vile Extraction",
@@ -436,7 +436,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "Sacrifice a creature: Draw a card.",
     forza: "2",
     costituzione: "2",
-    tag: ["sacrifica", "pesca"],
+    tag: ["scarta", "pesca"],
   }),
   carta({
     nome: "Crypt Tithe",
@@ -497,7 +497,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "When this creature enters, you gain 3 life.",
     forza: "2",
     costituzione: "2",
-    tag: ["guadagna-punti-vita"],
+    tag: ["previene-il-danno"],
   }),
   carta({
     nome: "Iron Sentinel",

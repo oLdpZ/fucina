@@ -129,7 +129,7 @@ function leProve(carte: readonly Carta[]): Prova[] {
     {
       titolo: "Con vincoli negativi forti — bianco-blu senza creature",
       perche:
-        "Il tema che dice soprattutto quel che NON vuole. Le esclusioni vincono sempre, e qui tagliano il modo in cui il motore sa vincere. Una nota sul filtro: dentro un `FiltroTema` le categorie si sommano in **and**, quindi escludere «Creature» **e** «produce-pedine» insieme escluderebbe le sole creature che fanno pedine — non le creature. Qui l'esclusione è una sola apposta.",
+        "Il tema che dice soprattutto quel che NON vuole. Le esclusioni vincono sempre, e qui tagliano il modo in cui il motore sa vincere. Una nota sul filtro: dentro un `FiltroTema` le categorie si sommano in **and**, quindi escludere «Creature» **e** «danno-diretto» insieme escluderebbe le sole creature che tirano danno — non le creature. Qui l'esclusione è una sola apposta.",
       tema: tema({
         inclusioni: filtro({ colori: ["W", "U"] }),
         esclusioni: filtro({ tipi: ["Creature"] }),

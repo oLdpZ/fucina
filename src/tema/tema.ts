@@ -78,7 +78,6 @@ export function filtroVuoto(filtro: FiltroTema): boolean {
  * entrano, quelle uscite dallo Standard escono.
  */
 export type CriterioAllargamento =
-  | { readonly tipo: "produce-pedine-del-sottotipo"; readonly sottotipo: string }
   | { readonly tipo: "nomina-il-sottotipo"; readonly sottotipo: string }
   | { readonly tipo: "tag-affine"; readonly tag: Tag }
   | {
@@ -221,8 +220,6 @@ function nelVicinato(carta: Carta, seme: Carta): boolean {
 /** Se una carta soddisfa il criterio di un allargamento accettato. */
 export function soddisfaCriterio(carta: Carta, criterio: CriterioAllargamento): boolean {
   switch (criterio.tipo) {
-    case "produce-pedine-del-sottotipo":
-      return carta.tag.includes("produce-pedine") && nomina(carta, criterio.sottotipo);
     case "nomina-il-sottotipo":
       return nomina(carta, criterio.sottotipo);
     case "tag-affine":
@@ -325,10 +322,7 @@ function stessoCriterio(a: CriterioAllargamento, b: CriterioAllargamento): boole
     );
   }
   if (a.tipo === "tag-affine" && b.tipo === "tag-affine") return a.tag === b.tag;
-  if (
-    (a.tipo === "produce-pedine-del-sottotipo" || a.tipo === "nomina-il-sottotipo") &&
-    a.tipo === b.tipo
-  ) {
+  if (a.tipo === "nomina-il-sottotipo" && b.tipo === "nomina-il-sottotipo") {
     return a.sottotipo === b.sottotipo;
   }
   return false;

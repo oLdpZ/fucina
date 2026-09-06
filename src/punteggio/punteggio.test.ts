@@ -239,7 +239,7 @@ const PEDINE = magia({
   valoreDiMana: 2,
   identitaDiColore: ["R"],
   tipi: ["Sorcery"],
-  tag: ["produce-pedine"],
+  tag: ["potenzia"],
 });
 const ALTARE = magia({
   nome: "Altare del Fumo",
@@ -248,7 +248,7 @@ const ALTARE = magia({
   identitaDiColore: ["R"],
   forza: 1,
   costituzione: 2,
-  tag: ["sacrifica"],
+  tag: ["evasione"],
 });
 /** Le stesse due carte senza tag: stessa forma, sinergia zero. */
 const PEDINE_MUTA: Carta = { ...PEDINE, nome: "Chiamata Muta", tag: [] };
@@ -449,14 +449,14 @@ describe("densità di sinergia", () => {
       valoreDiMana: 2,
       identitaDiColore: ["R"],
       tipi: ["Artifact"],
-      tag: ["produce-pedine", "sacrifica"],
+      tag: ["potenzia", "evasione"],
     });
     const grezzi = valuta([{ carta: doppia, copie: 36 }]).punteggio.sinergia.grezzi;
 
     expect(grezzi.coppieDiCopie).toBe(630);
     expect(grezzi.coppieAttive).toBe(630);
     expect(grezzi.perCoppiaDiTag).toEqual([
-      { uno: "produce-pedine", altro: "sacrifica", coppie: 630 },
+      { uno: "evasione", altro: "potenzia", coppie: 630 },
     ]);
   });
 
@@ -493,7 +493,7 @@ describe("qualità delle singole carte", () => {
       valoreDiMana: 2,
       identitaDiColore: ["B"],
       tipi: ["Instant"],
-      testo: "Destroy target creature with mana value 3 or less.",
+      testo: "Destroy target black creature.",
       tag: ["rimozione-mirata"],
     });
 
@@ -556,7 +556,7 @@ describe("qualità delle singole carte", () => {
     const timida: Carta = {
       ...rimozione,
       nome: "Rovina Timida",
-      testo: "Destroy target creature with mana value 3 or less.",
+      testo: "Destroy target black creature.",
     };
     const pesca = magia({
       nome: "Studio",

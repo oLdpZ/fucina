@@ -102,20 +102,30 @@ export const TURNO_MAZZO_LENTO = 10;
  * fanno insieme più di quanto farebbero separate.
  *
  * L'elenco è corto di proposito, come le regole dei tag: preferisce tacere che
- * sbagliare (`HANDOFF.md`). `accelerazione-di-mana` non compare perché accelera
- * le carte care, che non sono un tag; `spazza-via` non compare perché con le
- * pedine litiga invece di collaborare, e dire il contrario sarebbe inventare.
+ * sbagliare (`HANDOFF.md`). È stato **riscritto** col vocabolario nuovo del 6
+ * settembre 2026: le coppie dello Standard parlavano di pedine e sacrifici, che
+ * su questo pool sono nove carte in tutto.
  *
  * Le coppie sono **non ordinate**: l'ordine in cui si scrivono non conta.
  */
 export const COPPIE_CHE_SI_ATTIVANO: readonly (readonly [Tag, Tag])[] = [
-  // Le pedine sono cibo per chi sacrifica, e teste da contare per chi conta.
-  ["produce-pedine", "sacrifica"],
-  ["produce-pedine", "conta-le-creature"],
-  // Chi sacrifica riempie il cimitero, e chi se ne cura lo svuota di nuovo.
-  ["sacrifica", "si-cura-del-cimitero"],
-  // Il classico: sacrificare una creatura e prendersi i punti vita.
-  ["sacrifica", "guadagna-punti-vita"],
+  // L'aggressione del formato: un corpo che passa e qualcosa che lo ingrossa.
+  ["potenzia", "evasione"],
+  // E quando il corpo non basta, il danno che chiude la partita dalla mano.
+  ["evasione", "danno-diretto"],
+  // Il controllo: annullare quel che si può, pescare per averne ancora.
+  ["controincantesimo", "pesca"],
+  // La prigione: fermare il campo e togliere le terre con cui si scioglierebbe.
+  ["imbriglia", "attacca-le-terre"],
+  // Il mana veloce serve a lanciare prima quel che chiude, e qui chiude il danno.
+  ["accelerazione-di-mana", "danno-diretto"],
+  // Gli artefatti sono il mana veloce di questo formato: chi li usa e chi li
+  // muove guardano la stessa metà del pool.
+  ["accelerazione-di-mana", "colpisce-gli-artefatti"],
+  // Svuotare la mano avversaria e ripescarsi la propria dal cimitero.
+  ["scarta", "si-cura-del-cimitero"],
+  // Rigenerare è la risposta allo spazzino: i propri restano, gli altri no.
+  ["spazza-via", "rigenera"],
 ];
 
 /**
@@ -179,18 +189,34 @@ export const QUOTA_DELLA_RIMOZIONE_CONDIZIONALE = 0.6;
  * del pool: qui sta la stessa scelta dei tag — meglio dire «incondizionata» a
  * una rimozione che non lo è del tutto, che inventare condizioni che non ci
  * sono.
+ *
+ * Riscritto col pool del 6 settembre 2026: qui le rimozioni si condizionano
+ * quasi tutte sul **colore** («target black creature», «target blue
+ * permanent») o sul muro, che sono i due modi in cui il 1994 scriveva «non
+ * tutto». Ogni frase qui sotto è stata contata sulle rimozioni vere del pool, e
+ * quelle che non toccavano nemmeno una carta — «that entered», «with mana
+ * value», «target white», «target green» — sono state tolte invece di restare a
+ * far numero.
+ *
+ * Fra le tolte c'è anche «enchanted creature», che pure di carte ne toccava
+ * cinque: ci sarebbe finita dentro **Control Magic**, che in questo formato è
+ * la rimozione migliore che ci sia. Un'aura si può disincantare, e in quel senso
+ * è condizionale; ma chiamare mezza rimozione la carta che ruba il drago è un
+ * errore più grosso di quello che si voleva evitare.
  */
 export const CONDIZIONI_DELLA_RIMOZIONE: readonly string[] = [
-  "with mana value",
-  "with power",
+  "target blue",
+  "target black",
+  "target red",
+  "nonartifact",
+  "nonblack",
   "with toughness",
-  "nonland",
+  "with flying",
   "attacking",
   "blocking",
   "tapped creature",
-  "you don't control",
-  "that entered",
-  "an opponent controls with",
+  "non-wall",
+  "target wall",
 ];
 
 /**

@@ -70,24 +70,30 @@ export const NOMI_DEI_COLORI: Readonly<Record<Colore, string>> = {
 export const ORDINE_DEI_COLORI: readonly Colore[] = ["W", "U", "B", "R", "G"];
 
 /**
- * I nove tag di sinergia in italiano, in due forme perché servono in due posti:
- * `etichetta` sta su un bottone del filtro, `azione` sta dentro una frase dopo
- * «le carte che…». Tradurre è una scelta, e come i nomi dei tipi sta scritta a
- * mano qui e in nessun altro posto.
+ * I quindici tag di sinergia in italiano, in due forme perché servono in due
+ * posti: `etichetta` sta su un bottone del filtro, `azione` sta dentro una
+ * frase dopo «le carte che…». Tradurre è una scelta, e come i nomi dei tipi sta
+ * scritta a mano qui e in nessun altro posto.
  */
 const TAG_NOTI: Readonly<Record<Tag, { etichetta: string; azione: string }>> = {
-  "produce-pedine": { etichetta: "Produce pedine", azione: "producono pedine" },
-  sacrifica: { etichetta: "Sacrifica", azione: "sacrificano le proprie creature" },
-  "guadagna-punti-vita": {
-    etichetta: "Guadagna punti vita",
-    azione: "fanno guadagnare punti vita",
-  },
+  "danno-diretto": { etichetta: "Danno diretto", azione: "tirano danno addosso a chi gioca" },
   "rimozione-mirata": { etichetta: "Rimozione mirata", azione: "tolgono di mezzo una carta sola" },
   "spazza-via": { etichetta: "Spazza via", azione: "spazzano via il campo" },
+  "attacca-le-terre": { etichetta: "Attacca le terre", azione: "attaccano la base di terre" },
+  "colpisce-gli-artefatti": {
+    etichetta: "Artefatti",
+    azione: "si occupano degli artefatti",
+  },
+  controincantesimo: { etichetta: "Controincantesimo", azione: "annullano gli incantesimi" },
+  scarta: { etichetta: "Scarta", azione: "fanno scartare" },
+  imbriglia: { etichetta: "Imbriglia", azione: "tengono fermo il campo avversario" },
+  "previene-il-danno": { etichetta: "Previene il danno", azione: "prevengono il danno" },
+  potenzia: { etichetta: "Potenzia", azione: "ingrossano le creature" },
+  evasione: { etichetta: "Evasione", azione: "passano oltre i bloccanti" },
   pesca: { etichetta: "Pesca", azione: "fanno pescare" },
   "accelerazione-di-mana": { etichetta: "Accelera il mana", azione: "accelerano il mana" },
-  "conta-le-creature": { etichetta: "Conta le creature", azione: "contano le creature" },
   "si-cura-del-cimitero": { etichetta: "Si cura del cimitero", azione: "si curano del cimitero" },
+  rigenera: { etichetta: "Rigenera", azione: "rigenerano" },
 };
 
 /** L'elenco dei tag nell'ordine in cui si mostrano: quello in cui sono scritti. */

@@ -135,6 +135,9 @@ export type Diario = {
 export type Buchi = {
   senzaImmagine: number;
   senzaPrezzo: number;
+  /** Senza nessuno dei tag **nostri**: è il numero che il ticket 06 chiede. */
+  senzaTagNostri: number;
+  /** Senza nemmeno un tag di nessuna delle due razze. */
   senzaTag: number;
   totale: number;
 };
@@ -682,6 +685,7 @@ export function contaBuchi(pool: Pool): Buchi {
   return {
     senzaImmagine: pool.carte.filter((carta) => carta.immagine === null).length,
     senzaPrezzo: pool.carte.filter((carta) => carta.prezzo.euro === null).length,
+    senzaTagNostri: pool.carte.filter((carta) => carta.tag.length === 0).length,
     senzaTag: pool.carte.filter(
       (carta) => carta.tag.length === 0 && carta.tagScryfall.length === 0,
     ).length,
@@ -729,7 +733,8 @@ export function raccontaDiario(diario: Diario): string {
 export function raccontaBuchi(buchi: Buchi): string {
   return (
     `Sulle ${buchi.totale} carte del pool: ${buchi.senzaImmagine} senza immagine, ` +
-    `${buchi.senzaPrezzo} senza prezzo, ${buchi.senzaTag} senza nemmeno un tag.`
+    `${buchi.senzaPrezzo} senza prezzo, ${buchi.senzaTagNostri} senza nessuno dei nostri tag ` +
+    `(di cui ${buchi.senzaTag} senza nemmeno un tag).`
   );
 }
 

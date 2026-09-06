@@ -51,45 +51,53 @@ function carta(nome: string, testo: string, tipi: string[] = ["Creature"]): Cart
 describe("le regole meccaniche", () => {
   const tag = (testo: string, tipi?: string[]) => tagMeccanici(carta("Prova", testo, tipi));
 
-  it("riconosce i punti vita anche quando il numero non è scritto", () => {
-    expect(tag("You gain life equal to its power.")).toEqual(["guadagna-punti-vita"]);
-    expect(tag("Whenever you gain life, put a +1/+1 counter on this creature.")).toEqual([
-      "guadagna-punti-vita",
+  it("separa il danno addosso a chi gioca dal danno che toglie di mezzo una carta", () => {
+    expect(tag("Lightning Bolt deals 3 damage to any target.")).toEqual([
+      "danno-diretto",
+      "rimozione-mirata",
     ]);
-    expect(tag("Whenever this creature attacks, you gain 2 life.")).toEqual([
-      "guadagna-punti-vita",
+    // Fireball scrive il bersaglio dall'altra parte, e nel 1994 lo fanno in tanti.
+    expect(tag("Fireball deals X damage divided evenly among any number of targets.")).toEqual([
+      "danno-diretto",
     ]);
-    // Chi impedisce di guadagnare punti vita fa l'opposto, e non è del tema.
-    expect(tag("Players can't gain life.")).toEqual([]);
-  });
-
-  it("riconosce la rimozione con «fino a un bersaglio» e col danno non scritto in cifre", () => {
-    expect(tag("Exile up to one target nonland permanent.")).toEqual(["rimozione-mirata"]);
+    expect(tag("Inferno deals 6 damage to each creature and each player.")).toEqual([
+      "danno-diretto",
+      "spazza-via",
+    ]);
+    // Un colpo su una creatura sola non è danno diretto: non arriva a nessuno.
     expect(tag("This creature deals damage equal to its power to target creature.")).toEqual([
       "rimozione-mirata",
     ]);
   });
 
-  it("riconosce la pescata anche quando le carte non si contano a numero", () => {
-    expect(tag("Draw cards equal to the number of creatures you control.")).toEqual([
-      "pesca",
-      "conta-le-creature",
-    ]);
-    expect(tag("Whenever you draw your second card each turn, scry 1.")).toEqual(["pesca"]);
+  it("riconosce la rimozione con «fino a un bersaglio» e chi la carta se la porta via", () => {
+    expect(tag("Exile up to one target nonland permanent.")).toEqual(["rimozione-mirata"]);
+    // Control Magic in questo formato è la rimozione migliore che ci sia.
+    expect(tag("Enchant creature\nYou control enchanted creature.")).toEqual(["rimozione-mirata"]);
+    // Rimbalzare non è rimuovere: la carta torna in mano e si rigioca.
+    expect(tag("Return target creature to its owner's hand.")).toEqual([]);
   });
 
-  it("non chiama «sacrifica» una terra che sacrifica solo se stessa", () => {
-    // Sono quarantasei nel pool vero: con il tag, ogni base di terre risulterebbe
-    // un mazzo da sacrifici.
-    expect(tag("{4}, {T}, Sacrifice this land: Draw 4 cards.", ["Land"])).toEqual(["pesca"]);
-    // Una terra che sacrifica **altro** invece del tema fa parte davvero.
-    expect(tag("{1}, {T}, Sacrifice a token: Draw a card.", ["Land"])).toEqual([
-      "sacrifica",
-      "pesca",
+  it("tiene separata la terra distrutta dal permanente distrutto", () => {
+    expect(tag("Destroy target land.")).toEqual(["attacca-le-terre"]);
+    // Fissure sceglie: è una rimozione **e** un colpo alla base di terre, e la
+    // parola «land» in fondo alla frase non deve toglierle la prima.
+    expect(tag("Destroy target creature or land. It can't be regenerated.")).toEqual([
+      "rimozione-mirata",
+      "attacca-le-terre",
     ]);
-    // E una creatura che si sacrifica per un effetto è un corpo da sacrificare:
-    // quella resta dentro.
-    expect(tag("{T}, Sacrifice this creature: Scry 1.")).toEqual(["sacrifica"]);
+    expect(tag("Destroy all lands.")).toEqual(["spazza-via", "attacca-le-terre"]);
+    // Blood Moon non distrugge niente e fa lo stesso mestiere.
+    expect(tag("Nonbasic lands are Mountains.")).toEqual(["attacca-le-terre"]);
+    // Ma una terra sacrificata come **proprio** costo è un prezzo, non un attacco.
+    expect(tag("When this creature enters, sacrifice it unless you sacrifice two Swamps.")).toEqual(
+      [],
+    );
+  });
+
+  it("riconosce la pescata anche quando le carte non si contano a numero", () => {
+    expect(tag("Draw cards equal to the number of creatures you control.")).toEqual(["pesca"]);
+    expect(tag("Target player draws two cards.")).toEqual(["pesca"]);
   });
 
   it("guarda i tipi della faccia giocabile per prima, non l'unione delle due", () => {
@@ -130,34 +138,86 @@ describe("le regole meccaniche", () => {
   });
 
   it("non si cura del cimitero solo perché dice di non usarlo", () => {
+    // Il cimitero conta come **provenienza**: finirci dentro è solo morire.
     expect(
       tag(
         "Counter target spell unless its controller pays {3}. If that spell is countered " +
           "this way, exile it instead of putting it into its owner's graveyard.",
       ),
+    ).toEqual(["controincantesimo"]);
+    expect(tag("Return target creature card from your graveyard to your hand.")).toEqual([
+      "si-cura-del-cimitero",
+    ]);
+  });
+
+  /*
+   * Le quattro trappole del 1994: qui le regole scritte sul modo di scrivere le
+   * carte di oggi tacciono o sbagliano, ed è la ragione per cui questo
+   * vocabolario è stato riscritto invece che ereditato.
+   */
+
+  it("legge le parole chiave nude, che nel 1994 non hanno promemoria", () => {
+    // Non c'è nessun «(This creature can't be blocked except by…)» da leggere:
+    // c'è la parola e basta, a inizio riga o dopo una virgola.
+    expect(tag("Flying")).toEqual(["evasione"]);
+    expect(tag("Defender, flying")).toEqual(["evasione"]);
+    expect(tag("Enchant creature\nEnchanted creature has flying.")).toEqual([
+      "potenzia",
+      "evasione",
+    ]);
+  });
+
+  it("non chiama evasione la carta che il volo lo nomina per punirlo", () => {
+    // Sono una ventina nel pool vero, e col tag direbbero il contrario del vero.
+    expect(tag("Hurricane deals X damage to each creature with flying and each player.")).toEqual([
+      "danno-diretto",
+      "spazza-via",
+    ]);
+    expect(tag("All creatures lose flying.")).toEqual([]);
+    expect(
+      tag("Creatures with mountainwalk can be blocked as though they didn't have mountainwalk."),
     ).toEqual([]);
+  });
+
+  it("non chiama prigione la carta che il difetto ce l'ha addosso", () => {
+    // Mana Vault non imbriglia nessuno: paga il proprio costo.
+    expect(tag("This artifact doesn't untap during your untap step.\n{T}: Add {C}{C}{C}.")).toEqual(
+      ["accelerazione-di-mana"],
+    );
+    expect(tag("This creature can't attack unless defending player controls an Island.")).toEqual(
+      [],
+    );
+    // Chi invece il campo lo tiene fermo davvero.
+    expect(tag("{1}, {T}: Tap target creature.")).toEqual(["imbriglia"]);
+    expect(tag("Players skip their untap steps.")).toEqual(["imbriglia"]);
+  });
+
+  it("non chiama rigenerazione la frase che la vieta", () => {
+    expect(tag("{B}: Regenerate this creature.")).toEqual(["rigenera"]);
+    expect(tag("Destroy all creatures. They can't be regenerated.")).toEqual(["spazza-via"]);
+    expect(tag("{T}: Target creature can't be regenerated this turn.")).toEqual([]);
   });
 });
 
 describe("il file delle correzioni a mano", () => {
   it("legge una correzione che aggiunge e una che toglie", () => {
-    const esito = leggiCorrezioni(["Alfa: +pesca", "Beta: -sacrifica"].join("\n"));
+    const esito = leggiCorrezioni(["Alfa: +pesca", "Beta: -evasione"].join("\n"));
 
     expect(esito.problemi).toEqual([]);
     expect(esito.correzioni).toEqual([
       { nome: "Alfa", aggiunge: ["pesca"], toglie: [] },
-      { nome: "Beta", aggiunge: [], toglie: ["sacrifica"] },
+      { nome: "Beta", aggiunge: [], toglie: ["evasione"] },
     ]);
   });
 
   it("accetta più tag sulla stessa riga, aggiunti e tolti insieme", () => {
-    const esito = leggiCorrezioni("Alfa: +pesca, +spazza-via, -sacrifica");
+    const esito = leggiCorrezioni("Alfa: +pesca, +spazza-via, -evasione");
 
     expect(esito.problemi).toEqual([]);
     expect(esito.correzioni[0]).toEqual({
       nome: "Alfa",
       aggiunge: ["pesca", "spazza-via"],
-      toglie: ["sacrifica"],
+      toglie: ["evasione"],
     });
   });
 
@@ -217,17 +277,17 @@ describe("il file delle correzioni a mano", () => {
 });
 
 describe("le correzioni applicate al pool", () => {
-  const pool = [carta("Alfa", "Draw a card."), carta("Beta", "Sacrifice a creature: Scry 1.")];
+  const pool = [carta("Alfa", "Draw a card."), carta("Beta", "{B}: Regenerate this creature.")];
 
   it("aggiungono e tolgono tag alla carta giusta", () => {
     const conTag = pool.map((c) => ({ ...c, tag: tagMeccanici(c) }));
     const esito = applicaCorrezioni(conTag, [
-      { nome: "Alfa", aggiunge: ["conta-le-creature"], toglie: ["pesca"] },
+      { nome: "Alfa", aggiunge: ["evasione"], toglie: ["pesca"] },
     ]);
 
-    expect(esito.carte[0]?.tag).toEqual(["conta-le-creature"]);
+    expect(esito.carte[0]?.tag).toEqual(["evasione"]);
     // La carta che nessuno corregge resta com'era.
-    expect(esito.carte[1]?.tag).toEqual(["sacrifica"]);
+    expect(esito.carte[1]?.tag).toEqual(["rigenera"]);
     expect(esito.orfane).toEqual([]);
   });
 

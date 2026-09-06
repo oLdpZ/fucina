@@ -19,16 +19,72 @@ import type { Carta, Tag } from "../src/dati/pool.ts";
 
 /**
  * Il testo su cui le regole lavorano: quello della carta **senza i promemoria
- * fra parentesi**.
+ * fra parentesi** e senza le tre frasi che dicono il contrario di quel che
+ * sembrano dire.
  *
  * Il testo fra parentesi ripete regole del gioco che il giocatore potrebbe non
- * ricordare — cosa fa una pedina Tesoro, cosa vuol dire equipaggiare — e non è
- * quel che la carta fa. Leggerlo vorrebbe dire che ogni carta che regala un
- * Tesoro «sacrifica», e allora il tag non distinguerebbe più niente.
+ * ricordare, e non è quel che la carta fa. Su questo pool ce n'è pochissimo —
+ * nel 1994 le parole chiave si stampavano nude, senza promemoria — e proprio
+ * per questo le regole qui sotto non possono appoggiarsi al promemoria per
+ * capire cosa una parola chiave voglia dire: devono conoscere la parola.
+ *
+ * Le tre frasi tolte prima di leggere sono negazioni scritte con le stesse
+ * parole dell'affermazione, ed è la trappola più frequente di un pool dove
+ * quasi ogni meccanica ha la sua carta che la spegne:
+ *
+ * - «as though they didn't have mountainwalk» — sono i quattro muri di
+ *   Rinascimento, che dell'attraversare parlano per **impedirlo**;
+ * - «creatures with islandwalk can be blocked…» — la stessa cosa detta dal
+ *   verso opposto;
+ * - «can't be regenerated» — sta su Wrath of God e su Terror, che rigenerare
+ *   non lo fanno affatto.
  */
 function testoDelleRegole(carta: Carta): string {
-  return carta.testo.replace(/\([^)]*\)/g, " ");
+  return carta.testo
+    .replace(/\([^)]*\)/g, " ")
+    .replace(ANTI_ATTRAVERSAMENTO, " ")
+    .replace(COME_SE_NON_AVESSE, " ")
+    .replace(NIENTE_RIGENERAZIONE, " ");
 }
+
+/** «Creatures with forestwalk can be blocked as though they didn't have forestwalk.» */
+const ANTI_ATTRAVERSAMENTO =
+  /\bcreatures with (?:forest|island|swamp|mountain|plains)walk can be blocked[^.]*\./gi;
+
+/** «…as though it didn't have defender», «…as though they didn't have flying». */
+const COME_SE_NON_AVESSE = /\bas though (?:it|they) (?:didn't|doesn't|don't) have [^.]*/gi;
+
+/** «Destroy all creatures. They can't be regenerated.» */
+const NIENTE_RIGENERAZIONE = /\bcan't be regenerated\b/gi;
+
+/**
+ * Le clausole che una carta scrive **su se stessa** e che le regole della
+ * prigione devono saltare.
+ *
+ * Su questo pool è un caso frequentissimo: una ventina di creature e artefatti
+ * portano «doesn't untap during your untap step» o «can't attack unless
+ * defending player controls an Island» come **proprio difetto**, e sono
+ * l'opposto di una carta che imbriglia il campo altrui. Mana Vault non è una
+ * prigione: è un mostro che paga il proprio costo.
+ */
+const SU_SE_STESSO =
+  /\bthis (?:creature|artifact|land|enchantment) (?:can't attack|can't block|doesn't untap|attacks each combat if able|blocks each combat if able)[^.]*\./gi;
+
+/**
+ * Il bersaglio di una distruzione, guardato da vicino: «target land», «target
+ * Mountains», «X target Mountains».
+ *
+ * Le due parole di margine bastano per «target **basic** land» e per «target
+ * creature **or** land», e non arrivano fino a una terra nominata più in là
+ * nella frase — che è il punto: Savaen Elves distrugge «target Aura attached to
+ * a land», e l'Aura è il bersaglio, non la terra.
+ */
+const BERSAGLIO_TERRA =
+  /\btarget\s+(?:\w+\s+){0,2}?(?:lands?|Forests?|Islands?|Swamps?|Mountains?|Plains)\b/i;
+
+/** Lo stesso sguardo, per il permanente che terra non è. */
+const BERSAGLIO_NON_TERRA =
+  /\btarget\s+(?:\w+\s+){0,3}?(?:creature|permanent|artifact|enchantment|Aura|Wall)\b/i;
 
 /**
  * I tipi della **faccia giocabile per prima**, che è quella con cui la carta si
@@ -61,102 +117,239 @@ function eUnaTerra(carta: Carta): boolean {
  * trappola che rappresenta.
  */
 const REGOLE: Record<Tag, (carta: Carta, testo: string) => boolean> = {
-  /** «create a 1/1 red Goblin creature token» — la formula è sempre questa. */
-  "produce-pedine": (_, testo) => /\bcreates?\b[^.]*\btokens?\b/i.test(testo),
-
   /**
-   * Sia il costo («Sacrifice a creature:») sia l'innesco («Whenever you
-   * sacrifice…»): al motore interessa che la carta stia in un mazzo che
-   * sacrifica, non da che parte del sacrificio stia. Anche chi sacrifica **se
-   * stesso** è del tema: è un corpo che muore quando serve.
+   * Il fulcro rosso e nero del formato: il danno che va **addosso a chi
+   * gioca**, non su una creatura. Lightning Bolt, Fireball, Psionic Entity.
    *
-   * Con un'eccezione, trovata sul pool vero: le terre. Quarantasei terre si
-   * sacrificano da sole per un effetto, e col tag ogni base di mana risulterebbe
-   * un mazzo da sacrifici. Da una terra il tema lo prende solo chi sacrifica
-   * **altro**.
+   * Il «to» prima del bersaglio non si chiede, perché mezze carte lo scrivono
+   * dall'altra parte — «deals X damage to each creature and each player» — e
+   * chiederlo lasciava fuori Earthquake, Hurricane e Inferno, che sono tre dei
+   * modi in cui questo formato chiude una partita.
    */
-  sacrifica: (carta, testo) =>
-    eUnaTerra(carta) ? SACRIFICA_ALTRO.test(testo) : /\bsacrifices?\b/i.test(testo),
+  "danno-diretto": (_, testo) =>
+    /\bdeals?\b[^.]*\bdamage\b[^.]*\b(?:any target|any number of targets|target player|target opponent|each opponent|each player|that player)\b/i.test(
+      testo,
+    ),
 
   /**
-   * «You gain 2 life», «you gain life equal to its power», «Whenever you gain
-   * life», e il legame vitale, che è la stessa cosa detta in una parola. Il
-   * numero scritto in cifre non c'è quasi mai: chiederlo lasciava fuori i
-   * quaranta bersagli veri del tema.
-   */
-  "guadagna-punti-vita": (_, testo) =>
-    (/\bgains?\b[^.]*\blife\b/i.test(testo) && !/\bcan't gain life\b/i.test(testo)) ||
-    /\blifelink\b/i.test(testo),
-
-  /**
-   * Rimozione con un bersaglio: toglie di mezzo un permanente. Il danno conta
-   * solo quando può andare su una creatura o su un planeswalker — un punto di
-   * danno all'avversario non rimuove niente, e ce l'hanno decine di terre.
-   * «Return target creature» non c'è: rimbalzare non è rimuovere.
+   * Togliere di mezzo **un** permanente: distruggerlo, esiliarlo, ucciderlo col
+   * danno, ridurgli la costituzione a zero, o portarselo via — Control Magic in
+   * questo formato è la rimozione migliore che ci sia, e chiamarla altrimenti
+   * sarebbe un cavillo.
    *
-   * «Fino a un bersaglio» e «danno pari alla sua forza» sono due modi normali
-   * di scrivere una rimozione, e chiederli in cifre lasciava fuori più di cento
-   * carte, fra cui rimozioni che in Standard giocano tutti.
+   * Tre cose che assomigliano a una rimozione e non lo sono, e per cui la
+   * regola guarda dentro la stessa frase prima di dire di sì: la **terra**, che
+   * ha un tag suo; il **cimitero** (Tormod's Crypt esilia carte già morte); e
+   * quel che colpisce le **proprie** carte, come Safe Haven, che i suoi li mette
+   * al sicuro. Rimbalzare invece non è rimuovere, e Boomerang qui non entra: la
+   * carta torna in mano e si rigioca.
+   *
+   * La terra si guarda **sul bersaglio** e non nella frase intera, perché
+   * esistono carte che possono colpire l'una o l'altra: Fissure distrugge
+   * «target creature or land», e la sola parola *land* in fondo alla frase le
+   * toglieva di dosso la rimozione. Quando dopo `target` compare anche un
+   * permanente non-terra, la carta è una rimozione e prende il tag — e se la
+   * terra la sa colpire lo stesso, quello lo dice `attacca-le-terre`.
    */
   "rimozione-mirata": (_, testo) =>
-    /\b(?:destroy|exile)\s+(?:up to \w+\s+)?target\b/i.test(testo) ||
-    /\bdeals?\b[^.]*\bdamage\b[^.]*\bto\s+(?:any target|target (?:creature|planeswalker|battle|permanent))\b/i.test(
+    (/\b(?:destroy|exile)\b[^.]*\btarget\b(?![^.]*\bgraveyards?\b)(?![^.]*\byou control\b)/i.test(
       testo,
-    ) ||
-    /\btarget\s+creature[^.]*\bgets?\s+-/i.test(testo),
+    ) &&
+      (!BERSAGLIO_TERRA.test(testo) || BERSAGLIO_NON_TERRA.test(testo))) ||
+    /\bdeals?\b[^.]*\bdamage\b[^.]*\bto\s+(?:any target|target[^.]*creature)\b/i.test(testo) ||
+    /\b(?:target|enchanted)\s+creature[^.]*\bgets?\s+-\d+\/-[1-9]/i.test(testo) ||
+    /\bdestroy (?:that|the other) creature\b/i.test(testo) ||
+    /\bgains? control of (?:target|enchanted)\b/i.test(testo) ||
+    /\byou control enchanted creature\b/i.test(testo),
 
   /**
-   * Lo spazzino: colpisce una **categoria intera** di permanenti, non un
-   * bersaglio e non le sole pedine di chi lo lancia.
+   * Lo spazzino: colpisce una **categoria intera**. Qui ci sono i tre modi in
+   * cui questo pool spazza — la distruzione di massa (Wrath of God), il danno a
+   * tutti (Inferno, Earthquake) e la costituzione tolta a tutti (Holy Light).
+   *
+   * Il taglio di forza non basta: «All creatures get -1/-0» è un trucco di
+   * combattimento, non uno spazzino, e sono tre carte che senza questo
+   * distinguo passavano per Wrath of God.
    */
   "spazza-via": (_, testo) =>
-    /\b(?:destroy|exile)\s+(?:all|each)(?:\s+other)?\s+(?:nonland\s+)?(?:creatures?|permanents?|artifacts?|enchantments?|planeswalkers?|lands?)\b/i.test(
+    /\b(?:destroy|exile)\s+(?:all|each)\b(?:[^.]*?)\b(?:creatures?|permanents?|artifacts?|enchantments?|lands?|Forests?|Islands?|Swamps?|Mountains?|Plains)\b/i.test(
       testo,
     ) ||
-    /\ball\s+creatures?\b[^.]*\bgets?\s+-/i.test(testo) ||
-    /\beach\s+(?:player|opponent)\s+sacrifices\b/i.test(testo),
+    /\b(?:all|non\w+) creatures?\b[^.]*\bgets?\s+-\d+\/-[1-9]/i.test(testo) ||
+    /\bdeals?\b[^.]*\bdamage\b[^.]*\bto each (?:creature|permanent)\b/i.test(testo) ||
+    /\beach (?:player|opponent) sacrifices\b/i.test(testo),
 
   /**
-   * «Draw a card», «draw two cards», «draw cards equal to…», e l'innesco
-   * «whenever you draw your second card each turn», che è un tema intero dello
-   * Standard di adesso.
+   * Colpire la **base di mana** dell'avversario: è un archetipo intero di questo
+   * formato, e nello Standard non lo era. Armageddon e Stone Rain la
+   * distruggono, Blood Moon e Evil Presence la cambiano di tipo, Mana Vortex la
+   * fa sacrificare.
+   *
+   * Il sacrificio conta solo quando a pagarlo è **un giocatore qualunque**: una
+   * dozzina di carte del pool si sacrifica una terra da sé come costo — Mold
+   * Demon, Wood Elemental, Dark Heart of the Wood — e quello è un prezzo, non
+   * un attacco.
    */
+  "attacca-le-terre": (_, testo) =>
+    /\bdestroy\b[^.]*\b(?:target|all|each|X target)\b[^.]*\b(?:lands?|Forests?|Islands?|Swamps?|Mountains?|Plains)\b/i.test(
+      testo,
+    ) ||
+    /\bdestroy that land\b/i.test(testo) ||
+    /\b(?:that player|each player|any player|players?) sacrifices? (?:a|an|one|two|X|\w+) lands?\b/i.test(
+      testo,
+    ) ||
+    /\bplayers can't play lands\b|\blands can't enter\b/i.test(testo) ||
+    /\bnonbasic lands are\b/i.test(testo) ||
+    /(?:^|[\n.] *)all (?:Forests?|Islands?|Swamps?|Mountains?|Plains) are\b/i.test(testo) ||
+    /(?:^|[\n.] *)enchanted land is an? \w+/i.test(testo),
+
+  /**
+   * Gli artefatti come materia: distruggerli, rubarli, animarli, contarli.
+   *
+   * Sta in piedi da sola perché in questo pool gli artefatti sono
+   * centoventitré su 778 — un sesto del gioco — e portano il mana veloce, le
+   * prigioni e mezze creature. Chi ne fa un mazzo e chi li odia guardano la
+   * stessa parola, ed è giusto: sono la stessa sinergia vista dalle due parti.
+   */
+  "colpisce-gli-artefatti": (_, testo) =>
+    /\btarget (?:\w+ )?artifacts?\b/i.test(testo) ||
+    /\b(?:all|each) (?:\w+ )?artifacts?\b/i.test(testo) ||
+    /\b(?:enchant|enchanted) artifact\b/i.test(testo) ||
+    /\bartifacts? (?:you|an opponent|your opponents?) controls?\b/i.test(testo) ||
+    /\bnumber of artifacts\b/i.test(testo) ||
+    /\bartifact cards?\b/i.test(testo),
+
+  /**
+   * Rispondere prima che l'incantesimo risolva. Nel 1994 questi si chiamavano
+   * *interrupt* e non avevano una parola chiave: la formula scritta è sempre
+   * «counter target spell», o «counter it» dentro un innesco.
+   */
+  controincantesimo: (_, testo) =>
+    /\bcounter target\b/i.test(testo) ||
+    /\bcounters? (?:that|the) spell\b/i.test(testo) ||
+    /\bcounter it\b/i.test(testo),
+
+  /**
+   * Svuotare la mano dell'avversario: Hymn to Tourach, Mind Twist, The Rack.
+   * Una parola sola basta, perché in questo pool «discard» non è mai un costo
+   * nascosto in un promemoria.
+   */
+  scarta: (_, testo) => /\bdiscards?\b/i.test(testo),
+
+  /**
+   * La prigione: tenere fermo il campo altrui. Winter Orb, Stasis, Icy
+   * Manipulator, Moat, The Abyss — è metà di quel che questo formato sa fare, e
+   * nello Standard di oggi non esiste quasi più.
+   *
+   * La regola legge il testo **senza le clausole che una carta scrive su se
+   * stessa** (`SU_SE_STESSO`): Mana Vault, Colossus of Sardia e le dodici
+   * creature che «can't attack unless defending player controls an Island» non
+   * imbrigliano nessuno, pagano un prezzo.
+   */
+  imbriglia: (_, testo) => {
+    const altrui = testo.replace(SU_SE_STESSO, " ");
+    return (
+      /\btap\b[^.]{0,24}\btarget\b/i.test(altrui) ||
+      /\btap all\b/i.test(altrui) ||
+      /\b(?:doesn't|don't|can't) untap\b/i.test(altrui) ||
+      /\bcan't (?:attack|block|be untapped)\b/i.test(altrui) ||
+      /\b(?:attacks?|blocks?) (?:each|this) (?:combat|turn) if able\b/i.test(altrui) ||
+      /\bskips? (?:their|his or her) (?:untap|draw) steps?\b/i.test(altrui) ||
+      /\bremove it from combat\b/i.test(altrui)
+    );
+  },
+
+  /**
+   * Impedire il danno invece di subirlo: i Circle of Protection, i Ward, Fog,
+   * la protezione stampata su una creatura.
+   *
+   * È una voce che nello Standard non avrebbe meritato un tag e qui ne merita
+   * uno: sessantotto carte del pool prevengono danno, ed è la ragione per cui
+   * un mazzo bianco di questo formato riesce a non morire al quarto turno.
+   */
+  "previene-il-danno": (_, testo) =>
+    /\bprevent\b[^.]*\bdamage\b/i.test(testo) ||
+    /\bprotection from\b/i.test(testo) ||
+    /\bdamage that would be dealt\b/i.test(testo),
+
+  /**
+   * Rendere una creatura più grossa o più difficile da fermare: Giant Growth,
+   * Crusade, le aure che aggiungono forza, i contatori +1/+1.
+   *
+   * Le parole chiave si leggono **nude**, perché nel 1994 si stampavano così:
+   * «Enchanted creature has flying» non ha promemoria, e una regola scritta sul
+   * modo di scrivere di oggi qui non vedrebbe niente.
+   */
+  potenzia: (_, testo) =>
+    /\bgets?\s+\+/i.test(testo) ||
+    /\+1\/\+1 counter|\+1\/\+0 counter|\+0\/\+1 counter/i.test(testo) ||
+    /\b(?:gains?|have|has)\s+(?:flying|first strike|trample|banding|haste|vigilance|forestwalk|islandwalk|swampwalk|mountainwalk|plainswalk|protection from|rampage)/i.test(
+      testo,
+    ),
+
+  /**
+   * Passare oltre i bloccanti. Il volo è la parola più comune del pool, e va
+   * riconosciuta **solo quando la carta ce l'ha o la dà**: una ventina di carte
+   * il volo lo nominano per punirlo — Hurricane, Earthbind, Gravity Sphere — e
+   * con loro dentro il tag avrebbe detto il contrario del vero.
+   *
+   * Da qui la forma della regola: la parola chiave vale quando sta all'inizio di
+   * una riga o dopo una virgola, cioè dove si stampa una parola chiave, oppure
+   * dietro un «gains» o un «has». «to target creature with flying» non è
+   * nessuna delle due.
+   */
+  evasione: (_, testo) =>
+    /(?:^|[\n.,;] *)(?:flying|fear)\b/i.test(testo) ||
+    /\b(?:gains?|has|have) (?:flying|fear)\b/i.test(testo) ||
+    /\btokens?\b[^.]*\bwith flying\b/i.test(testo) ||
+    /\bcan't be blocked\b/i.test(testo) ||
+    /\bcan be blocked only\b/i.test(testo) ||
+    /\b(?:forest|island|swamp|mountain|plains|legendary|land)walk\b/i.test(testo),
+
+  /** «Draw a card», «draw two cards», «target player draws». */
   pesca: (_, testo) => /\bdraws?\b[^.]*\bcards?\b/i.test(testo),
 
   /**
    * Mana in più, ma **non** dalle terre: una terra il mana lo produce per
    * mestiere, e chiamarla accelerazione vorrebbe dire dare il tag a tutte.
-   * Contano l'aggiungere mana, l'andare a prendere una terra dal mazzo, e il
-   * Tesoro, che è mana rimandato di un turno.
+   *
+   * Sono i Moxen, Sol Ring, Dark Ritual, Llanowar Elves: su un pool con
+   * quarantaquattro carte a costo zero, questo tag è la porta d'ingresso di
+   * quasi ogni mazzo veloce.
    */
   "accelerazione-di-mana": (carta, testo) =>
     !eUnaTerra(carta) &&
-    (/\badd\s+\{/i.test(testo) ||
-      /\badd\s+(?:one|two|three|X)\b/i.test(testo) ||
-      /\bTreasure tokens?\b/i.test(testo) ||
+    (/\badds?\s+\{/i.test(testo) ||
+      /\badds?\s+(?:one|two|three|four|X|an additional|an amount)\b/i.test(testo) ||
       /\bsearch your library for a[^.]*\bland card\b[^.]*\bbattlefield\b/i.test(testo)),
 
-  /** Carte il cui effetto cresce col numero di creature in gioco. */
-  "conta-le-creature": (_, testo) =>
-    /\bfor each creature\b/i.test(testo) || /\bnumber of creatures\b/i.test(testo),
-
   /**
-   * Il cimitero come risorsa: nominarlo, o riempirlo con il macinare. Non conta
-   * la formula dei controincantesimi che il cimitero lo **evitano** («exile it
-   * instead of putting it into its owner's graveyard»).
+   * Il cimitero come risorsa: pescarci dentro (Regrowth, Raise Dead, Animate
+   * Dead), contarne le carte, o riempirlo col macinare.
+   *
+   * La regola chiede il cimitero come **provenienza** e non come destinazione:
+   * «put into a graveyard from the battlefield» è il modo normale di dire «se
+   * muore», e col cimitero come risorsa non c'entra niente.
    */
   "si-cura-del-cimitero": (_, testo) =>
-    /\bgraveyard\b/i.test(testo.replace(CIMITERO_EVITATO, " ")) || /\bmills?\b/i.test(testo),
+    /\bfrom (?:your|a|their|its owner's|target player's) graveyards?\b/i.test(testo) ||
+    /\bin (?:your|a|their) graveyards?\b/i.test(testo) ||
+    /\byour graveyard (?:into|to)\b/i.test(testo) ||
+    /\bexile target player's graveyard\b/i.test(testo) ||
+    /\bmills?\b/i.test(testo),
+
+  /**
+   * Rigenerare: la parola con cui nel 1994 una creatura sopravvive a quasi
+   * tutto. È l'unica risposta che questo pool ha contro Wrath of God e contro
+   * il combattimento, e per questo sta fra i quindici invece del guadagno di
+   * punti vita, che qui è quasi sempre una carta che nessuno gioca.
+   *
+   * «can't be regenerated» è già sparito dal testo prima di arrivare qui: è la
+   * negazione scritta con le stesse parole, e sta sulle carte che rigenerare
+   * non lo fanno per niente.
+   */
+  rigenera: (_, testo) => /\bregenerates?\b/i.test(testo),
 };
-
-/**
- * Sacrificare qualcosa che non sia la carta stessa: è il «sacrifice» che fa
- * tema. Serve solo alle terre, che altrimenti lo sarebbero quasi tutte.
- */
-const SACRIFICA_ALTRO = /\bsacrifices?\s+(?!this\b|it\b)/i;
-
-/** «…exile it instead of putting it into its owner's graveyard.» */
-const CIMITERO_EVITATO = /instead of putting (?:it|them) into (?:its owner's|their owner's|their) graveyards?/gi;
 
 /**
  * L'elenco chiuso dei tag, nell'ordine in cui compaiono su ogni carta. È anche
@@ -196,7 +389,7 @@ export type LetturaCorrezioni = {
  * Il file delle correzioni, letto. Una riga per correzione:
  *
  *     # le righe che iniziano con # sono commenti, e servono a dire perché
- *     Kuldotha Cackler: +produce-pedine, -pesca
+ *     Jade Monolith: +previene-il-danno, -rimozione-mirata
  *
  * Il formato è questo e non JSON per un motivo solo: il file lo scrive una
  * persona a mano, e una persona ha bisogno di poter scrivere accanto alla
@@ -288,7 +481,7 @@ export function leggiCorrezioni(testo: string): LetturaCorrezioni {
 
 export type EsitoCorrezioni = {
   carte: Carta[];
-  /** I nomi corretti che nel pool non esistono più: quasi sempre, carte ruotate fuori. */
+  /** I nomi corretti che nel pool non esistono: su un pool congelato, nomi storti. */
   orfane: string[];
 };
 
@@ -298,7 +491,8 @@ export type EsitoCorrezioni = {
  *
  * Una correzione che non trova la sua carta non viene ignorata: il suo nome
  * esce di qui e finisce a schermo, perché è il modo in cui il manutentore
- * scopre che una carta è uscita di Standard e che quella riga si può cancellare.
+ * scopre di avere scritto storto un nome — su un pool congelato non c'è altra
+ * ragione perché una correzione non trovi la sua carta.
  */
 export function applicaCorrezioni(carte: Carta[], correzioni: Correzione[]): EsitoCorrezioni {
   const perNome = new Map<string, Correzione[]>();
@@ -344,8 +538,8 @@ export function raccontaCorrezioni(esito: { problemi: string[]; orfane: string[]
   if (esito.orfane.length > 0) {
     if (righe.length > 0) righe.push("");
     righe.push(
-      `Correzioni a carte che nel pool non ci sono più (${esito.orfane.length}) —` +
-        ` probabilmente sono ruotate fuori, e le righe si possono cancellare:`,
+      `Correzioni a carte che nel pool non ci sono (${esito.orfane.length}) — il pool` +
+        ` è congelato, quindi quasi certamente il nome è scritto storto:`,
     );
     for (const nome of esito.orfane) righe.push(`  ${nome}`);
   }

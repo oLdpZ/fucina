@@ -91,7 +91,7 @@ describe("le inclusioni dicono che cosa sta dentro", () => {
   });
 
   it("un tag prende le carte che fanno quella cosa", () => {
-    expect(nomiDelTema({ ...TEMA_VUOTO, inclusioni: { ...FILTRO_TEMA_VUOTO, tag: ["produce-pedine"] } }))
+    expect(nomiDelTema({ ...TEMA_VUOTO, inclusioni: { ...FILTRO_TEMA_VUOTO, tag: ["potenzia"] } }))
       .toEqual(["Krenko's Command"]);
   });
 
@@ -138,7 +138,7 @@ describe("le esclusioni vincono sempre", () => {
     const tema: Tema = {
       ...TEMA_VUOTO,
       inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Goblin"] },
-      esclusioni: { ...FILTRO_TEMA_VUOTO, tag: ["sacrifica"] },
+      esclusioni: { ...FILTRO_TEMA_VUOTO, tag: ["accelerazione-di-mana"] },
     };
     expect(nomiDelTema(tema)).toEqual(["Goblin Chieftain", "Rakdos Firestarter"]);
   });
@@ -147,7 +147,7 @@ describe("le esclusioni vincono sempre", () => {
     const tema: Tema = {
       ...TEMA_VUOTO,
       seme: "Skirk Prospector",
-      esclusioni: { ...FILTRO_TEMA_VUOTO, tag: ["sacrifica"] },
+      esclusioni: { ...FILTRO_TEMA_VUOTO, tag: ["accelerazione-di-mana"] },
     };
     expect(appartiene(carta("Skirk Prospector"), risolviTema(tema, TUTTE))).toBe(false);
   });

@@ -14,15 +14,97 @@
 # iniziano con # sono commenti: usali per dire *perché* hai corretto, che fra
 # sei mesi non te lo ricordi.
 #
-# I nove tag che esistono:
+# I quindici tag che esistono:
 #
-#     produce-pedine          sacrifica              guadagna-punti-vita
-#     rimozione-mirata        spazza-via             pesca
-#     accelerazione-di-mana   conta-le-creature      si-cura-del-cimitero
+#     danno-diretto           rimozione-mirata       spazza-via
+#     attacca-le-terre        colpisce-gli-artefatti controincantesimo
+#     scarta                  imbriglia              previene-il-danno
+#     potenzia                evasione               pesca
+#     accelerazione-di-mana   si-cura-del-cimitero   rigenera
 #
 # Se una riga nomina una carta che nel pool non c'è più, `npm run dati` te lo
-# dice a schermo: quasi sempre vuol dire che la carta è ruotata fuori di
-# Standard, e che la riga si può cancellare.
+# dice a schermo: su questo formato il pool è congelato, quindi vuol dire quasi
+# sempre che il nome è scritto storto.
 #
-# Per ora non c'è nessuna correzione: le prime arriveranno guardando i tag sulle
-# carte vere, alla sosta e prova reale.
+# Le correzioni qui sotto vengono dalla passata sulle 778 carte del 6 settembre
+# 2026 (ticket 06). I tag di Scryfall Tagger sono serviti a trovarle — sono
+# materiale grezzo e non verità — ma quel che è scritto qui l'ha deciso una
+# persona guardando il testo della carta.
+
+
+# ---------------------------------------------------------------------------
+# Quel che le regole dicono di troppo
+# ---------------------------------------------------------------------------
+
+# Il difetto scritto in mezzo a un'altra frase: «enters tapped and doesn't
+# untap during your untap step». La regola sa saltare la clausola quando sta da
+# sola, non quando è appesa a un'altra.
+Leviathan: -imbriglia
+
+# Distrugge un'aura *attaccata* a una terra: la terra non la tocca.
+Savaen Elves: -attacca-le-terre
+
+# Del volo parla per punirlo: «if enchanted creature has flying, this Aura
+# deals 2 damage to that creature».
+Earthbind: -evasione
+
+# Non tolgono di mezzo niente: spostano il danno da una parte all'altra. Il
+# mestiere è l'opposto, ed è quello che il tag deve dire.
+Jade Monolith: -rimozione-mirata, +previene-il-danno
+Nova Pentacle: -rimozione-mirata, +previene-il-danno
+
+
+# ---------------------------------------------------------------------------
+# Quel che le regole non vedono
+# ---------------------------------------------------------------------------
+
+# Rimozioni scritte in un modo che nessun'altra carta usa.
+Sorceress Queen: +rimozione-mirata     # base 0/2: la creatura resta, ma è morta
+Tivadar's Crusade: +spazza-via         # «Destroy all Goblins»: un tipo, non una categoria
+
+# Prigioni scritte senza nominare né il tappare né l'attaccare.
+Kismet: +imbriglia                     # entra tappato tutto quel che entra all'avversario
+Caverns of Despair: +imbriglia         # non più di due creature per combattimento
+The Tabernacle at Pendrell Vale: +imbriglia   # tenere in vita costa, e presto non si tiene
+
+# Terre colpite da lontano.
+Blight: +attacca-le-terre              # la terra incantata muore appena si tappa
+Kudzu: +attacca-le-terre               # come sopra, e poi cambia terra
+Land Equilibrium: +attacca-le-terre    # le terre di troppo non entrano nemmeno
+Winter Orb: +attacca-le-terre          # non le distrugge: le spegne, che è lo stesso
+Balance: +spazza-via, +attacca-le-terre    # pareggia terre, creature e mano insieme
+
+# Danno che arriva addosso a chi gioca per una via traversa: «to that land's
+# controller», «to that creature's controller», «to that source's controller».
+Ankh of Mishra: +danno-diretto
+Dingus Egg: +danno-diretto
+Psychic Venom: +danno-diretto
+Creature Bond: +danno-diretto
+Backfire: +danno-diretto
+Eye for an Eye: +danno-diretto
+
+# Prevenzione scritta senza la parola «prevent».
+Blood of the Martyr: +previene-il-danno    # il danno alle creature se lo prende il giocatore
+Forethought Amulet: +previene-il-danno     # tre danni diventano due
+
+# Mana in più detto in un modo solo suo.
+Fastbond: +accelerazione-di-mana        # terre a volontà, che è la stessa cosa
+Drain Power: +accelerazione-di-mana     # «you add the mana lost this way»
+
+# Il cimitero senza la parola cimitero: «return that card to its owner's hand».
+Puppet Master: +si-cura-del-cimitero
+
+
+# ---------------------------------------------------------------------------
+# Quel che si è deciso di NON correggere, e perché
+# ---------------------------------------------------------------------------
+#
+# - Il **rimbalzo** (Boomerang, Unsummon, Karakas) resta senza rimozione: la
+#   carta torna in mano e si rigioca, e chiamarlo rimuovere gonfierebbe la
+#   qualità di mezzo blu.
+# - I **tutori** (Demonic Tutor, Land Tax) restano senza pesca: trovano una
+#   carta, non ne aggiungono una.
+# - Il **guadagno di punti vita** non ha più un tag, per scelta del vocabolario:
+#   su questo pool sono trentacinque carte che quasi nessuno gioca, e il posto
+#   se l'è preso `rigenera`.
+# - Le **pedine** non hanno più un tag: nel pool sono nove carte in tutto.
