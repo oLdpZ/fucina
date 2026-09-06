@@ -6,6 +6,11 @@
  * e non si rompono quando esce un set. I nomi sono inventati ma somigliano a
  * quelli veri, perché la ricerca per nome va provata su parole plausibili.
  *
+ * Alcune carte portano anche il **nome italiano**, e altre no: sono i due stati
+ * che il pool vero conosce, e la ricerca deve reggerli tutti e due — chi scrive
+ * in italiano trova la carta, e la carta che in italiano non è mai stata
+ * stampata non fa cadere niente.
+ *
  * Vive fuori dai file `.test.ts` perché lo condividono più test.
  */
 
@@ -79,6 +84,7 @@ function carta(abbozzo: Abbozzo): Carta {
 export const POOL_FINTO: readonly Carta[] = [
   carta({
     nome: "Goblin Chieftain",
+    nomeItaliano: "Capoclan dei Goblin",
     costoDiMana: "{1}{R}{R}",
     valoreDiMana: 3,
     identitaDiColore: ["R"],
@@ -88,6 +94,7 @@ export const POOL_FINTO: readonly Carta[] = [
   }),
   carta({
     nome: "Skirk Prospector",
+    nomeItaliano: "Cercatore di Skirk",
     costoDiMana: "{R}",
     valoreDiMana: 1,
     identitaDiColore: ["R"],
@@ -107,6 +114,7 @@ export const POOL_FINTO: readonly Carta[] = [
   }),
   carta({
     nome: "Lightning Strike",
+    nomeItaliano: "Fulmine",
     costoDiMana: "{1}{R}",
     valoreDiMana: 2,
     identitaDiColore: ["R"],
@@ -144,6 +152,7 @@ export const POOL_FINTO: readonly Carta[] = [
   }),
   carta({
     nome: "Whispering Sage",
+    nomeItaliano: "Saggio Sussurrante",
     costoDiMana: "{2}{U}",
     valoreDiMana: 3,
     identitaDiColore: ["U"],
@@ -154,6 +163,7 @@ export const POOL_FINTO: readonly Carta[] = [
   }),
   carta({
     nome: "Sunlit Sanctuary",
+    nomeItaliano: "Santuario Soleggiato",
     tipi: ["Land"],
     testo: "Sunlit Sanctuary comes into play tapped.\n{T}: Add {W} to your mana pool.",
     euro: null,
@@ -162,6 +172,7 @@ export const POOL_FINTO: readonly Carta[] = [
   // (`Jötun Grunt`, `Krenko's Command`), e chi cerca li scrive senza.
   carta({
     nome: "Jötun Emberkin",
+    nomeItaliano: "Progenie di Brace",
     costoDiMana: "{2}{G}",
     valoreDiMana: 3,
     identitaDiColore: ["G"],
@@ -479,7 +490,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["B"],
     tipi: ["Instant"],
-    testo: "Destroy target creature. It can’t be regenerated.",
+    testo: "Destroy target creature. It can't be regenerated.",
     tag: ["rimozione-mirata"],
   }),
   carta({

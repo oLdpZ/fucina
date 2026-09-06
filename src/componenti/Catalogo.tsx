@@ -13,8 +13,10 @@
 
 import { useEffect, useMemo, useState } from "preact/hooks";
 
+import { codaDelConteggio } from "../catalogo/conteggio.js";
 import { FILTRI_VUOTI, cerca, contaFiltriAttivi, type Filtri } from "../catalogo/filtri.js";
 import { sottotipiDiCreatura, tipiPresenti } from "../catalogo/vocabolario.js";
+import type { IdentitaDiFormato } from "../dati/ambito.js";
 import type { Carta, Pool } from "../dati/pool.js";
 import { GrigliaCarte } from "./GrigliaCarte.js";
 import { PannelloFiltri } from "./PannelloFiltri.js";
@@ -24,12 +26,18 @@ const NUMERI = new Intl.NumberFormat("it-IT");
 
 export function Catalogo({
   pool,
+  formato,
   filtri,
   cambiaFiltri,
   copiePerNome,
   cambiaCopie,
 }: {
   pool: Pool;
+  /**
+   * Il formato che si sta giocando, per il nome che il conteggio pronuncia.
+   * Arriva dal documento di formato: qui dentro non c'è nessun nome di gioco.
+   */
+  formato: IdentitaDiFormato;
   /** I filtri stanno fuori: passando al mazzo e tornando, non si perdono. */
   filtri: Filtri;
   cambiaFiltri: (filtri: Filtri) => void;
@@ -120,18 +128,19 @@ export function Catalogo({
               inputMode="search"
               autocomplete="off"
               spellcheck={false}
-              // Nessun nome di carta come esempio: le carte ruotano, e un esempio
-              // che non è più in Standard farebbe cercare a vuoto. Il segnaposto
-              // dice invece la cosa che non si immagina: si può sbagliare.
-              placeholder="Scrivi il nome, anche sbagliato"
+              // Nessun nome di carta come esempio, che ADR-0004 non permette.
+              // Il segnaposto dice invece le due cose che nessuno immagina di
+              // poter fare: scrivere in italiano, e scrivere sbagliato. Sta in
+              // una riga sola perché su un telefono un segnaposto lungo si
+              // taglia, e la metà che si taglia è sempre l'ultima.
+              placeholder="Il nome, anche in italiano, anche sbagliato"
               value={filtri.nome}
               onInput={(evento) => cambiaFiltri({ ...filtri, nome: evento.currentTarget.value })}
             />
           </label>
           <p class="conteggio" aria-live="polite">
             <strong>{NUMERI.format(risultati.length)}</strong>{" "}
-            {risultati.length === 1 ? "carta" : "carte"}
-            {attivi > 0 ? " con questi filtri" : " in Standard"}
+            {risultati.length === 1 ? "carta" : "carte"} {codaDelConteggio(attivi, formato.nome)}
           </p>
         </div>
 

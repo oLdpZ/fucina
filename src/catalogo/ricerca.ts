@@ -1,16 +1,36 @@
 /**
  * La ricerca per nome, tollerante ai refusi (storie 4 e 5).
  *
- * I nomi delle carte sono in inglese per decisione di progetto (Q24), perché
- * devono corrispondere a quelli stampati e alle liste da torneo. Ma chi li
- * cerca non parla inglese: sbaglia una lettera, ne inverte due, ignora accenti
- * e apostrofi. La ricerca deve perdonare tutto questo senza mai inventare
- * risultati — «Goblin Chieftain» si trova scrivendo «goblim chieftan», e
- * «qwertyuiop» non trova niente.
+ * I nomi delle carte si **mostrano** in inglese per decisione di progetto (Q24),
+ * perché devono corrispondere a quelli stampati e alle liste da torneo. Ma chi
+ * li cerca non parla inglese: sbaglia una lettera, ne inverte due, ignora
+ * accenti e apostrofi. La ricerca deve perdonare tutto questo senza mai
+ * inventare risultati — «Goblin Chieftain» si trova scrivendo «goblim
+ * chieftan», e «qwertyuiop» non trova niente.
  *
- * Nessun indice, nessuna libreria: un passaggio sul pool a ogni battuta. Sul
- * pool vero (quasi cinquemila carte) costa pochi millisecondi, e un test lo
- * tiene fermo.
+ * ## Perché si cerca anche in italiano, e non si mostra
+ *
+ * Il formato è definito dalle **stampe italiane** (`PROGETTO.md` §7, ADR-0005):
+ * chi ci gioca ha in mano cartoncini italiani e alle carte pensa con quel nome
+ * lì. Cercare solo in inglese vorrebbe dire chiedergli di tradurre prima di
+ * poter chiedere.
+ *
+ * Mostrare l'italiano invece no, e la ragione sta in `PROGETTO.md` §7 sotto
+ * Q24, coi numeri per esteso. In breve: il nome italiano c'è per tutte le carte
+ * del pool, ma l'**immagine** italiana manca per una fetta consistente e il
+ * **testo di regole** italiano su Scryfall non esiste quasi per nessuna. Una
+ * interfaccia in italiano darebbe nome italiano, immagine a volte inglese e
+ * testo sempre inglese — cioè tre lingue in una scheda. In più i prezzi sono
+ * quelli delle stampe inglesi: mostrando l'inglese, nome e prezzo parlano della
+ * stessa stampa.
+ *
+ * Da qui la forma di questo modulo: **due chiavi, un risultato**. Si cerca su
+ * entrambi i nomi, e quel che esce è sempre la carta — che si mostra in inglese
+ * come si è sempre mostrata.
+ *
+ * Nessun indice, nessuna libreria: un passaggio sul pool a ogni battuta — due,
+ * da quando i nomi sono due. Sul pool vero costa pochi millisecondi, e un test
+ * lo tiene fermo.
  */
 
 import type { Carta } from "../dati/pool.js";
@@ -174,6 +194,39 @@ export function corrispondenza(domanda: string, nome: string): number | null {
 }
 
 /**
+ * Quanto bene una **carta** risponde a una domanda, guardando tutti i nomi che
+ * porta: l'inglese, che è quello che si mostra, e l'italiano, che è quello con
+ * cui spesso la si pensa.
+ *
+ * Vale il migliore dei due, e non la loro somma: i gradini di `corrispondenza`
+ * dicono *quanto bene* si è indovinato, e aver indovinato in una lingua sola è
+ * aver indovinato. Chi scrive il nome inglese per intero resta davanti a chi
+ * gli assomiglia in italiano, perché il gradino dell'esatto è più basso di
+ * qualunque gradino approssimato — in qualsiasi lingua.
+ *
+ * Il nome italiano assente non è un guasto e non vale come risposta storta: la
+ * carta risponde in inglese come ha sempre fatto.
+ *
+ * Assente si chiede col `typeof` e non con un `=== null`, ed è l’unico campo di
+ * questo modulo a meritarlo. Il nome inglese c’è da sempre; l’italiano è nato
+ * dopo, e `carica-pool.ts` lo riscrive per i pool che non lo avevano — senza
+ * però controllare le carte una per una, che sarebbe un secondo posto in cui è
+ * scritta la forma dei dati. Il pool però arriva anche dal deposito del
+ * dispositivo, e un campo scritto storto là dentro costerebbe caro proprio qui:
+ * questa funzione gira a ogni battuta, e cadendo si porterebbe via il catalogo
+ * intero invece di una carta sola.
+ */
+export function corrispondenzaDellaCarta(domanda: string, carta: Carta): number | null {
+  const inglese = corrispondenza(domanda, carta.nome);
+  if (typeof carta.nomeItaliano !== "string") return inglese;
+
+  const italiano = corrispondenza(domanda, carta.nomeItaliano);
+  if (inglese === null) return italiano;
+  if (italiano === null) return inglese;
+  return Math.min(inglese, italiano);
+}
+
+/**
  * Le carte che rispondono alla domanda, dalla più pertinente alla meno.
  *
  * Senza domanda si restituisce tutto nell'ordine ricevuto: il catalogo a riposo
@@ -185,7 +238,7 @@ export function cercaPerNome(carte: readonly Carta[], domanda: string): Carta[] 
 
   const trovate: { carta: Carta; punteggio: number }[] = [];
   for (const carta of carte) {
-    const punteggio = corrispondenza(cercato, carta.nome);
+    const punteggio = corrispondenzaDellaCarta(cercato, carta);
     if (punteggio !== null) trovate.push({ carta, punteggio });
   }
 

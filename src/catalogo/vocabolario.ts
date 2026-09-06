@@ -1,11 +1,14 @@
 /**
  * Le voci offerte dai filtri, ricavate **dal pool**.
  *
- * Nessun elenco di tipi o di sottotipi scritto nel codice: quando esce un set
- * con un tipo di creatura nuovo, il filtro lo conosce senza che nessuno tocchi
- * niente. È lo stesso principio della legalità letta dai dati (`CLAUDE.md`), e
- * vale la pena qui perché i sottotipi di creatura in Standard sono centinaia e
- * cambiano a ogni uscita.
+ * Nessun elenco di tipi o di sottotipi scritto nel codice: il filtro conosce
+ * quel che il pool contiene, senza che nessuno tocchi niente. È lo stesso
+ * principio di ADR-0004 — nessuna verità di formato nel sorgente — e il cambio
+ * di formato del 6 settembre 2026 ha mostrato quanto valga: il pool è cambiato
+ * da capo a fondo, i sottotipi di prima sono spariti e quelli nuovi sono
+ * comparsi, e questo file non è stato toccato di una riga. Un elenco scritto a
+ * mano avrebbe continuato a offrire i sottotipi di un gioco che non si gioca
+ * più, con la faccia di chi ha ragione.
  *
  * Le sole cose scritte a mano sono i nomi italiani da mostrare e l'ordine in
  * cui i tipi compaiono: tradurre e ordinare sono scelte, non dati.

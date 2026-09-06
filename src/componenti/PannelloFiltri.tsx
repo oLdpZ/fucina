@@ -44,6 +44,14 @@ export function PannelloFiltri({ filtri, cambia, tipi, sottotipi }: Proprieta) {
   const scelti = filtri.sottotipi.filter(
     (s) => !inVista.some((vista) => vista.sottotipo === s),
   );
+  // Anche gli **esempi** vengono dal pool, e non da un elenco scritto qui: un
+  // elenco a mano nominerebbe i sottotipi del gioco che si giocava quando lo si
+  // è scritto, e col cambio di formato ne è sparita una lista intera senza che
+  // nessuno se ne accorgesse. Si prendono i primi che l'elenco lungo aggiunge ai
+  // bottoni: sono i più numerosi fra quelli che non si vedono già.
+  const esempi = sottotipi
+    .slice(SOTTOTIPI_IN_VISTA, SOTTOTIPI_IN_VISTA + 3)
+    .map((voce) => voce.sottotipo);
 
   return (
     <div class="filtri">
@@ -111,7 +119,7 @@ export function PannelloFiltri({ filtri, cambia, tipi, sottotipi }: Proprieta) {
           <input
             type="text"
             list="elenco-sottotipi"
-            placeholder="Dragon, Elf, Vampire…"
+            placeholder={esempi.length === 0 ? "Il sottotipo che cerchi" : `${esempi.join(", ")}…`}
             // Campo non controllato di proposito: il sottotipo scelto diventa
             // un bottone qui sopra e il campo torna vuoto, ma imporgli un
             // valore a ogni ridisegno cancellerebbe quel che si sta scrivendo.
@@ -121,7 +129,7 @@ export function PannelloFiltri({ filtri, cambia, tipi, sottotipi }: Proprieta) {
               const esiste = sottotipi.find(
                 (voce) => voce.sottotipo.toLowerCase() === scelto.toLowerCase(),
               );
-              // Un sottotipo che in Standard non c'è resta scritto: svuotare il
+              // Un sottotipo che in questo pool non c'è resta scritto: svuotare il
               // campo in silenzio farebbe credere di aver filtrato.
               if (!esiste) return;
               campo.value = "";

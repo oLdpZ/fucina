@@ -26,6 +26,22 @@ const PERCORSO_POOL = `${import.meta.env.BASE_URL}dati/pool.json`;
  * distinguono un pool da un file qualunque — che abbia una data e che abbia
  * carte.
  */
+/**
+ * I campi che il rattoppo qui sotto sa riscrivere, e insieme la condizione per
+ * saltarlo: se ci sono tutti, la carta è già nella forma di oggi.
+ *
+ * Sta scritto una volta sola perché l’elenco e il controllo devono cambiare
+ * insieme. Il giorno che nascerà un campo nuovo, chi lo aggiunge al rattoppo
+ * senza aggiungerlo qui otterrebbe un rattoppo che non gira mai.
+ */
+const CAMPI_DEL_RATTOPPO = [
+  "nomeItaliano",
+  "edizione",
+  "numeroDiCollezione",
+  "linguaDellaStampa",
+  "tettoDiCopie",
+] as const satisfies readonly (keyof Carta)[];
+
 export function interpretaPool(dati: unknown): Pool {
   if (typeof dati !== "object" || dati === null) {
     throw new Error("Il file del pool delle carte non si legge.");
@@ -84,7 +100,12 @@ export function interpretaPool(dati: unknown): Pool {
     generatoIl,
     registroTagScryfall: senzaTag ? [] : (registroTagScryfall as TagDiScryfall[]),
     carte: (carte as Carta[]).map((carta) => {
-      if (!senzaTag && carta.tettoDiCopie !== undefined && carta.edizione !== undefined) {
+      // La scorciatoia va chiesta a **tutti** i campi che il rattoppo scrive, e
+      // non a due di loro. I campi nuovi non sono arrivati tutti insieme e non
+      // arriveranno tutti insieme la prossima volta: chiedendone solo alcuni,
+      // un pool a metà strada passa intero e gli altri restano a `undefined` -
+      // che il tipo dichiara impossibile, quindi nessuno lo cercherebbe lì.
+      if (!senzaTag && CAMPI_DEL_RATTOPPO.every((campo) => carta[campo] !== undefined)) {
         return carta;
       }
       return {

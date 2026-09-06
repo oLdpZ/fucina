@@ -342,6 +342,7 @@ export function App() {
         ) : pagina === "catalogo" ? (
           <Catalogo
             pool={pool}
+            formato={ambito}
             filtri={filtri}
             cambiaFiltri={setFiltri}
             copiePerNome={copiePerNome}

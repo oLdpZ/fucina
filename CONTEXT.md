@@ -300,6 +300,28 @@ per tappare quel buco: sarebbe un prezzo vero di una carta che non si gioca.
 
 ---
 
+## Chiave di ricerca
+
+**Il nome italiano di una carta: quello con cui la si cerca, mai quello con cui
+la si mostra.**
+
+Il formato è definito dalle stampe italiane, e chi ci gioca alle carte pensa col
+nome che ha letto sul cartoncino: chi scrive *«Labirinto di Ith»* deve trovare
+*Maze of Ith*, con la stessa tolleranza ai refusi che ha l'inglese. Il nome
+italiano sta nel pool per questo, e per niente altro.
+
+Non è una lingua d'interfaccia a metà: mostrarlo darebbe nome italiano,
+immagine a volte inglese e testo di regole sempre inglese — tre lingue in una
+scheda — e un prezzo che parla di una stampa diversa da quella nominata. Il
+perché per esteso, coi numeri, sta in `PROGETTO.md` §7 sotto Q24.
+
+Chi legge «ricerca» in questo progetto guardi il contesto: qui è la ricerca del
+**catalogo** — trovare una carta — e in `src/ricerca/` è la ricerca del
+**motore**, che cerca un mazzo. Sono due mestieri diversi con lo stesso nome, ed
+è l'unica coppia di parole di questo vocabolario che si ripete.
+
+---
+
 ## Parole che questo progetto non usa
 
 - **«tier», «competitivo», «buono»** per dire potenza. La potenza qui ha

@@ -105,6 +105,31 @@ describe("lettura del pool", () => {
     expect(pool.carte[0]?.nomeItaliano).toBeNull();
   });
 
+  it("rattoppa anche il pool che ha una metà dei campi nuovi e non l'altra", () => {
+    // I campi nuovi non sono arrivati tutti insieme, e non arriveranno tutti
+    // insieme la prossima volta: la scorciatoia che salta il rattoppo va chiesta
+    // a **tutti** i campi che il rattoppo scrive, o ne lascia passare uno a
+    // `undefined`. Un `nomeItaliano` a `undefined` non è un campo vuoto in una
+    // scheda: la ricerca per nome lo legge a ogni battuta, e il catalogo
+    // morirebbe alla prima lettera scritta.
+    const pool = interpretaPool({
+      generatoIl: "2026-09-03T09:05:32.000+00:00",
+      registroTagScryfall: [{ id: "9f2c", nome: "counterspell" }],
+      carte: [
+        {
+          nome: "Negate",
+          edizione: "xa",
+          numeroDiCollezione: "7",
+          linguaDellaStampa: "en",
+          tagScryfall: ["counterspell"],
+          tettoDiCopie: 1,
+        },
+      ],
+    });
+
+    expect(pool.carte[0]?.nomeItaliano).toBeNull();
+  });
+
   it("non rimette mano alle carte di un pool che ha già tutto", () => {
     const carte = [
       {
