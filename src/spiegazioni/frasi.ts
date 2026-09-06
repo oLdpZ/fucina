@@ -531,6 +531,84 @@ export function frasePerLaCombo(grezzi: GrezziDellaCombo): string {
   return `${conto} Ma ${fuori} ${restate}: quel ${percento(grezzi.probabilita)} vale per i pezzi rimasti, non per la combo che avevi dichiarato.`;
 }
 
+/** Le terre che un mazzo importato portava e che nell'elenco non entrano. */
+export type GrezziDelleTerreScartate = {
+  readonly terre: readonly { readonly nome: string; readonly copie: number }[];
+};
+
+/**
+ * **Le terre di un mazzo che arriva da fuori.**
+ *
+ * Chi importa il testo di un amico si aspetta il mazzo dell'amico. Le terre
+ * però non entrano nell'elenco delle carte che si tengono in mano — la base la
+ * ricalcola l'app dalla curva — e finché è così l'app deve **dirlo**: senza
+ * questa frase si legge «è stato importato, ed è il mazzo che hai in mano» e ci
+ * si ritrova con delle carte in meno, che il primo salvataggio poi consolida.
+ *
+ * La frase esiste per essere tolta: il giorno che le terre nominate si sapranno
+ * tenere, sparisce con la riga che le scarta.
+ */
+export function frasePerLeTerreScartate(grezzi: GrezziDelleTerreScartate): string {
+  const copieTotali = grezzi.terre.reduce((somma, voce) => somma + voce.copie, 0);
+  const quali = elenco(grezzi.terre.map((voce) => `${copie(voce.copie)} di «${voce.nome}»`));
+  const una = grezzi.terre.length === 1;
+  const soggetto = una ? "La terra" : `Le ${grezzi.terre.length} terre`;
+  // Il mazzo **non** resta più corto: la base si rifà dalla curva, e le terre
+  // tornano al loro numero. Quel che si perde è *quali* erano, e la frase deve
+  // dire quello — dire «hai N carte in meno» sarebbe un allarme falso.
+  return `${soggetto} che il mazzo portava — ${quali} — ${una ? "non è quella che rimetto" : "non sono quelle che rimetto"} nel mazzo: la base di terre la scelgo io dalla curva, e ${copie(copieTotali)} scritte in una lista non le so ancora tenere. Il numero di terre torna quello che serve, la scelta è la mia.`;
+}
+
+/**
+ * I pezzi dichiarati, con **quante copie ciascuno ne entrerà davvero**: il
+ * numero che il patto qui sotto promette.
+ */
+export type GrezziDelPattoDellaCombo = {
+  readonly pezzi: readonly { readonly nome: string; readonly copie: number }[];
+  readonly turno: number;
+};
+
+/**
+ * **Il patto, prima che il mazzo esista**: la frase in cima alla schermata della
+ * combo, quella che l'utente legge *prima* di dare un numero per un giudizio.
+ *
+ * Il numero di copie non è una costante e non lo può essere: il formato limita
+ * certe carte a una copia sola, e una frase che promettesse quattro copie di una
+ * carta limitata direbbe una cosa che il mazzo poi non fa — l'app violerebbe il
+ * formato a parole, avendolo rispettato nei fatti. Le copie arrivano quindi dai
+ * **tetti dei pezzi dichiarati**, letti con la stessa funzione con cui il motore
+ * li mette nel mazzo (`copieAlMassimo`).
+ *
+ * Tre forme, e nessuna è un giudizio: senza pezzi si promette il massimo senza
+ * dire un numero che non c'è ancora; con pezzi tutti uguali si dice quel numero;
+ * con pezzi diversi si dice **carta per carta**, che è l'unico modo di non
+ * mentire su nessuna delle due.
+ */
+export function frasePerIlPattoDellaCombo(grezzi: GrezziDelPattoDellaCombo): string {
+  const una = grezzi.pezzi.length === 1;
+  const patto = una
+    ? "Non giudico se la carta che nomini vinca la partita: quello lo dici tu, e ti credo."
+    : "Non giudico se le carte che nomini vincano la partita insieme: quello lo dici tu, e ti credo.";
+  const probabilita = `Ti dico che probabilità hai di ${una ? "averla" : "averle"} in mano${una ? "" : " tutte"} entro il turno ${grezzi.turno}`;
+
+  if (grezzi.pezzi.length === 0) {
+    return `${patto} ${probabilita}, e le metto nel mazzo al massimo delle copie che il tuo formato concede, senza mai scambiarle via.`;
+  }
+
+  const tetti = new Set(grezzi.pezzi.map((pezzo) => pezzo.copie));
+  if (tetti.size === 1) {
+    const quante = copie(grezzi.pezzi[0]!.copie);
+    return una
+      ? `${patto} ${probabilita}, e la metto nel mazzo in ${quante} senza mai scambiarla via.`
+      : `${patto} ${probabilita}, e le metto nel mazzo in ${quante} ciascuna senza mai scambiarle via.`;
+  }
+
+  const dettaglio = elenco(
+    grezzi.pezzi.map((pezzo) => `${copie(pezzo.copie)} di «${pezzo.nome}»`),
+  );
+  return `${patto} ${probabilita}, e nel mazzo ne metto quante il tuo formato ne concede — ${dettaglio} — senza mai scambiarle via.`;
+}
+
 /**
  * Un pezzo dichiarato che nel mazzo non ci va, e perché.
  *

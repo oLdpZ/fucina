@@ -17,6 +17,7 @@ import { dimenticaMazzo, elencaMazziSalvati, salvaMazzo } from "../dati/mazzi-sa
 import type { Pool } from "../dati/pool.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { leggiScambio, listaDaTorneo, scriviScambio } from "../mazzo/scambio.js";
+import { frasePerLeTerreScartate } from "../spiegazioni/frasi.js";
 import {
   nomePulito,
   NOME_MASSIMO,
@@ -26,6 +27,12 @@ import {
 
 /** Il mazzo aperto adesso: il suo posto nel deposito, se ne ha già uno. */
 export type MazzoAperto = { id: string; nome: string; salvatoIl: string } | null;
+
+/**
+ * Le terre che una lista portava e che nell'elenco non entrano: chi rimette in
+ * mano un mazzo le restituisce, perché vanno **dette**.
+ */
+export type TerreScartate = readonly { nome: string; copie: number }[];
 
 export function MazziSalvati({
   pool,
@@ -51,7 +58,7 @@ export function MazziSalvati({
    * si vuole aprendo dall'elenco, non quando si è appena salvato o importato e
    * c'è un messaggio da leggere su questa schermata.
    */
-  apriMazzo: (salvato: MazzoSalvato, vaiAlMazzo: boolean) => void;
+  apriMazzo: (salvato: MazzoSalvato, vaiAlMazzo: boolean) => TerreScartate;
   /** Il mazzo che si stava guardando non c'è più: è stato cancellato. */
   chiudiMazzo: () => void;
 }) {
@@ -189,8 +196,27 @@ export function MazziSalvati({
     // bottone «Risalva» punterebbe al mazzo dell'amico mentre in mano c'è il
     // proprio, e il primo salvataggio distruggerebbe quello appena arrivato.
     // Si resta però qui, dove c'è il messaggio da leggere.
-    apriMazzo(salvato, false);
-    racconta(`«${salvato.nome}» è stato importato, ed è il mazzo che hai in mano.`, null);
+    const scartate = apriMazzo(salvato, false);
+    const annuncio = `«${salvato.nome}» è stato importato, ed è il mazzo che hai in mano.`;
+    racconta(
+      scartate.length === 0
+        ? annuncio
+        : `${annuncio} ${frasePerLeTerreScartate({ terre: scartate })}`,
+      null,
+    );
+  };
+
+  /**
+   * Le terre che una lista portava e che nell'elenco non entrano, dette a voce.
+   *
+   * Vale per **tutte** le strade che rimettono un mazzo in mano, non solo per
+   * l'importazione: un mazzo arrivato da un amico resta nel deposito con le sue
+   * terre dentro, e riaprirlo dall'elenco le riperde uguale. Tacerlo lì e dirlo
+   * qui vorrebbe dire avvisare solo nel caso in cui il file è ancora intero.
+   */
+  const raccontaLeTerreScartate = (scartate: TerreScartate): void => {
+    if (scartate.length === 0) return;
+    racconta(frasePerLeTerreScartate({ terre: scartate }), null);
   };
 
   return (
@@ -246,7 +272,7 @@ export function MazziSalvati({
                 <button
                   type="button"
                   class="nome-salvato"
-                  onClick={() => apriMazzo(salvato, true)}
+                  onClick={() => raccontaLeTerreScartate(apriMazzo(salvato, true))}
                 >
                   <span class="nome">{salvato.nome}</span>
                   <span class="dettagli">

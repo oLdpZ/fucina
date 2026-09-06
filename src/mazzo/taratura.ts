@@ -61,6 +61,46 @@ export const TERRE_MASSIME = 27;
 export const TERRE_NON_BASE_PER_COLORE_IN_PIU = 8;
 
 /**
+ * Quante copie di **terre di utilità** può prendere un mazzo: le terre non base
+ * che non servono a fare colori ma a fare qualcosa — picchiare, prevenire un
+ * danno, distruggere una terra avversaria.
+ *
+ * Il numero sta accanto al precedente ed è tutt'altra cosa: quello dipende dai
+ * colori del mazzo, e per un mazzo di un colore solo vale zero. Se le terre di
+ * utilità passassero di lì, un monocolore non ne vedrebbe mai una — e sono
+ * proprio i monocolore a giocarle di più.
+ *
+ * Cinque è il punto di partenza da ritarare alla sosta: è quanto tolgono alle
+ * terre che fanno mana prima che il mazzo cominci a non lanciare le sue carte.
+ */
+export const TERRE_DI_UTILITA_MASSIME = 5;
+
+/**
+ * Di quelle, quante possono essere terre che **non fanno mana affatto**.
+ *
+ * Una terra che fa mana incolore costa al mazzo la flessibilità di un colore;
+ * una che non fa mana per niente costa un posto intero, e nei conti che vengono
+ * dopo non compare fra le fonti — né nella probabilità (`probabilita.ts`) né
+ * nella simulazione (`simulazione.ts`), che è la sola lettura onesta.
+ * Il tetto più stretto è la conseguenza di quel costo.
+ */
+export const TERRE_SENZA_MANA_MASSIME = 2;
+
+/**
+ * Quante copie di quel che una terra di utilità **fa** il mazzo deve giocare
+ * prima che valga la pena metterla.
+ *
+ * Senza questa soglia basterebbe una carta sola: un mazzo con una copia di una
+ * carta che potenzia si prenderebbe quattro terre-creatura, e pagherebbe quattro
+ * fonti di colore per una sinergia che in partita non si vede mai. Una terra di
+ * utilità costa un posto della base di mana, e il costo va meritato.
+ *
+ * Quattro copie sono un tema che il mazzo gioca davvero, e non una carta che ci
+ * è finita dentro. È il numero da rivedere alla sosta insieme agli altri due.
+ */
+export const COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA = 4;
+
+/**
  * Quanto pesa, nella scelta, il fatto che una terra entri girata.
  *
  * Il punteggio di una terra doppia parte dai colori utili che produce e scende

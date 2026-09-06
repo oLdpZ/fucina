@@ -10,7 +10,7 @@
  */
 
 import type { Carta, Colore, ColoreMana, Tag } from "../dati/pool.js";
-import { leggiTettoDiCopie } from "../mazzo/copie.js";
+import { COPIE_DI_UNA_LIMITATA, leggiTettoDiCopie } from "../mazzo/copie.js";
 
 type Abbozzo = {
   nome: string;
@@ -26,6 +26,14 @@ type Abbozzo = {
   euro?: number | null;
   forza?: string | null;
   costituzione?: string | null;
+  /**
+   * La carta è **limitata** dal documento di formato: una copia sola per mazzo.
+   *
+   * Nel pool vero questo numero lo scrive la preparazione leggendo il documento
+   * di formato, e nessuna riga di codice sa quali carte siano limitate. Qui lo
+   * scrive il test, che è l'unico posto in cui il formato lo si inventa apposta.
+   */
+  limitata?: boolean;
 };
 
 const GENERATO_IL = "2026-09-02T09:05:48.145+00:00";
@@ -60,8 +68,11 @@ function carta(abbozzo: Abbozzo): Carta {
     facce: null,
     terra: null,
     // Il tetto lo scrive la stessa regola che lo scrive nel pool vero: un pool
-    // finto che se lo calcolasse a modo suo proverebbe un gioco diverso.
-    tettoDiCopie: leggiTettoDiCopie(testo, tipi),
+    // finto che se lo calcolasse a modo suo proverebbe un gioco diverso. Le
+    // limitate lo scavalcano come nel pool vero, dove a scavalcarlo è il
+    // documento di formato.
+    tettoDiCopie:
+      abbozzo.limitata === true ? COPIE_DI_UNA_LIMITATA : leggiTettoDiCopie(testo, tipi),
   };
 }
 
@@ -73,7 +84,7 @@ export const POOL_FINTO: readonly Carta[] = [
     identitaDiColore: ["R"],
     tipi: ["Creature"],
     sottotipi: ["Goblin"],
-    testo: "Other Goblin creatures you control get +1/+1 and have haste.",
+    testo: "Other Goblins you control get +1/+1.",
   }),
   carta({
     nome: "Skirk Prospector",
@@ -82,7 +93,7 @@ export const POOL_FINTO: readonly Carta[] = [
     identitaDiColore: ["R"],
     tipi: ["Creature"],
     sottotipi: ["Goblin"],
-    testo: "Sacrifice a Goblin: Add {R}.",
+    testo: "Sacrifice a Goblin: Add {R} to your mana pool.",
     tag: ["accelerazione-di-mana"],
   }),
   carta({
@@ -91,7 +102,7 @@ export const POOL_FINTO: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["R"],
     tipi: ["Sorcery"],
-    testo: "Create two 1/1 red Goblin creature tokens.",
+    testo: "Goblins you control get +1/+1 until end of turn.",
     tag: ["potenzia"],
   }),
   carta({
@@ -100,7 +111,7 @@ export const POOL_FINTO: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["R"],
     tipi: ["Instant"],
-    testo: "Lightning Strike deals 3 damage to any target.",
+    testo: "Lightning Strike deals 3 damage to target creature or player.",
     tag: ["rimozione-mirata"],
     euro: 0.6,
   }),
@@ -111,7 +122,7 @@ export const POOL_FINTO: readonly Carta[] = [
     identitaDiColore: ["B"],
     tipi: ["Creature"],
     sottotipi: ["Zombie"],
-    testo: "When this creature enters, return target creature card from your graveyard to your hand.",
+    testo: "When Gravedigger Zombie comes into play, return target creature card from your graveyard to your hand.",
     tag: ["si-cura-del-cimitero"],
   }),
   carta({
@@ -121,7 +132,7 @@ export const POOL_FINTO: readonly Carta[] = [
     identitaDiColore: ["B", "R"],
     tipi: ["Creature"],
     sottotipi: ["Goblin", "Shaman"],
-    testo: "Whenever this creature attacks, each opponent loses 1 life.",
+    testo: "Whenever Rakdos Firestarter attacks, defending player loses 1 life.",
   }),
   carta({
     nome: "Ancient Colossus",
@@ -138,13 +149,13 @@ export const POOL_FINTO: readonly Carta[] = [
     identitaDiColore: ["U"],
     tipi: ["Creature"],
     sottotipi: ["Human", "Wizard"],
-    testo: "When this creature enters, draw a card.",
+    testo: "When Whispering Sage comes into play, draw a card.",
     tag: ["pesca"],
   }),
   carta({
     nome: "Sunlit Sanctuary",
     tipi: ["Land"],
-    testo: "This land enters tapped.\n{T}: Add {W}.",
+    testo: "Sunlit Sanctuary comes into play tapped.\n{T}: Add {W} to your mana pool.",
     euro: null,
   }),
   // Un nome con accento e uno con apostrofo: sulle carte inglesi vere capita
@@ -160,10 +171,10 @@ export const POOL_FINTO: readonly Carta[] = [
 ];
 
 /**
- * Le terre finte: le sei base più qualche terra a due colori scelta apposta per
- * i casi che contano — una che entra dritta, una che entra girata sempre, una
- * che entra girata solo a volte, e una terra incolore che non fa nessun colore
- * del mazzo.
+ * Le terre finte: le sei base, qualche terra a due colori scelta apposta per i
+ * casi che contano — una che entra dritta, una che entra girata sempre, una che
+ * entra girata solo a volte, e una terra incolore che non fa nessun colore del
+ * mazzo — e in fondo le **terre di utilità** del ticket 08.
  *
  * I nomi delle terre base sono quelli veri perché sono gli unici nomi di carta
  * che non ruotano mai; gli altri sono inventati, come nel resto del pool finto.
@@ -177,6 +188,9 @@ function terra(
     condizione?: string | null;
     identita?: Colore[];
     euro?: number | null;
+    /** Quel che la terra **fa**, oltre a fare mana: è ciò che la rende di utilità. */
+    tag?: Tag[];
+    testo?: string;
   } = {},
 ): Carta {
   const identita = extra.identita ?? (coloriProdotti.filter((c) => c !== "C") as Colore[]);
@@ -186,6 +200,8 @@ function terra(
       tipi: extra.base === true ? ["Basic", "Land"] : ["Land"],
       identitaDiColore: identita,
       euro: extra.euro ?? 0.05,
+      ...(extra.tag === undefined ? {} : { tag: extra.tag }),
+      ...(extra.testo === undefined ? {} : { testo: extra.testo }),
     }),
     terra: {
       coloriProdotti,
@@ -213,6 +229,36 @@ export const TERRE_FINTE: readonly Carta[] = [
   terra("Tideglass Steps", ["U", "W"], { entraGirata: true }),
   // Una terra che non fa nessun colore: nel conto vale come terra e basta.
   terra("Hollow Quarry", ["C"], { identita: [] }),
+
+  /* --- Le terre di utilità (ticket 08) ----------------------------------- *
+   * Il formato ne è pieno, e fino al ticket 08 nessuna poteva entrare in un
+   * mazzo per nessuna strada. Sono quattro apposta: una che fa mana e picchia,
+   * una che fa mana e distrugge terre, una che **non fa mana affatto**, e una
+   * che non porta nessun tag — quella deve restare fuori, ed è il caso che
+   * distingue «l'app sceglie» da «l'app indovina».
+   * ---------------------------------------------------------------------- */
+  terra("Emberworks Foundry", ["C"], {
+    testo:
+      "{T}: Add {C} to your mana pool.\n{1}: Target Assembly-Worker creature gets +1/+1 until end of turn.",
+    tag: ["potenzia"],
+    euro: 7,
+  }),
+  terra("Sunken Quarry", ["C"], {
+    testo:
+      "{T}: Add {C} to your mana pool.\n{T}, Sacrifice Sunken Quarry: Destroy target land.",
+    tag: ["attacca-le-terre"],
+    euro: 8,
+  }),
+  // Non fa mana: nel mazzo è un posto che non lancia niente, e i conti lo
+  // devono dire — né `probabilita.ts` né `simulazione.ts` la contano fra le fonti.
+  terra("Winding Causeway", [], {
+    testo:
+      "{T}: Untap target attacking creature. Prevent all combat damage that would be dealt to and dealt by that creature this turn.",
+    tag: ["previene-il-danno"],
+    euro: 30,
+  }),
+  // Nessun tag: di questa terra l'app non sa dire niente, e non la mette.
+  terra("Sorrowfen Path", [], { testo: "{T}: Target creature gains banding until end of turn." }),
 ];
 
 /**
@@ -247,8 +293,8 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     identitaDiColore: ["R"],
     sottotipi: ["Goblin", "Soldier"],
     testo: "Other Goblins you control get +1/+0.",
-    forza: "5",
-    costituzione: "3",
+    forza: "2",
+    costituzione: "2",
     tag: ["potenzia"],
   }),
   carta({
@@ -257,9 +303,9 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 3,
     identitaDiColore: ["R"],
     sottotipi: ["Goblin"],
-    testo: "When this creature enters, create a 1/1 red Goblin creature token.",
-    forza: "3",
-    costituzione: "3",
+    testo: "When Torchbearer Goblin comes into play, it deals 1 damage to target creature.",
+    forza: "2",
+    costituzione: "2",
     tag: ["danno-diretto"],
   }),
   carta({
@@ -268,18 +314,19 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["R"],
     sottotipi: ["Goblin"],
-    testo: "Sacrifice another creature: This creature gets +2/+0 until end of turn.",
+    testo: "{R}, Sacrifice a creature: Cinder Skirmisher gets +2/+0 until end of turn.",
     forza: "2",
     costituzione: "3",
-    tag: ["scarta"],
   }),
+  // **La creatura vaniglia**: nessun testo, nessun tag. Il 1994 ne è pieno, e
+  // serve a provare che una carta di cui l'app non sa dire niente entra lo
+  // stesso in un mazzo — per i suoi numeri, che sono tutto quel che ha.
   carta({
     nome: "Ember Scrapper",
     costoDiMana: "{R}",
     valoreDiMana: 1,
     identitaDiColore: ["R"],
     sottotipi: ["Goblin"],
-    testo: "Haste.",
     forza: "2",
     costituzione: "1",
   }),
@@ -289,9 +336,10 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["R"],
     sottotipi: ["Goblin"],
-    testo: "Whenever this creature attacks, it gets +1/+0 until end of turn.",
+    testo: "Mountainwalk.",
     forza: "3",
     costituzione: "2",
+    tag: ["evasione"],
   }),
   carta({
     nome: "Warren Marshal",
@@ -299,9 +347,9 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 4,
     identitaDiColore: ["R"],
     sottotipi: ["Goblin"],
-    testo: "When this creature enters, create two 1/1 red Goblin creature tokens.",
-    forza: "3",
-    costituzione: "4",
+    testo: "Other Goblins you control get +0/+1.",
+    forza: "2",
+    costituzione: "3",
     tag: ["potenzia"],
   }),
   carta({
@@ -310,8 +358,8 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 4,
     identitaDiColore: ["R"],
     sottotipi: ["Goblin", "Artificer"],
-    testo: "Sacrifice a creature: This creature deals 1 damage to any target.",
-    forza: "3",
+    testo: "{T}: Destroy target artifact.",
+    forza: "1",
     costituzione: "3",
     tag: ["colpisce-gli-artefatti"],
   }),
@@ -321,10 +369,11 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["R"],
     sottotipi: ["Goblin"],
-    testo: "When this creature enters, it deals 2 damage to target creature an opponent controls.",
+    testo:
+      "{T}: Goblin Powdersmith deals 1 damage to target creature or player. Goblin Powdersmith deals 1 damage to you.",
     forza: "2",
     costituzione: "2",
-    tag: ["previene-il-danno"],
+    tag: ["danno-diretto"],
   }),
   carta({
     nome: "Emberflock Scout",
@@ -332,9 +381,10 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["R"],
     sottotipi: ["Goblin", "Scout"],
-    testo: "Menace.",
+    testo: "Mountainwalk.",
     forza: "1",
     costituzione: "2",
+    tag: ["evasione"],
   }),
   carta({
     nome: "Kindlefang Runt",
@@ -354,7 +404,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 1,
     identitaDiColore: ["R"],
     tipi: ["Instant"],
-    testo: "Scorch Bolt deals 3 damage to any target.",
+    testo: "Scorch Bolt deals 3 damage to target creature or player.",
     tag: ["danno-diretto"],
   }),
   carta({
@@ -363,8 +413,8 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["R"],
     tipi: ["Sorcery"],
-    testo: "Add {R}{R}{R}.",
-    tag: ["previene-il-danno"],
+    testo: "Add {R}{R}{R} to your mana pool.",
+    tag: ["accelerazione-di-mana"],
   }),
   carta({
     nome: "Molten Insight",
@@ -372,8 +422,8 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 3,
     identitaDiColore: ["R"],
     tipi: ["Instant"],
-    testo: "Draw two cards.",
-    tag: ["potenzia"],
+    testo: "Draw two cards, then discard a card.",
+    tag: ["pesca"],
   }),
   carta({
     nome: "Wildfire Sweep",
@@ -390,7 +440,8 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 3,
     identitaDiColore: ["R"],
     tipi: ["Enchantment"],
-    testo: "At the beginning of your end step, create a 1/1 red Goblin creature token.",
+    testo:
+      "Creatures can't attack you unless their controller pays {1} for each creature they control.",
     tag: ["imbriglia"],
   }),
 
@@ -401,10 +452,26 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 5,
     identitaDiColore: ["B"],
     sottotipi: ["Vampire"],
-    testo: "Flying. Whenever this creature deals damage, you gain that much life.",
+    testo: "Flying.\n{B}: Regenerate Nightfall Herald.",
     forza: "5",
     costituzione: "5",
-    tag: ["rigenera"],
+    tag: ["evasione", "rigenera"],
+  }),
+  // Il tre mana che decide le partite del formato: piccolo, vola, e svuota la
+  // mano. È la carta per cui vale la pena tradire il tema, e serve che nel pool
+  // ce ne sia una — se no la frontiera non ha niente da mostrare.
+  carta({
+    nome: "Duskwing Harrier",
+    costoDiMana: "{1}{B}{B}",
+    valoreDiMana: 3,
+    identitaDiColore: ["B"],
+    sottotipi: ["Specter"],
+    testo:
+      "Flying. Whenever Duskwing Harrier deals damage to a player, that player discards a card at random.",
+    forza: "2",
+    costituzione: "2",
+    tag: ["evasione", "scarta"],
+    euro: 40,
   }),
   carta({
     nome: "Vile Extraction",
@@ -412,7 +479,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["B"],
     tipi: ["Instant"],
-    testo: "Destroy target creature.",
+    testo: "Destroy target creature. It can’t be regenerated.",
     tag: ["rimozione-mirata"],
   }),
   carta({
@@ -422,7 +489,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     identitaDiColore: ["B"],
     sottotipi: ["Zombie"],
     testo:
-      "When this creature enters, return target creature card from your graveyard to your hand.",
+      "When Grave Reveler comes into play, return target creature card from your graveyard to your hand.",
     forza: "4",
     costituzione: "3",
     tag: ["si-cura-del-cimitero"],
@@ -433,10 +500,10 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["B"],
     sottotipi: ["Skeleton"],
-    testo: "Sacrifice a creature: Draw a card.",
+    testo: "{B}: Regenerate Bone Collector.",
     forza: "2",
     costituzione: "2",
-    tag: ["scarta", "pesca"],
+    tag: ["rigenera"],
   }),
   carta({
     nome: "Crypt Tithe",
@@ -444,8 +511,8 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 3,
     identitaDiColore: ["B"],
     tipi: ["Sorcery"],
-    testo: "Draw two cards. You lose 2 life.",
-    tag: ["pesca"],
+    testo: "Target player discards two cards at random.",
+    tag: ["scarta"],
   }),
   carta({
     nome: "Tidecaller Adept",
@@ -453,10 +520,10 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["U"],
     sottotipi: ["Merfolk", "Wizard"],
-    testo: "When this creature enters, draw a card.",
+    testo: "Islandwalk.",
     forza: "2",
     costituzione: "2",
-    tag: ["pesca"],
+    tag: ["evasione"],
   }),
   carta({
     nome: "Skyward Archivist",
@@ -464,10 +531,10 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 4,
     identitaDiColore: ["U"],
     sottotipi: ["Bird", "Wizard"],
-    testo: "Flying. At the beginning of your upkeep, draw a card.",
+    testo: "Flying.\n{U}{U}: Draw a card.",
     forza: "2",
     costituzione: "5",
-    tag: ["pesca"],
+    tag: ["evasione", "pesca"],
   }),
   carta({
     nome: "Thornwood Guardian",
@@ -475,7 +542,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 3,
     identitaDiColore: ["G"],
     sottotipi: ["Beast"],
-    testo: "Reach.",
+    testo: "Trample.",
     forza: "4",
     costituzione: "4",
   }),
@@ -485,7 +552,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 1,
     identitaDiColore: ["G"],
     tipi: ["Sorcery"],
-    testo: "Search your library for a basic land card and put it onto the battlefield tapped.",
+    testo: "Search your library for a basic land card and put it into play tapped.",
     tag: ["accelerazione-di-mana"],
   }),
   carta({
@@ -494,7 +561,7 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 2,
     identitaDiColore: ["W"],
     sottotipi: ["Human", "Cleric"],
-    testo: "When this creature enters, you gain 3 life.",
+    testo: "{W}: Prevent the next 1 damage that would be dealt to any target this turn.",
     forza: "2",
     costituzione: "2",
     tag: ["previene-il-danno"],
@@ -505,9 +572,45 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     valoreDiMana: 4,
     tipi: ["Artifact", "Creature"],
     sottotipi: ["Golem"],
-    testo: "Vigilance.",
+    testo: "Trample.",
     forza: "4",
     costituzione: "4",
+  }),
+
+  /* --- Gli artefatti, che in questo formato sono metà del gioco ----------- */
+  // **L'artefatto a costo zero, e insieme la carta limitata**: il pool vero ne
+  // ha diciotto, e sono quasi tutte fra le più forti che ci siano. È il caso
+  // che il ticket 08 chiede per nome — se la legalità si controllasse a valle,
+  // scartando i mazzi illegali, un pool così la farebbe fallire quasi sempre.
+  carta({
+    nome: "Onyx Chalice",
+    costoDiMana: "{0}",
+    valoreDiMana: 0,
+    tipi: ["Artifact"],
+    testo: "{T}, Sacrifice Onyx Chalice: Add {R}{R}{R} to your mana pool.",
+    tag: ["accelerazione-di-mana"],
+    euro: 900,
+    limitata: true,
+  }),
+  carta({
+    nome: "Rustvein Talisman",
+    costoDiMana: "{2}",
+    valoreDiMana: 2,
+    tipi: ["Artifact"],
+    testo: "{T}: Add one mana of any color to your mana pool.",
+    tag: ["accelerazione-di-mana"],
+    euro: 3,
+  }),
+
+  /* --- Il controllo, perché la coppia di tag esista nel pool -------------- */
+  carta({
+    nome: "Wavebreak Denial",
+    costoDiMana: "{1}{U}",
+    valoreDiMana: 2,
+    identitaDiColore: ["U"],
+    tipi: ["Instant"],
+    testo: "Counter target spell.",
+    tag: ["controincantesimo"],
   }),
 
   /* --- I due casi limite -------------------------------------------------- */
@@ -533,5 +636,6 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     testo: "Flying.",
     forza: "5",
     costituzione: "5",
+    tag: ["evasione"],
   }),
 ];

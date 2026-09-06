@@ -90,9 +90,15 @@ describe("le inclusioni dicono che cosa sta dentro", () => {
     expect(nomi).toContain("Goblin Chieftain");
   });
 
-  it("un tag prende le carte che fanno quella cosa", () => {
-    expect(nomiDelTema({ ...TEMA_VUOTO, inclusioni: { ...FILTRO_TEMA_VUOTO, tag: ["potenzia"] } }))
-      .toEqual(["Krenko's Command"]);
+  it("un tag prende le carte che fanno quella cosa, terre comprese", () => {
+    // La terra c'è apposta: su questo formato una fetta delle terre porta tag,
+    // e sono le terre di utilità che dal ticket 08 entrano davvero in un mazzo.
+    // Nella **purezza** non contano — le terre non contano mai (più sotto) —
+    // ma nel tema ci stanno, e dire il contrario qui vorrebbe dire che il tema
+    // di chi cerca `potenzia` non contiene una carta che potenzia.
+    expect(
+      nomiDelTema({ ...TEMA_VUOTO, inclusioni: { ...FILTRO_TEMA_VUOTO, tag: ["potenzia"] } }),
+    ).toEqual(["Emberworks Foundry", "Krenko's Command"]);
   });
 
   it("filtri diversi si restringono a vicenda", () => {

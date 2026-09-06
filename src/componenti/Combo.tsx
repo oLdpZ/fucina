@@ -26,8 +26,8 @@ import {
 } from "../combo/combo.js";
 import { CARTE_MASSIME_DELLA_COMBO, TURNO_DELLA_COMBO } from "../combo/taratura.js";
 import type { Carta, Pool } from "../dati/pool.js";
-import { COPIE_MASSIME } from "../mazzo/taratura.js";
-import { frasePerIlGuaioDellaCombo } from "../spiegazioni/frasi.js";
+import { copieAlMassimo } from "../mazzo/copie.js";
+import { frasePerIlGuaioDellaCombo, frasePerIlPattoDellaCombo } from "../spiegazioni/frasi.js";
 import type { Tema } from "../tema/tema.js";
 
 /** Quante carte si propongono mentre si scrive: come per la carta-seme. */
@@ -50,6 +50,14 @@ export function Combo({
   const risolta = useMemo(
     () => risolviCombo(combo, pool.carte, tema),
     [combo, pool.carte, tema],
+  );
+
+  const patto = useMemo(
+    () => ({
+      pezzi: risolta.pezzi.map((carta) => ({ nome: carta.nome, copie: copieAlMassimo(carta) })),
+      turno: TURNO_DELLA_COMBO,
+    }),
+    [risolta],
   );
 
   const piena = combo.length >= CARTE_MASSIME_DELLA_COMBO;
@@ -76,13 +84,13 @@ export function Combo({
       {/*
         Il patto. Sta qui sopra tutto il resto perché è la cosa che l'utente
         deve leggere **prima** di dare un numero per un giudizio.
+
+        Le copie promesse le dicono **i pezzi dichiarati**, non una costante: su
+        una carta che il formato limita a una copia la costante direbbe quattro,
+        e il mazzo ne conterrebbe una. La frase e il motore leggono lo stesso
+        numero dalla stessa funzione.
       */}
-      <p class="patto">
-        Non giudico se le carte che nomini vincano la partita insieme: quello lo dici tu, e ti
-        credo. Ti dico che probabilità hai di averle in mano <strong>tutte</strong> entro il turno{" "}
-        {TURNO_DELLA_COMBO}, e le metto nel mazzo in {COPIE_MASSIME} copie ciascuna senza mai
-        scambiarle via.
-      </p>
+      <p class="patto">{frasePerIlPattoDellaCombo(patto)}</p>
 
       {comboDichiarata(combo) ? (
         <ul class="pezzi-combo">

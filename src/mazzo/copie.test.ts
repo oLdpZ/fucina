@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { POOL_FINTO } from "../catalogo/pool-finto.js";
 import type { Carta } from "../dati/pool.js";
-import { copieMassime, leggiTettoDiCopie } from "./copie.js";
+import { copieAlMassimo, copieMassime, leggiTettoDiCopie } from "./copie.js";
 import { COPIE_MASSIME } from "./taratura.js";
 
 const QUALUNQUE = POOL_FINTO[0]!;
@@ -56,5 +56,24 @@ describe("copieMassime", () => {
       testo: "A deck can have any number of cards named Warren Multiplier.",
     };
     expect(copieMassime(carta)).toBe(COPIE_MASSIME);
+  });
+});
+
+describe("copieAlMassimo", () => {
+  it("di norma sono quattro", () => {
+    expect(copieAlMassimo(conTetto(COPIE_MASSIME))).toBe(COPIE_MASSIME);
+  });
+
+  it("su una carta limitata è una, e non quattro", () => {
+    // È il numero che il motore mette nel mazzo **e** quello che la schermata
+    // della combo promette: se le due letture divergessero, l'app prometterebbe
+    // quattro copie di una carta che poi ne mette una.
+    expect(copieAlMassimo(conTetto(1))).toBe(1);
+  });
+
+  it("su una carta senza tetto si ferma comunque a quattro", () => {
+    // Trentatré copie della stessa carta sono un mazzo legale che non è un
+    // mazzo: di lì non si parte, e non si promette.
+    expect(copieAlMassimo(conTetto(null))).toBe(COPIE_MASSIME);
   });
 });

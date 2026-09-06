@@ -12,26 +12,48 @@
  * 1. **Quante terre** — dalla curva del mazzo, non da una tabella per
  *    archetipo (`taratura.ts`).
  * 2. **Quali terre** — le terre a due colori legali che producono i colori
- *    chiesti, con una penalità dichiarata per quelle che entrano girate; il
+ *    chiesti, con una penalità dichiarata per quelle che entrano girate; poi le
+ *    **terre di utilità**, quelle che fanno qualcosa invece che i colori; il
  *    resto in terre base, divise secondo quanto ogni colore è chiesto.
  * 3. **Le probabilità** — calcolate in `probabilita.ts`, non stimate.
+ *
+ * ## Le terre di utilità
+ *
+ * Su questo formato una fetta delle terre non fa colori: fa altro — picchia,
+ * previene un danno, distrugge la terra dell'avversario. Fino al ticket 08
+ * nessuna di quelle poteva entrare in un mazzo per nessuna strada, e un motore
+ * che non le sa mettere costruisce mazzi legali e sbagliati.
+ *
+ * Entrano di qui, e non dalla porta degli incantesimi, perché sono terre: sono
+ * la terra che si cala al proprio turno, e chi sceglie le terre è questo
+ * modulo. **Quali** entrino non lo decide un elenco di nomi — sarebbe verità di
+ * formato nel sorgente (`CLAUDE.md`) — ma i tag di sinergia che la carta porta:
+ * una terra entra se fa qualcosa che il mazzo già fa **in abbastanza copie**.
+ * Le copie contano, e non le carte: una terra di utilità costa un posto alla
+ * base di mana, e una carta sola che per caso porti quel tag non lo paga.
+ *
+ * Una terra che non porta nessun tag non entra: l'app non legge il testo delle
+ * carte (ADR-0002), e di quella terra non sa dire niente. È un silenzio onesto,
+ * non una svista.
  */
 
-import type { Carta, ColoreMana } from "../dati/pool.js";
-import { copieMassime } from "./copie.js";
+import type { Carta, ColoreMana, Tag } from "../dati/pool.js";
+import { copieAlMassimo } from "./copie.js";
 import { simboliDiColore } from "./costo.js";
 import { probabilitaDiLanciare, type GruppoDiTerre, type Pip } from "./probabilita.js";
 import {
-  COPIE_MASSIME,
+  COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA,
   DIMENSIONE_MAZZO,
   PENALITA_ENTRA_GIRATA,
   PENALITA_ENTRA_GIRATA_A_VOLTE,
   PERDITA_MASSIMA_PER_I_COLORI,
   TERRE_A_COSTO_ZERO,
+  TERRE_DI_UTILITA_MASSIME,
   TERRE_MASSIME,
   TERRE_MINIME,
   TERRE_NON_BASE_PER_COLORE_IN_PIU,
   TERRE_PER_COSTO_MEDIO,
+  TERRE_SENZA_MANA_MASSIME,
 } from "./taratura.js";
 
 /** Una carta e quante copie ne stanno nel mazzo. */
@@ -77,6 +99,10 @@ export type BaseDiTerre = {
   copieNonTerra: number;
   dimensioneMazzo: number;
   coloriRichiesti: RichiestaDiColore[];
+  /** Le terre di utilità che ci sono finite: quelle che fanno altro dai colori. */
+  terreDiUtilita: number;
+  /** Di quelle, quante non fanno mana affatto: sono posti che non lanciano. */
+  terreSenzaMana: number;
   terreCheEntranoGirate: number;
   /** Di quelle girate, quante entrano girate **solo a certe condizioni**. */
   terreGirateSoloAVolte: number;
@@ -135,7 +161,20 @@ export function analizzaBaseDiTerre(
     )
     .map(([colore]) => colore);
 
-  const terre = scegliTerre(terreDelPool, coloriRichiesti, simboliPerColore, numeroTerre);
+  // Quel che il mazzo **fa**, contato in copie: è con questo che si scelgono le
+  // terre di utilità, e non con un elenco di nomi.
+  const tagDelMazzo = new Map<Tag, number>();
+  for (const voce of nonTerre) {
+    for (const tag of voce.carta.tag) tagDelMazzo.set(tag, (tagDelMazzo.get(tag) ?? 0) + voce.copie);
+  }
+
+  const terre = scegliTerre(
+    terreDelPool,
+    coloriRichiesti,
+    simboliPerColore,
+    numeroTerre,
+    tagDelMazzo,
+  );
   const gruppi = raggruppa(terre, coloriRichiesti);
 
   const dimensioneMazzo = Math.max(DIMENSIONE_MAZZO, copieNonTerra + numeroTerre);
@@ -196,6 +235,12 @@ export function analizzaBaseDiTerre(
       simboli: simboliPerColore.get(colore) ?? 0,
       fonti: fontiPerColore.get(colore) ?? 0,
     })),
+    terreDiUtilita: terre
+      .filter((voce) => terraDiUtilita(voce.carta))
+      .reduce((somma, voce) => somma + voce.copie, 0),
+    terreSenzaMana: terre
+      .filter((voce) => (voce.carta.terra?.coloriProdotti.length ?? 0) === 0)
+      .reduce((somma, voce) => somma + voce.copie, 0),
     terreCheEntranoGirate: terre
       .filter((voce) => voce.carta.terra?.entraGirata === true)
       .reduce((somma, voce) => somma + voce.copie, 0),
@@ -228,6 +273,7 @@ function scegliTerre(
   coloriRichiesti: readonly ColoreMana[],
   simboliPerColore: ReadonlyMap<ColoreMana, number>,
   numeroTerre: number,
+  tagDelMazzo: ReadonlyMap<Tag, number>,
 ): CopieDiCarta[] {
   if (numeroTerre <= 0) return [];
 
@@ -293,8 +339,7 @@ function scegliTerre(
       // partenza della ricerca (`costruisci.ts`): una base fatta di dodici
       // copie della stessa terra doppia è una base legale che non è una base.
       const quante = Math.min(
-        copieMassime(carta),
-        COPIE_MASSIME,
+        copieAlMassimo(carta),
         tetto - messe,
         restanti - perRiempire.length,
       );
@@ -305,7 +350,53 @@ function scegliTerre(
     }
   }
 
-  // 2. Il resto in terre base, divise secondo quanto ogni colore è chiesto. Il
+  // 2. Le terre di utilità: quelle che non servono a fare colori ma a fare
+  //    qualcosa che il mazzo già fa, **in abbastanza copie** da essere un tema
+  //    e non un caso. Il budget è dichiarato e **non** dipende dai colori, se no
+  //    un mazzo monocolore non ne vedrebbe mai una.
+  const presi = new Set(scelte.map((voce) => voce.carta.nome));
+  const tettoUtilita = Math.max(
+    0,
+    Math.min(TERRE_DI_UTILITA_MASSIME, restanti - perRiempire.length),
+  );
+
+  if (tettoUtilita > 0) {
+    const utili = terreDelPool
+      .filter((carta) => !presi.has(carta.nome) && terraDiUtilita(carta))
+      .filter((carta) => identitaDentro(carta, coloriDaServire))
+      .map((carta) => ({ carta, condivisi: copieCheFannoLaStessaCosa(carta, tagDelMazzo) }))
+      .filter(({ condivisi }) => condivisi >= COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA)
+      .sort(
+        (a, b) =>
+          b.condivisi - a.condivisi ||
+          // A pari sinergia si preferisce la terra che **fa anche mana**: l'altra
+          // costa al mazzo un posto che non lancia niente.
+          faMana(b.carta) - faMana(a.carta) ||
+          prezzo(a.carta) - prezzo(b.carta) ||
+          a.carta.nome.localeCompare(b.carta.nome, "en"),
+      );
+
+    let messe = 0;
+    let senzaMana = 0;
+    for (const { carta } of utili) {
+      if (messe >= tettoUtilita) break;
+      const spazioSenzaMana =
+        faMana(carta) === 1 ? Number.POSITIVE_INFINITY : TERRE_SENZA_MANA_MASSIME - senzaMana;
+      const quante = Math.min(
+        copieAlMassimo(carta),
+        tettoUtilita - messe,
+        spazioSenzaMana,
+        restanti - perRiempire.length,
+      );
+      if (quante <= 0) continue;
+      scelte.push({ carta, copie: quante });
+      messe += quante;
+      restanti -= quante;
+      if (faMana(carta) === 0) senzaMana += quante;
+    }
+  }
+
+  // 3. Il resto in terre base, divise secondo quanto ogni colore è chiesto. Il
   //    metodo del resto più grande: deterministico, e non perde né inventa
   //    terre per colpa degli arrotondamenti.
   const pesi = perRiempire.map((colore) => Math.max(0, simboliPerColore.get(colore) ?? 1));
@@ -355,6 +446,42 @@ function utileComeTerraDoppia(carta: Carta, colori: readonly ColoreMana[]): bool
   return terra.coloriProdotti.filter((colore) => colori.includes(colore)).length >= 2;
 }
 
+/**
+ * Una **terra di utilità**: una terra non base che porta almeno un tag di
+ * sinergia, cioè che l'app sa dire che *fa* qualcosa oltre a fare mana.
+ *
+ * Il tag è l'unica cosa che l'app legge di una carta oltre ai suoi numeri
+ * (ADR-0002), e quindi è l'unico criterio possibile che non sia un elenco di
+ * nomi scritto nel sorgente. Una terra senza tag resta fuori: non è che sia
+ * cattiva, è che di lei non si sa niente, e metterla sarebbe indovinare.
+ */
+function terraDiUtilita(carta: Carta): boolean {
+  return carta.terra !== null && !carta.tipi.includes("Basic") && carta.tag.length > 0;
+}
+
+/** L'identità della carta sta dentro i colori del mazzo. Incolore sta sempre. */
+function identitaDentro(carta: Carta, colori: readonly ColoreMana[]): boolean {
+  return carta.identitaDiColore.every((colore) => colori.includes(colore));
+}
+
+/**
+ * Quante **copie** del mazzo fanno quel che questa terra fa: è la sinergia,
+ * contata e non stimata.
+ *
+ * Si contano le copie e non le carte, ed è la differenza fra «il mazzo gioca
+ * questo tema» e «il mazzo ha una carta che per caso ce l'ha». Una terra di
+ * utilità costa un posto alla base di mana, e una carta sola non lo paga: sotto
+ * `COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA` la terra resta fuori.
+ */
+function copieCheFannoLaStessaCosa(carta: Carta, tagDelMazzo: ReadonlyMap<Tag, number>): number {
+  return carta.tag.reduce((somma, tag) => somma + (tagDelMazzo.get(tag) ?? 0), 0);
+}
+
+/** Uno se la terra fa mana, zero se non ne fa affatto: si ordina con questo. */
+function faMana(carta: Carta): number {
+  return (carta.terra?.coloriProdotti.length ?? 0) > 0 ? 1 : 0;
+}
+
 /** I colori utili che produce, meno la penalità dichiarata per l'entrata girata. */
 function punteggioTerra(carta: Carta, colori: readonly ColoreMana[]): number {
   const terra = carta.terra!;
@@ -375,6 +502,13 @@ function prezzo(carta: Carta): number {
  * Le terre che entrano girate **solo a volte** contano come girate: è la
  * lettura pessimistica, ed è la sola che non può promettere all'utente più di
  * quel che avrà.
+ *
+ * Le terre che **non fanno mana affatto** non compaiono qui, e non è una
+ * dimenticanza: nel conto delle probabilità ogni terra elencata paga almeno il
+ * mana generico, e una terra che non fa mana non lo paga. Restando fuori
+ * finisce nel mucchio delle carte che non sono fonti, che è esattamente quel
+ * che è. Nel mazzo c'è lo stesso — `dimensioneMazzo` la conta — ma come posto
+ * che non lancia niente.
  */
 function raggruppa(
   terre: readonly CopieDiCarta[],
@@ -383,7 +517,7 @@ function raggruppa(
   const gruppi = new Map<string, GruppoDiTerre>();
   for (const voce of terre) {
     const terra = voce.carta.terra;
-    if (terra === null) continue;
+    if (terra === null || terra.coloriProdotti.length === 0) continue;
     const produce = ORDINE_COLORI.filter(
       (colore) => coloriRichiesti.includes(colore) && terra.coloriProdotti.includes(colore),
     );

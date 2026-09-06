@@ -63,3 +63,22 @@ export function leggiTettoDiCopie(testo: string, tipi: readonly string[]): numbe
 export function copieMassime(carta: Carta): number {
   return carta.tettoDiCopie ?? Number.POSITIVE_INFINITY;
 }
+
+/**
+ * Le copie che l'app si concede davvero di una carta: il suo tetto, ma **mai
+ * oltre le quattro**.
+ *
+ * Le due cose non coincidono nei due sensi opposti, ed è tutto il senso di
+ * questa funzione. Sotto: una carta che il formato limita ne ammette una, e una
+ * sola ne entra. Sopra: una carta che si concede copie illimitate potrebbe
+ * riempire un mazzo intero, e trentatré copie della stessa carta sono un mazzo
+ * legale che non è un mazzo — di lì non si parte.
+ *
+ * Sta qui, e non nel motore, perché la stessa risposta serve a chi costruisce e
+ * a chi la **racconta** all'utente: la frase che promette «te ne metto tante»
+ * deve leggere lo stesso numero che il mazzo poi contiene, se no promette
+ * quattro copie di una carta che il formato limita a una.
+ */
+export function copieAlMassimo(carta: Carta): number {
+  return Math.min(copieMassime(carta), COPIE_MASSIME);
+}

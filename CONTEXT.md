@@ -189,6 +189,36 @@ il gruppo limita una carta in più, cambia quel numero e nient'altro.
 
 ---
 
+## Terra di utilità
+
+**Una terra che non serve a fare colori ma a fare qualcosa**: picchiare,
+prevenire un danno, distruggere la terra dell'avversario.
+
+Su questo formato sono una fetta grossa delle terre, e nessun mazzo serio le
+ignora. Fino al ticket 08 non potevano entrare in un mazzo per nessuna strada —
+la ricerca escludeva ogni terra dagli incantesimi candidati, il catalogo non ne
+faceva aggiungere a mano, e la base di terre chiedeva due colori di identità.
+
+Entrano dalla **base di terre** (`src/mazzo/base-di-terre.ts`), che è chi le
+terre le sceglie. **Quali** entrino non lo dice un elenco di nomi — sarebbe
+verità di formato nel sorgente — ma i **tag** che la carta porta: una terra entra
+se fa qualcosa che il mazzo già fa, **contato in copie** e non in carte. Una
+terra di utilità costa un posto alla base di mana, e una carta sola che per caso
+porti quel tag non lo paga: sotto la soglia dichiarata in `taratura.ts` la terra
+resta fuori. Resta fuori anche la terra senza nessun tag: l'app non legge il
+testo delle carte, e di quella non sa dire niente.
+
+Il loro budget è dichiarato in `taratura.ts` e **non dipende dai colori**, al
+contrario di quello delle terre doppie: se ne dipendesse, un mazzo monocolore
+non ne vedrebbe mai una, e sono proprio i monocolore a giocarle di più.
+
+Quelle che **non fanno mana affatto** hanno un tetto più stretto e stanno fuori
+dalle fonti in ogni conto che segue — la probabilità di lanciare e la
+simulazione. Nel mazzo ci sono: sono un posto che non lancia niente, ed è
+esattamente quel che sono.
+
+---
+
 ## Formato
 
 **Il documento di dati che dice quale gioco si sta giocando**, e non il concetto

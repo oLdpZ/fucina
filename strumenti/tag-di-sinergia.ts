@@ -297,6 +297,20 @@ const REGOLE: Record<Tag, (carta: Carta, testo: string) => boolean> = {
    * una riga o dopo una virgola, cioè dove si stampa una parola chiave, oppure
    * dietro un «gains» o un «has». «to target creature with flying» non è
    * nessuna delle due.
+   *
+   * **L'attraversamento chiede la stessa disciplina**, e per un po' non ce l'ha
+   * avuta: cercare `landwalk` dovunque nel testo prendeva anche le terre
+   * leggendarie che l'attraversamento lo **tolgono** — «target creature loses
+   * all landwalk abilities» — cioè le carte che fanno l'esatto contrario. Non è
+   * un difetto cosmetico: dal ticket 08 sono i tag a scegliere quali terre di
+   * utilità entrano nel mazzo, e un mazzo di creature che passano si sarebbe
+   * preso quattro copie di una terra che serve a fermarle.
+   *
+   * La parola dell'attraversamento porta però spesso un aggettivo davanti —
+   * «legendary landwalk», «nonbasic landwalk» — e per quello l'ancora concede
+   * **una** parola prima: quella di Livonya Silone è una parola chiave stampata
+   * come le altre, e senza il permesso sarebbe caduta insieme alle vere
+   * negazioni.
    */
   evasione: (_, testo) =>
     /(?:^|[\n.,;] *)(?:flying|fear)\b/i.test(testo) ||
@@ -304,7 +318,10 @@ const REGOLE: Record<Tag, (carta: Carta, testo: string) => boolean> = {
     /\btokens?\b[^.]*\bwith flying\b/i.test(testo) ||
     /\bcan't be blocked\b/i.test(testo) ||
     /\bcan be blocked only\b/i.test(testo) ||
-    /\b(?:forest|island|swamp|mountain|plains|legendary|land)walk\b/i.test(testo),
+    /(?:^|[\n.,;] *)(?:[a-z]+ )?(?:forest|island|swamp|mountain|plains|land)walk\b/i.test(testo) ||
+    /\b(?:gains?|has|have) (?:[a-z]+ )?(?:forest|island|swamp|mountain|plains|land)walk\b/i.test(
+      testo,
+    ),
 
   /** «Draw a card», «draw two cards», «target player draws». */
   pesca: (_, testo) => /\bdraws?\b[^.]*\bcards?\b/i.test(testo),

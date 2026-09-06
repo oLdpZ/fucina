@@ -325,3 +325,34 @@ describe("la forma della risposta", () => {
     expect(() => simulaGoldfish(BRUTALE, { seme: 1, partite: 0 })).toThrow();
   });
 });
+
+describe("le terre che non fanno mana", () => {
+  it("non pagano niente, né colorato né generico", () => {
+    // Su questo formato ci sono terre che non producono mana affatto, e dal
+    // ticket 08 entrano nei mazzi. Contarle fra le fonti farebbe lanciare in
+    // simulazione magie che in partita restano in mano.
+    const carte: CopieDiCarta[] = [
+      { carta: magia({ nome: "Due", costoDiMana: "{1}{R}", valoreDiMana: 2, forza: 2 }), copie: 24 },
+      { carta: terra("Passaggio Inerte", []), copie: 36 },
+    ];
+    const esito = simulaGoldfish(carte, { seme: 3, partite: 40 });
+
+    // Trentasei terre inerti e nessuna fonte: non si lancia mai niente, il
+    // danno resta zero e nessuna partita si chiude.
+    expect(esito.dannoMedio).toBe(0);
+    expect(esito.quotaPartiteChiuse).toBe(0);
+  });
+
+  it("non contano nemmeno per decidere se una mano si tiene", () => {
+    // La regola di mulligan guarda le **fonti**, non le terre: una mano di tre
+    // terre inerti non lancia niente, e chiamarla tenibile racconterebbe una
+    // partenza che in partita non c'è.
+    const carte: CopieDiCarta[] = [
+      { carta: magia({ nome: "Due", costoDiMana: "{1}{R}", valoreDiMana: 2, forza: 2 }), copie: 36 },
+      { carta: terra("Passaggio Inerte", []), copie: 24 },
+    ];
+    const esito = simulaGoldfish(carte, { seme: 5, partite: 60 });
+
+    expect(esito.quotaManiTenibili).toBe(0);
+  });
+});

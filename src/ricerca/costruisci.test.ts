@@ -19,6 +19,7 @@ import { POOL_DEL_MOTORE, TERRE_FINTE } from "../catalogo/pool-finto.js";
 import { COMBO_VUOTA } from "../combo/combo.js";
 import { TURNO_DELLA_COMBO } from "../combo/taratura.js";
 import type { Carta } from "../dati/pool.js";
+import { COPIE_DI_UNA_LIMITATA, copieMassime } from "../mazzo/copie.js";
 import { probabilitaDiAssemblarne } from "../mazzo/probabilita.js";
 import { COPIE_MASSIME, DIMENSIONE_MAZZO } from "../mazzo/taratura.js";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
@@ -51,6 +52,18 @@ function tema(parti: Partial<Tema>): Tema {
 }
 
 const GOBLIN = tema({ inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Goblin"] } });
+
+/**
+ * Il tema nero: è quello che pesca dalla metà del pool dove stanno la carta
+ * limitata e quella che si concede copie illimitate, e serve ai test della
+ * legalità qui sotto.
+ */
+const NERO = tema({ inclusioni: { ...FILTRO_TEMA_VUOTO, colori: ["B"] } });
+
+/** Ogni voce di ogni mazzo della frontiera: la legalità si guarda su tutti. */
+function tutteLeVoci(frontiera: Frontiera) {
+  return frontiera.mazzi.flatMap((mazzo) => [...mazzo.carte, ...mazzo.terre]);
+}
 
 function richiesta(parti: Partial<Richiesta> = {}): Richiesta {
   return {
@@ -93,14 +106,15 @@ describe("il primo mazzo costruito dall'app", () => {
     expect(frontiera.mazzi.length).toBeGreaterThan(0);
   });
 
-  it("è legale: sessanta carte, mai più di quattro copie salvo le terre base", () => {
+  it("è legale: sessanta carte, e nessuna carta oltre il tetto che si porta dietro", () => {
     const frontiera = costruisci();
     expect(carteTotali(frontiera)).toBe(DIMENSIONE_MAZZO);
 
+    // Il tetto lo dice la **carta**, non questo test: rileggerlo qui dal testo
+    // o dai tipi vorrebbe dire provare il motore contro una seconda copia della
+    // regola, che è il modo di non accorgersi mai che le due divergono.
     for (const voce of voci(frontiera)) {
-      const base = voce.carta.tipi.includes("Basic");
-      const illimitata = /any number of cards named/i.test(voce.carta.testo);
-      if (!base && !illimitata) expect(voce.copie).toBeLessThanOrEqual(COPIE_MASSIME);
+      expect(voce.copie).toBeLessThanOrEqual(copieMassime(voce.carta));
       expect(voce.copie).toBeGreaterThan(0);
     }
   });
@@ -136,6 +150,21 @@ describe("il primo mazzo costruito dall'app", () => {
     expect(frontiera.mazzi).toHaveLength(0);
   });
 
+  it("sa mettere nel mazzo una terra che non fa colori ma fa qualcosa", () => {
+    // Le terre di utilità sono metà di quel che definisce questo formato, e fino
+    // al ticket 08 non potevano entrare in un mazzo per nessuna strada: gli
+    // incantesimi candidati escludono ogni terra, il catalogo non le fa
+    // aggiungere a mano, e la base voleva due colori di identità. Un motore che
+    // non le sa mettere costruisce mazzi legali e sbagliati.
+    const terre = costruisci().mazzi[0]!.terre;
+    const utilita = terre.filter(
+      (voce) => !voce.carta.tipi.includes("Basic") && voce.carta.tag.length > 0,
+    );
+
+    expect(utilita.length).toBeGreaterThan(0);
+    expect(costruisci().mazzi[0]!.base.terreDiUtilita).toBeGreaterThan(0);
+  });
+
   it("le terre che il mazzo porta sono quelle che la sua curva chiede", () => {
     const mazzo = costruisci().mazzi[0]!;
     expect(mazzo.base.numeroTerre).toBe(mazzo.base.numeroTerreDallaCurva);
@@ -159,6 +188,91 @@ describe("il primo mazzo costruito dall'app", () => {
       "sinergia",
       "qualita",
     ]);
+  });
+});
+
+describe("la legalità, che è un dato della carta e non un controllo a valle", () => {
+  it("nessuna carta supera il proprio tetto, in nessun mazzo della frontiera", () => {
+    for (const voce of tutteLeVoci(costruisciMazzo(richiesta({ tema: NERO }), POOL, SVELTA))) {
+      expect(voce.copie).toBeLessThanOrEqual(copieMassime(voce.carta));
+    }
+  });
+
+  it("una carta limitata non compare mai due volte, per quanto forte sia", () => {
+    const frontiera = costruisciMazzo(richiesta({ tema: NERO }), POOL, SVELTA);
+    const limitate = tutteLeVoci(frontiera).filter(
+      (voce) => voce.carta.tettoDiCopie === COPIE_DI_UNA_LIMITATA,
+    );
+
+    // Che ce ne sia almeno una è metà del test, e la metà che conta: se il
+    // motore le scartasse tutte questa asserzione cadrebbe, e l'altra passerebbe
+    // per vuota.
+    expect(limitate.length).toBeGreaterThan(0);
+    for (const voce of limitate) expect(voce.copie).toBe(COPIE_DI_UNA_LIMITATA);
+  });
+
+  it("la limitata più forte del pool entra lo stesso: non si butta il mazzo, si mette una copia", () => {
+    // Nel pool finto la limitata è l'artefatto a costo zero, cioè la carta più
+    // forte che ci sia — come nel formato vero. Un motore che controllasse la
+    // legalità **a valle**, scartando i mazzi illegali, su un pool così
+    // scarterebbe quasi sempre: o non costruirebbe niente, o consegnerebbe
+    // mazzi senza le carte migliori. Qui la carta c'è, una volta sola.
+    const forte = POOL_DEL_MOTORE.find(
+      (carta) => carta.tettoDiCopie === COPIE_DI_UNA_LIMITATA && carta.valoreDiMana === 0,
+    );
+    expect(forte).toBeDefined();
+
+    const frontiera = costruisciMazzo(richiesta({ tema: NERO }), POOL, SVELTA);
+    expect(frontiera.esito).not.toBe("niente-da-costruire");
+
+    const dove = tutteLeVoci(frontiera).filter((voce) => voce.carta.nome === forte!.nome);
+    expect(dove.length).toBeGreaterThan(0);
+    for (const voce of dove) expect(voce.copie).toBe(1);
+  });
+
+  it("una carta col permesso nel testo supera le quattro copie", () => {
+    // «A deck can have any number of cards named …»: il permesso è scritto sulla
+    // carta, il pool lo legge una volta sola, e il motore ne legge il tetto come
+    // di tutte le altre. Il tema qui è il sottotipo che quella carta ha da sola,
+    // così la ricerca non ha altro da metterci.
+    const illimitata = POOL_DEL_MOTORE.find((carta) => carta.tettoDiCopie === null);
+    expect(illimitata).toBeDefined();
+
+    const suo = tema({
+      inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: illimitata!.sottotipi },
+    });
+    const frontiera = costruisciMazzo(richiesta({ tema: suo }), POOL, SVELTA);
+
+    const copie = tutteLeVoci(frontiera)
+      .filter((voce) => voce.carta.nome === illimitata!.nome)
+      .map((voce) => voce.copie);
+    expect(Math.max(...copie)).toBeGreaterThan(COPIE_MASSIME);
+  });
+
+  it("il motore non sa quali carte siano limitate: cambia il dato, cambia il mazzo", () => {
+    // La prova che il formato non vive nel sorgente. Si prende lo stesso pool e
+    // si limita a mano una carta qualunque — è quel che farebbe il documento di
+    // formato — e il mazzo che ne esce la rispetta, senza che nessuna riga di
+    // codice sappia il suo nome.
+    const vittima = POOL_DEL_MOTORE.find((carta) => carta.nome === "Nightfall Herald");
+    expect(vittima).toBeDefined();
+    const limitato: readonly Carta[] = POOL.map((carta) =>
+      carta.nome === vittima!.nome ? { ...carta, tettoDiCopie: COPIE_DI_UNA_LIMITATA } : carta,
+    );
+
+    const prima = costruisciMazzo(richiesta({ tema: NERO }), POOL, SVELTA);
+    const dopo = costruisciMazzo(richiesta({ tema: NERO }), limitato, SVELTA);
+
+    const quante = (frontiera: Frontiera) =>
+      Math.max(
+        0,
+        ...tutteLeVoci(frontiera)
+          .filter((voce) => voce.carta.nome === vittima!.nome)
+          .map((voce) => voce.copie),
+      );
+
+    expect(quante(prima)).toBeGreaterThan(1);
+    expect(quante(dopo)).toBeLessThanOrEqual(COPIE_DI_UNA_LIMITATA);
   });
 });
 
@@ -328,6 +442,20 @@ describe("la frontiera: il tasso di cambio fra tema e potenza", () => {
     expect(frontiera.mazzi.length).toBeLessThanOrEqual(PESI_DELLA_PUREZZA.length);
   });
 
+  it("si apre davvero: più mazzi distinti, purezza che cala e potenza che sale", () => {
+    // Su un pool piccolo la frontiera può essere corta, e non è un guasto: dice
+    // che lì il margine di scambio è piccolo. Ma **aprirsi deve poterlo**, se no
+    // il fulcro del progetto non ha niente da mostrare. Il tema nero è quello
+    // che nel pool finto ha più margine, e qui si guarda proprio lui.
+    const mazzi = costruisciMazzo(richiesta({ tema: NERO }), POOL, SVELTA).mazzi;
+
+    expect(mazzi.length).toBeGreaterThan(2);
+    for (let i = 1; i < mazzi.length; i++) {
+      expect(mazzi[i]!.purezza).toBeLessThan(mazzi[i - 1]!.purezza);
+      expect(mazzi[i]!.potenza).toBeGreaterThan(mazzi[i - 1]!.potenza);
+    }
+  });
+
   it("nessun mazzo compare due volte: pesi diversi che danno lo stesso mazzo valgono uno", () => {
     const liste = costruisci().mazzi.map(
       (mazzo) =>
@@ -452,6 +580,45 @@ describe("la combo dichiarata", () => {
     for (const pezzo of PEZZI) {
       for (const copie of copieDi(frontiera, pezzo)) expect(copie).toBe(COPIE_MASSIME);
     }
+  });
+
+  it("una combo che nomina una carta limitata ne ottiene una sola", () => {
+    // Il caso che il ticket 08 chiede per nome. «Al massimo delle copie» non
+    // vuol dire quattro: vuol dire il tetto della carta, e su una limitata il
+    // tetto è uno. Il motore non fa un'eccezione per la combo — sarebbe la sola
+    // strada per cui un mazzo di quest'app uscirebbe illegale.
+    const limitata = POOL_DEL_MOTORE.find(
+      (carta) => carta.tettoDiCopie === COPIE_DI_UNA_LIMITATA,
+    );
+    expect(limitata).toBeDefined();
+
+    const frontiera = costruisci({ combo: [limitata!.nome, "Lone Sphinx"] });
+
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
+    for (const copie of copieDi(frontiera, limitata!.nome)) {
+      expect(copie).toBe(COPIE_DI_UNA_LIMITATA);
+    }
+    // E il pezzo libero accanto ne prende quattro: le due carte della stessa
+    // combo hanno due tetti diversi, ed è quel che la frase deve saper dire.
+    for (const copie of copieDi(frontiera, "Lone Sphinx")) expect(copie).toBe(COPIE_MASSIME);
+  });
+
+  it("e la probabilità che ne esce è quella di una copia sola, non di quattro", () => {
+    const limitata = POOL_DEL_MOTORE.find(
+      (carta) => carta.tettoDiCopie === COPIE_DI_UNA_LIMITATA,
+    )!;
+    const mazzo = costruisci({ combo: [limitata.nome] }).mazzi[0]!;
+
+    expect(mazzo.combo).not.toBeNull();
+    expect(mazzo.combo!.pezzi).toEqual([{ nome: limitata.nome, copie: COPIE_DI_UNA_LIMITATA }]);
+    expect(mazzo.combo!.probabilita).toBeCloseTo(
+      probabilitaDiAssemblarne(
+        mazzo.base.dimensioneMazzo,
+        [COPIE_DI_UNA_LIMITATA],
+        TURNO_DELLA_COMBO,
+      ),
+      12,
+    );
   });
 
   it("senza dichiararli, quegli stessi pezzi il mazzo Goblin non li vuole", () => {

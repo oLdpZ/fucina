@@ -69,9 +69,9 @@ import {
 } from "../combo/combo.js";
 import type { Carta } from "../dati/pool.js";
 import { terreDallaCurva, type BaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
-import { copieMassime } from "../mazzo/copie.js";
+import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
-import { COPIE_MASSIME, DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
+import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
 import { POSTI_NON_TERRA } from "../tema/taratura.js";
 import {
@@ -342,7 +342,7 @@ export function costruisciMazzo(
    * probabilità più alta che un mazzo da sessanta carte permetta.
    */
   const obbligate = comboRisolta.pezzi;
-  const copieObbligate = obbligate.reduce((somma, carta) => somma + copieDiPartenza(carta), 0);
+  const copieObbligate = obbligate.reduce((somma, carta) => somma + copieAlMassimo(carta), 0);
   const nomiObbligati = new Set(obbligate.map((carta) => carta.nome));
 
   // Non può succedere coi quattro pezzi che l'interfaccia concede — sedici
@@ -695,7 +695,7 @@ function scegliCandidati(
   let quante = Math.min(taratura.candidatiMassimi, ordinate.length);
   while (
     quante < ordinate.length &&
-    ordinate.slice(0, quante).reduce((somma, carta) => somma + Math.min(copieMassime(carta), COPIE_MASSIME), 0) <
+    ordinate.slice(0, quante).reduce((somma, carta) => somma + copieAlMassimo(carta), 0) <
       DIMENSIONE_MAZZO - TERRE_MINIME
   ) {
     quante += 1;
@@ -733,12 +733,7 @@ function ordinaPerPartenza(
  * che non e un mazzo, e non e da li che si costruisce.
  */
 function capienzaDi(carte: readonly Carta[]): number {
-  return carte.reduce((somma, carta) => somma + copieDiPartenza(carta), 0);
-}
-
-/** Le copie di una carta che una **partenza** si concede: mai oltre le quattro. */
-function copieDiPartenza(carta: Carta): number {
-  return Math.min(copieMassime(carta), COPIE_MASSIME);
+  return carte.reduce((somma, carta) => somma + copieAlMassimo(carta), 0);
 }
 
 /**
@@ -756,7 +751,7 @@ function riempi(
   const selezione: Selezione = new Map();
   let messe = 0;
   for (const carta of obbligate) {
-    const copie = Math.min(copieDiPartenza(carta), posti - messe);
+    const copie = Math.min(copieAlMassimo(carta), posti - messe);
     if (copie <= 0) continue;
     selezione.set(carta.nome, { carta, copie });
     messe += copie;
@@ -764,7 +759,7 @@ function riempi(
   for (const carta of ordine) {
     if (messe >= posti) break;
     if (selezione.has(carta.nome)) continue;
-    const copie = Math.min(copieDiPartenza(carta), posti - messe);
+    const copie = Math.min(copieAlMassimo(carta), posti - messe);
     if (copie <= 0) continue;
     selezione.set(carta.nome, { carta, copie });
     messe += copie;
@@ -848,7 +843,7 @@ function adatta(
   for (const carta of ordine) {
     if (copie >= posti) break;
     const gia = dopo.get(carta.nome)?.copie ?? 0;
-    const ancora = Math.min(copieDiPartenza(carta) - gia, posti - copie);
+    const ancora = Math.min(copieAlMassimo(carta) - gia, posti - copie);
     if (ancora <= 0) continue;
     dopo.set(carta.nome, { carta, copie: gia + ancora });
     copie += ancora;

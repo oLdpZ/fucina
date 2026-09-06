@@ -23,10 +23,12 @@ import {
   elenco,
   frasePerIlGuaioDellaCombo,
   frasePerIlPasso,
+  frasePerIlPattoDellaCombo,
   frasePerLaCombo,
   frasePerLaPresenza,
   frasePerLeCopie,
   frasePerLeTerre,
+  frasePerLeTerreScartate,
   frasePerLEsclusione,
   percento,
   percentoFine,
@@ -475,5 +477,80 @@ describe("frasePerIlGuaioDellaCombo", () => {
       expect(frase).toContain("Fornace Antica");
       expect(frase.length).toBeGreaterThan("Fornace Antica".length + 10);
     }
+  });
+});
+
+describe("il patto della combo, prima che il mazzo esista", () => {
+  it("senza pezzi promette il massimo, e non un numero che non c'è ancora", () => {
+    const frase = frasePerIlPattoDellaCombo({ pezzi: [], turno: 4 });
+    expect(frase).toContain("turno 4");
+    expect(frase).toContain("al massimo delle copie");
+  });
+
+  it("con pezzi tutti liberi dice quattro copie ciascuna", () => {
+    const frase = frasePerIlPattoDellaCombo({
+      pezzi: [
+        { nome: "Tizio", copie: 4 },
+        { nome: "Caio", copie: 4 },
+      ],
+      turno: 4,
+    });
+    expect(frase).toContain("4 copie ciascuna");
+  });
+
+  it("con una carta limitata dice una copia, e la nomina", () => {
+    // È il punto in cui l'app diceva la cosa sbagliata: la frase leggeva la
+    // costante e prometteva quattro copie, mentre il mazzo ne conteneva una.
+    const frase = frasePerIlPattoDellaCombo({
+      pezzi: [
+        { nome: "Tizio", copie: 4 },
+        { nome: "Calice d'onice", copie: 1 },
+      ],
+      turno: 4,
+    });
+    expect(frase).toContain("1 copia di «Calice d'onice»");
+    expect(frase).toContain("4 copie di «Tizio»");
+    expect(frase).not.toContain("4 copie ciascuna");
+  });
+
+  it("una sola carta limitata: nessuna promessa di quattro", () => {
+    const frase = frasePerIlPattoDellaCombo({
+      pezzi: [{ nome: "Calice", copie: 1 }],
+      turno: 4,
+    });
+    expect(frase).toContain("in 1 copia senza mai scambiarla via");
+    expect(frase).toContain("di averla in mano entro il turno 4");
+    expect(frase).not.toContain("4 copie");
+  });
+});
+
+describe("le terre di un mazzo che arriva da fuori", () => {
+  it("dice quali terre non sono entrate e quante carte mancano", () => {
+    const frase = frasePerLeTerreScartate({
+      terre: [
+        { nome: "Officina di Mishra", copie: 4 },
+        { nome: "Miniera a Nastro", copie: 1 },
+      ],
+    });
+
+    expect(frase).toContain("Le 2 terre");
+    expect(frase).toContain("4 copie di «Officina di Mishra»");
+    expect(frase).toContain("1 copia di «Miniera a Nastro»");
+    expect(frase).toContain("5 copie");
+  });
+
+  it("non dice che il mazzo è più corto, perché non lo è", () => {
+    // La base si rifà dalla curva e le terre tornano al loro numero: quel che si
+    // perde è **quali** erano. Dire «hai cinque carte in meno» sarebbe un
+    // allarme falso, ed è quel che questa frase diceva prima.
+    const frase = frasePerLeTerreScartate({ terre: [{ nome: "Labirinto", copie: 4 }] });
+    expect(frase).not.toContain("in meno");
+    expect(frase).toContain("torna quello che serve");
+  });
+
+  it("con una terra sola parla al singolare", () => {
+    const frase = frasePerLeTerreScartate({ terre: [{ nome: "Labirinto", copie: 1 }] });
+    expect(frase).toContain("La terra");
+    expect(frase).toContain("non è quella che rimetto");
   });
 });

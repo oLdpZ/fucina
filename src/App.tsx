@@ -4,7 +4,11 @@ import { Catalogo } from "./componenti/Catalogo.js";
 import { Combo } from "./componenti/Combo.js";
 import { Costruzione } from "./componenti/Costruzione.js";
 import { Mazzo } from "./componenti/Mazzo.js";
-import { MazziSalvati, type MazzoAperto } from "./componenti/MazziSalvati.js";
+import {
+  MazziSalvati,
+  type MazzoAperto,
+  type TerreScartate,
+} from "./componenti/MazziSalvati.js";
 import { NoteLegali } from "./componenti/NoteLegali.js";
 import { SchedaCarta } from "./componenti/SchedaCarta.js";
 import { Vincoli } from "./componenti/Vincoli.js";
@@ -227,9 +231,10 @@ export function App() {
    * affatto — una carta bandita, un'edizione che esce — ed è quel che deve
    * succedere: non sono più giocabili.
    */
-  const apriMazzo = (salvato: MazzoSalvato, vaiAlMazzo: boolean) => {
+  const apriMazzo = (salvato: MazzoSalvato, vaiAlMazzo: boolean): TerreScartate => {
     const perNome = new Map(pool?.carte.map((carta) => [carta.nome, carta]) ?? []);
     const copie = new Map<string, number>();
+    const scartate: { nome: string; copie: number }[] = [];
     for (const voce of salvato.carte) {
       const carta = perNome.get(voce.nome);
       if (carta === undefined) continue;
@@ -238,14 +243,28 @@ export function App() {
       // sarebbe una carta che l'app conta, salva ed esporta senza mostrarla
       // e senza lasciarla togliere. Le terre base non hanno tetto, quindi il
       // tetto non basta più a limitare i danni: è il posto giusto per dirlo.
-      if (carta.terra !== null) continue;
+      //
+      // Restano fuori **tutte** le terre, non solo le base — e da quando il
+      // motore sa mettere in un mazzo anche le terre di utilità
+      // (`mazzo/base-di-terre.ts`), una lista che ne porta perde davvero
+      // qualcosa. Finché è così, chi importa se lo deve sentir dire: se ne
+      // porta il conto fuori di qui, e chi chiama lo racconta.
+      if (carta.terra !== null) {
+        scartate.push({ nome: carta.nome, copie: Math.max(1, voce.copie) });
+        continue;
+      }
       const tetto = Math.min(copieMassime(carta), DIMENSIONE_MAZZO);
       copie.set(voce.nome, Math.max(1, Math.min(tetto, voce.copie)));
     }
     setCopiePerNome(copie);
     cambiaTerre(salvato.richiesta.terreVolute);
     setAperto({ id: salvato.id, nome: salvato.nome, salvatoIl: salvato.salvatoIl });
-    if (vaiAlMazzo) setPagina("mazzo");
+    // Se c'è qualcosa da dire, si resta dove la frase si legge: portare
+    // l'utente al mazzo con un messaggio alle spalle vorrebbe dire non dirglielo
+    // affatto — e questo è proprio il caso in cui il mazzo che vede non è
+    // quello che ha aperto.
+    if (vaiAlMazzo && scartate.length === 0) setPagina("mazzo");
+    return scartate;
   };
 
   /**

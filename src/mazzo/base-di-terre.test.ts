@@ -9,13 +9,23 @@
 import { describe, expect, it } from "vitest";
 
 import { TERRE_FINTE } from "../catalogo/pool-finto.js";
-import type { Carta } from "../dati/pool.js";
+import type { Carta, Tag } from "../dati/pool.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "./base-di-terre.js";
 import { leggiTettoDiCopie } from "./copie.js";
-import { PERDITA_MASSIMA_PER_I_COLORI } from "./taratura.js";
+import {
+  COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA,
+  PERDITA_MASSIMA_PER_I_COLORI,
+  TERRE_DI_UTILITA_MASSIME,
+  TERRE_SENZA_MANA_MASSIME,
+} from "./taratura.js";
 
 /** Una carta non-terra inventata sul momento: conta solo il suo costo. */
-function magia(nome: string, costoDiMana: string, valoreDiMana: number): Carta {
+function magia(
+  nome: string,
+  costoDiMana: string,
+  valoreDiMana: number,
+  tag: readonly Tag[] = [],
+): Carta {
   return {
     id: `finta-${nome}`,
     nome,
@@ -34,7 +44,7 @@ function magia(nome: string, costoDiMana: string, valoreDiMana: number): Carta {
     numeroDiCollezione: "1",
     linguaDellaStampa: "en",
     prezzo: { euro: 0.1, aggiornatoIl: "2026-09-02" },
-    tag: [],
+    tag: [...tag],
     tagScryfall: [],
     facce: null,
     terra: null,
@@ -61,6 +71,17 @@ function combinazioni(n: number, k: number): bigint {
 
 function copie(base: { terre: readonly CopieDiCarta[] }, nome: string): number {
   return base.terre.find((voce) => voce.carta.nome === nome)?.copie ?? 0;
+}
+
+/**
+ * Un mazzo rosso che **potenzia**: è il tag che porta la terra-creatura del
+ * pool finto, e serve ai test delle terre di utilità qui sotto.
+ */
+function mazzoChePotenzia(copieDelTag = 20): CopieDiCarta[] {
+  return [
+    { carta: magia("Ingrossatore", "{R}", 1, ["potenzia"]), copie: copieDelTag },
+    { carta: magia("Corpo", "{1}{R}", 2, []), copie: 38 - copieDelTag },
+  ];
 }
 
 describe("quante terre", () => {
@@ -256,5 +277,94 @@ describe("le probabilità", () => {
     expect(base.righe).toHaveLength(0);
     expect(base.difficili).toHaveLength(0);
     expect(base.numeroTerre).toBeGreaterThan(0);
+  });
+});
+
+describe("le terre di utilità: quelle che fanno qualcosa invece dei colori", () => {
+  const opzioni = { terreVolute: null };
+
+  it("una terra che fa quel che il mazzo fa entra nella base, anche in un monocolore", () => {
+    // È il caso che fino al ticket 08 non poteva succedere per nessuna strada:
+    // il budget delle terre non base dipendeva dai colori, e un monocolore ne
+    // aveva zero. Sono proprio i monocolore a giocarle di più.
+    const base = analizzaBaseDiTerre(mazzoChePotenzia(), TERRE_FINTE, opzioni);
+
+    expect(copie(base, "Emberworks Foundry")).toBeGreaterThan(0);
+    expect(base.terreDiUtilita).toBeGreaterThan(0);
+  });
+
+  it("una carta sola non compra una terra: la sinergia si conta in copie", () => {
+    // Una terra di utilità costa un posto alla base di mana. Un mazzo con una
+    // sola copia di una carta che potenzia pagherebbe quattro fonti di colore
+    // per una sinergia che in partita non si vede mai.
+    const base = analizzaBaseDiTerre(mazzoChePotenzia(1), TERRE_FINTE, opzioni);
+    expect(copie(base, "Emberworks Foundry")).toBe(0);
+
+    // Con le copie di un tema vero, invece, la terra entra.
+    const tema = analizzaBaseDiTerre(
+      mazzoChePotenzia(COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA),
+      TERRE_FINTE,
+      opzioni,
+    );
+    expect(copie(tema, "Emberworks Foundry")).toBeGreaterThan(0);
+  });
+
+  it("una terra che il mazzo non sa usare resta fuori", () => {
+    // «Sunken Quarry» distrugge terre, e questo mazzo non attacca le terre di
+    // nessuno: la sinergia si conta, non si immagina.
+    const base = analizzaBaseDiTerre(mazzoChePotenzia(), TERRE_FINTE, opzioni);
+
+    expect(copie(base, "Sunken Quarry")).toBe(0);
+  });
+
+  it("una terra senza nessun tag non entra mai: di quella l'app non sa dire niente", () => {
+    for (const carte of [mazzoChePotenzia(), mazzo(["Nera", "{1}{B}", 2, 34])]) {
+      const base = analizzaBaseDiTerre(carte, TERRE_FINTE, opzioni);
+      expect(copie(base, "Sorrowfen Path")).toBe(0);
+    }
+  });
+
+  it("la base resta del numero promesso: le terre di utilità non si aggiungono, sostituiscono", () => {
+    const base = analizzaBaseDiTerre(mazzoChePotenzia(), TERRE_FINTE, opzioni);
+    const messe = base.terre.reduce((somma, voce) => somma + voce.copie, 0);
+
+    expect(messe).toBe(base.numeroTerre);
+    // E resta almeno una terra base per il colore che il mazzo chiede: una base
+    // fatta solo di terre di utilità non farebbe i propri stessi colori.
+    expect(copie(base, "Mountain")).toBeGreaterThan(0);
+  });
+
+  it("una terra che non fa mana affatto non conta fra le fonti", () => {
+    // «Winding Causeway» previene danno e non produce niente. Nel mazzo c'è —
+    // è un posto occupato — ma nei conti non è una fonte: contarla prometterebbe
+    // a chi legge un mana che in partita non c'è.
+    const carte = [
+      { carta: magia("Parapetto", "{1}{W}", 2, ["previene-il-danno"]), copie: 20 },
+      { carta: magia("Corpo", "{1}{W}", 2, []), copie: 18 },
+    ];
+    const base = analizzaBaseDiTerre(carte, TERRE_FINTE, opzioni);
+    expect(copie(base, "Winding Causeway")).toBeGreaterThan(0);
+
+    // La stessa base senza quella terra: le carte devono risultare **più**
+    // facili da lanciare, perché le fonti sono le stesse su meno posti morti.
+    const senza = analizzaBaseDiTerre(
+      carte,
+      TERRE_FINTE.filter((carta) => carta.nome !== "Winding Causeway"),
+      opzioni,
+    );
+    expect(senza.righe[0]!.probabilita).toBeGreaterThan(base.righe[0]!.probabilita);
+    expect(base.terreSenzaMana).toBeGreaterThan(0);
+    expect(senza.terreSenzaMana).toBe(0);
+  });
+
+  it("le terre che non fanno mana hanno un tetto più stretto delle altre", () => {
+    const base = analizzaBaseDiTerre(
+      [{ carta: magia("Parapetto", "{1}{W}", 2, ["previene-il-danno"]), copie: 38 }],
+      TERRE_FINTE,
+      opzioni,
+    );
+
+    expect(base.terreSenzaMana).toBeLessThanOrEqual(TERRE_SENZA_MANA_MASSIME);
+    expect(base.terreDiUtilita).toBeLessThanOrEqual(TERRE_DI_UTILITA_MASSIME);
   });
 });

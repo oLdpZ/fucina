@@ -183,11 +183,15 @@ function pagaCosto(
   const spese = new Set<number>();
   for (let t = 0; t < abbinata.length; t++) if (abbinata[t] !== null) spese.add(t);
 
-  // Il generico lo paga qualunque terra: si spendono per prime le meno
-  // flessibili, così quelle che fanno più colori restano per le magie dopo.
+  // Il generico lo paga qualunque terra **che faccia mana**: si spendono per
+  // prime le meno flessibili, così quelle che fanno più colori restano per le
+  // magie dopo. Una terra che non fa mana affatto — su questo formato ce ne
+  // sono, ed entrano nel mazzo come terre di utilità (`base-di-terre.ts`) — non
+  // paga niente, né colorato né generico: contarla pagherebbe magie che in
+  // partita restano in mano.
   const libere = disponibili
     .map((produce, indice) => ({ produce, indice }))
-    .filter(({ indice }) => !spese.has(indice))
+    .filter(({ produce, indice }) => produce.length > 0 && !spese.has(indice))
     .sort((a, b) => a.produce.length - b.produce.length || a.indice - b.indice);
 
   if (libere.length < scheda.generico) return null;
@@ -241,11 +245,36 @@ function magieLanciabili(mano: readonly Scheda[], fonti: readonly Fonte[], turno
   return lanciate;
 }
 
-/** Le carte da mettere sotto dopo un mulligan: prima le terre in più, poi le magie più care. */
+/**
+ * Una **fonte**: una terra che il mana lo fa davvero.
+ *
+ * Non tutte le terre lo sono. Su questo formato ce ne sono che non producono
+ * niente, e dal ticket 08 entrano nei mazzi come terre di utilità: sono carte
+ * che si calano al proprio turno e che non pagano nessuna magia. Le due regole
+ * qui sotto — quale mano si tiene, e che cosa va sotto — contano le fonti e non
+ * le terre, se no una mano di tre carte che non lancia niente risulterebbe una
+ * mano tenibile.
+ */
+function eUnaFonte(scheda: Scheda): boolean {
+  return scheda.terra !== null && scheda.terra.produce.length > 0;
+}
+
+/**
+ * Le carte da mettere sotto dopo un mulligan: prima le fonti in più, poi le
+ * magie più care, e le fonti che servono per ultime.
+ *
+ * Le terre che mana non ne fanno stanno **con l'eccesso**, non con le fonti da
+ * salvare: non aiutano a lanciare niente, e tenerle al posto di una magia
+ * sarebbe la scelta peggiore che si possa fare con una mano da cinque carte.
+ */
 function daMettereSotto(mano: readonly Scheda[], quante: number): Set<number> {
-  const terre = mano
+  const fonti = mano
     .map((scheda, indice) => ({ scheda, indice }))
-    .filter(({ scheda }) => scheda.terra !== null)
+    .filter(({ scheda }) => eUnaFonte(scheda))
+    .map(({ indice }) => indice);
+  const inerti = mano
+    .map((scheda, indice) => ({ scheda, indice }))
+    .filter(({ scheda }) => scheda.terra !== null && !eUnaFonte(scheda))
     .map(({ indice }) => indice);
   const magie = mano
     .map((scheda, indice) => ({ scheda, indice }))
@@ -257,15 +286,26 @@ function daMettereSotto(mano: readonly Scheda[], quante: number): Set<number> {
     )
     .map(({ indice }) => indice);
 
-  const eccessoDiTerre = terre.slice(TERRE_VOLUTE_IN_MANO).reverse();
-  const ordine = [...eccessoDiTerre, ...magie, ...terre.slice(0, TERRE_VOLUTE_IN_MANO)];
+  const eccessoDiFonti = fonti.slice(TERRE_VOLUTE_IN_MANO).reverse();
+  const ordine = [
+    ...inerti,
+    ...eccessoDiFonti,
+    ...magie,
+    ...fonti.slice(0, TERRE_VOLUTE_IN_MANO),
+  ];
   return new Set(ordine.slice(0, quante));
 }
 
-/** La regola di mulligan, tutta qui: si guardano le terre e nient'altro. */
+/**
+ * La regola di mulligan, tutta qui: si guardano le **fonti** e nient'altro.
+ *
+ * Fonti e non terre: una mano di tre terre che non fanno mana non è una mano da
+ * tenere, ed è la sola lettura che non promette a chi legge una partenza che in
+ * partita non c'è.
+ */
 function manoTenibile(mano: readonly Scheda[]): boolean {
-  const terre = mano.filter((scheda) => scheda.terra !== null).length;
-  return terre >= TERRE_MINIME_IN_MANO && terre <= TERRE_MASSIME_IN_MANO;
+  const fonti = mano.filter(eUnaFonte).length;
+  return fonti >= TERRE_MINIME_IN_MANO && fonti <= TERRE_MASSIME_IN_MANO;
 }
 
 type Partita = {
@@ -396,8 +436,17 @@ function scegliLaTerra(
     }
     const utili = scheda.terra.produce.filter((colore) => coloriChiesti.has(colore)).length;
     // A parità di quel che si lancia oggi si mette giù la terra che entra
-    // girata: costa un turno, e costa meno adesso che dopo.
-    const voto = [mana, forza, scheda.terra.girata ? 1 : 0, utili];
+    // girata: costa un turno, e costa meno adesso che dopo. E, sempre a parità,
+    // una terra che **fa mana** prima di una che non ne fa: al primo turno non
+    // si lancia niente comunque, e chi cala lì la terra di utilità si toglie un
+    // mana per tutta la partita.
+    const voto = [
+      mana,
+      forza,
+      scheda.terra.girata ? 1 : 0,
+      scheda.terra.produce.length > 0 ? 1 : 0,
+      utili,
+    ];
 
     if (scelta === null || confronta(voto, meglio) > 0) {
       scelta = i;

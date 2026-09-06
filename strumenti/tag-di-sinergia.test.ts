@@ -179,6 +179,25 @@ describe("le regole meccaniche", () => {
     ).toEqual([]);
   });
 
+  it("né la carta che l'attraversamento lo toglie", () => {
+    // Sono le terre leggendarie del pool — Hammerheim, Urborg, Tolaria — e la
+    // regola le prendeva tutte, perché cercava `landwalk` dovunque nel testo.
+    // Dal ticket 08 non è un difetto cosmetico: i tag scelgono le terre di
+    // utilità che entrano nel mazzo, e un mazzo di creature che passano si
+    // sarebbe preso quattro copie della terra che serve a fermarle.
+    expect(tag("{T}: Target creature loses all landwalk abilities until end of turn.")).toEqual([]);
+    expect(
+      tag("{T}: Target creature loses first strike and all landwalk abilities until end of turn."),
+    ).toEqual([]);
+    // E la parola chiave nuda, che è quel che la regola deve continuare a
+    // prendere: a inizio riga, o data da un «has».
+    expect(tag("Mountainwalk")).toEqual(["evasione"]);
+    expect(tag("Enchant creature\nEnchanted creature has islandwalk.")).toEqual([
+      "potenzia",
+      "evasione",
+    ]);
+  });
+
   it("non chiama prigione la carta che il difetto ce l'ha addosso", () => {
     // Mana Vault non imbriglia nessuno: paga il proprio costo.
     expect(tag("This artifact doesn't untap during your untap step.\n{T}: Add {C}{C}{C}.")).toEqual(
