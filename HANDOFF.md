@@ -557,6 +557,10 @@ index.html               guscio della pagina
 src/identita.ts          il nome dell'app: il solo punto in cui cambiarlo
 src/dati/pool.ts         la forma del pool: solo tipi, nessun peso a runtime
 src/dati/carica-pool.ts  la lettura del pool e la data dei dati, in italiano
+src/dati/formato.ts      la forma del documento di formato: solo tipi
+src/dati/carica-formato.ts la lettura del documento di formato, le voci ancora
+                         da confermare, e il controllo che i nomi di carta che
+                         nomina esistano davvero
 src/dati/aggiornamento.ts quale pool si apre e cosa si fa di quel che arriva
 src/dati/deposito.ts     IndexedDB: il pool fresco tenuto sul dispositivo,
                          e nessuna funzione che possa fallire rumorosamente
@@ -625,6 +629,9 @@ src/stili/costruzione.css lo stile del tasto che costruisce, del suo esito e
                          della striscia dei mazzi affiancati
 src/stili/combo.css      lo stile del riquadro della combo dichiarata
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
+public/dati/formato.json il documento di formato: l'opposto del pool — lo
+                         scrive una persona, si corregge a mano, e nessun
+                         comando lo rigenera (ADR-0004)
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano
 strumenti/correzioni-tag.txt le correzioni a mano: file dell'uomo, mai riscritto

@@ -168,6 +168,52 @@ formato limiterà una carta a una copia, cambierà quel numero e nient'altro.
 
 ---
 
+## Formato
+
+**Il documento di dati che dice quale gioco si sta giocando**, e non il concetto
+vago di «formato».
+
+Sta in `public/dati/formato.json`, lo scrive una persona a mano ed entra in git.
+Contiene il nome del formato, la data e la fonte da cui la lista è stata presa,
+il criterio del pool, le edizioni ammesse per codice, le carte limitate a una
+copia e le carte bandite — ognuna col proprio **perché** scritto a parole, e con
+il segno della **divergenza** dove il gruppo si scosta dal regolamento
+pubblicato di riferimento.
+
+È l'opposto del pool, che è prodotto di compilazione: questo si apre e si
+corregge una riga per volta, senza toccare il codice. Il perché sta in
+[ADR-0004](docs/adr/0004-nessuna-verita-di-formato-nel-sorgente.md).
+
+Le voci ancora non confermate col gruppo portano scritta **la domanda da
+fargli**: un dato incerto dichiarato incerto è un dato; scritto senza dirlo è un
+errore che aspetta.
+
+---
+
+## Criterio del pool
+
+**La regola che decide quali carte esistono**, contrapposta all'elenco.
+
+Il formato non dice «queste ottocento carte»: dice «le carte che esistono
+stampate in italiano dentro queste edizioni». È una regola, e vale anche per le
+carte che nessuno ha ancora guardato. Il codice sa eseguire i criteri, il
+documento sceglie quale vale.
+
+---
+
+## Stampa
+
+**La carta e la sua edizione sono due cose diverse.** In Standard non serviva mai
+distinguerle; qui la distinzione è dappertutto, perché il criterio guarda la
+stampa **italiana** e quel che si mostra e si prezza viene dalla stampa
+**inglese** più economica fra quelle ammesse.
+
+Il conto di quali carte esistono si fa sempre **per nome** e mai per stampa:
+sottrarre insiemi di stampe dà risposte sbagliate, perché la stampa di
+un'edizione non è la stampa di un'altra anche quando la carta è la stessa.
+
+---
+
 ## Parole che questo progetto non usa
 
 - **«tier», «competitivo», «buono»** per dire potenza. La potenza qui ha

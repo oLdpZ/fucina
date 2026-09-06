@@ -1,0 +1,168 @@
+{
+  "nome": "Old School · stampe italiane",
+  "daConfermare": "Come si chiama questo formato nel gruppo, ed esiste un regolamento scritto? Il nome qui sotto è una descrizione, non il nome che si usa al tavolo.",
+  "aggiornatoIl": "2026-09-06",
+  "fonte": "Il gruppo del destinatario dell'app, riferito a voce. Non esiste un regolamento scritto del gruppo: è una delle voci da confermare.",
+  "regolamentoDiRiferimento": "Old School 93/94, Eternal Central — https://www.eternalcentral.com/9394rules/ — letto il 2026-09-06. Non è la fonte di questo documento: è il metro rispetto a cui si dichiarano le divergenze.",
+
+  "criterio": {
+    "regola": "stampa-italiana",
+    "descrizione": "Una carta è nel formato se esiste una sua stampa in italiano dentro le edizioni ammesse. Il conto è per nome e mai per stampa: la stampa di un'edizione non è la stampa di un'altra anche quando la carta è la stessa.",
+    "daConfermare": "Il gruppo intende «le carte esistenti in stampa italiana» (una regola) o «proprio quelle edizioni e basta» (un elenco)? Se è la seconda, questa riga diventa «solo-edizioni» e il pool cambia."
+  },
+
+  "edizioni": [
+    {
+      "codice": "fbb",
+      "nome": "Terza edizione a bordo nero, italiana",
+      "perché": "È la Terza edizione stampata in italiano, e la porta d'ingresso del formato: la maggior parte delle carte giocate viene di qui.",
+      "daConfermare": null
+    },
+    {
+      "codice": "4ed",
+      "nome": "Quarta edizione, italiana",
+      "perché": "Stampata in italiano e dentro l'era per il gruppo. Porta in italiano carte che le altre quattro non hanno.",
+      "daConfermare": null
+    },
+    {
+      "codice": "leg",
+      "nome": "Leggende",
+      "perché": "Uscita in italiano col proprio nome, ed è l'espansione che dà al formato le sue carte più caratteristiche.",
+      "daConfermare": null
+    },
+    {
+      "codice": "drk",
+      "nome": "L'Oscurità",
+      "perché": "Uscita in italiano col proprio nome, ed è l'ultima espansione dell'era.",
+      "daConfermare": null
+    },
+    {
+      "codice": "rin",
+      "nome": "Rinascimento",
+      "perché": "È l'unico modo in cui Arabian Nights e Antiquities esistono in italiano: 69 carte, di cui 26 nomi che le altre quattro edizioni non hanno.",
+      "daConfermare": "Rinascimento è dentro? Porta City of Brass, Erhnam Djinn, Ashnod's Altar e le tre terre di Urza, cioè cambia il formato più di quanto il numero di carte lasci pensare."
+    }
+  ],
+
+  "limitate": {
+    "perché": "Le carte che il gruppo tiene a una copia. Una carta limitata non è una carta bandita: si gioca, e il motore la mette in mazzo — una volta sola, perché il tetto di copie glielo dice il pool e non una regola del codice.",
+    "daConfermare": "Questo elenco NON è ancora la lista del gruppo. Le diciassette carte che il gruppo limita non sono mai state scritte da nessuna parte: quelle qui sotto sono le limitate del regolamento di riferimento che in questo pool esistono davvero, più Blood Moon, che sappiamo essere limitata dal gruppo. Quando la lista arriva, si sostituisce questo elenco e si cancella questa riga.",
+    "carte": [
+      {
+        "carta": "Balance",
+        "perché": "Rimette in pari il tavolo per un mana e mezzo, e chi la gioca sceglie il momento in cui è indietro.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Blood Moon",
+        "perché": "In un pool dove trentadue terre su trentasette non sono base, spegne mezzo formato da sola.",
+        "divergenza": "Il regolamento di riferimento non la limita. È una limitata del gruppo, e la ragione è il pool solo-italiano: senza le terre duali di Alpha, chi resta senza terre non base resta senza mazzo.",
+        "daConfermare": null
+      },
+      {
+        "carta": "Braingeyser",
+        "perché": "Pesca senza tetto, ed è il modo in cui una partita lunga finisce senza combattere.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Channel",
+        "perché": "Trasforma i punti vita in mana e salta l'era: qualunque cosa costi, si gioca al primo turno.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Demonic Tutor",
+        "perché": "Due mana per la carta che serve: rende ogni singola copia di una limitata una copia e mezza.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Mana Drain",
+        "perché": "Contromagia che paga il turno dopo. Non c'è un'altra carta del formato che faccia le due cose insieme.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Mind Twist",
+        "perché": "Con abbastanza mana toglie la mano intera, e la partita finisce senza che si giochi.",
+        "divergenza": null,
+        "daConfermare": "Manca dalla lista del gruppo, ma è in Terza e in Quarta ed è limitata in ogni regolamento pubblicato. Dimenticanza o scelta?"
+      },
+      {
+        "carta": "Recall",
+        "perché": "Riprende dal cimitero tutto quel che si è speso, comprese le altre limitate.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Regrowth",
+        "perché": "Due mana per rigiocare la carta più forte già giocata: è una seconda copia di ogni limitata.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Sol Ring",
+        "perché": "Un mana per due, dal primo turno, in qualunque colore. È l'artefatto che decide più partite di ogni altra carta del formato.",
+        "divergenza": null,
+        "daConfermare": null
+      }
+    ]
+  },
+
+  "bandite": {
+    "perché": "Carte che nel formato non si giocano affatto, e che non entrano nemmeno nel catalogo. Si scrivono per nome anche dove una regola basterebbe: sette delle otto sono le carte che si giocano per la posta, e una regola come fonte banderebbe in silenzio la prima carta che nomina la posta per un altro motivo. Le carte con la posta in tutto Magic sono nove: le due che qui non compaiono — Amulet of Quoz e Timmerian Fiends — stanno in un'edizione fuori dal formato. Rebirth e Tempest Efreet sono due delle sette, e non due aggiunte.",
+    "daConfermare": null,
+    "carte": [
+      {
+        "carta": "Bronze Tablet",
+        "perché": "Si gioca per la posta: chiede di scommettere una carta vera prima ancora di essere giocata.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Contract from Below",
+        "perché": "Si gioca per la posta.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Darkpact",
+        "perché": "Si gioca per la posta.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Demonic Attorney",
+        "perché": "Si gioca per la posta.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Falling Star",
+        "perché": "Si gioca lanciando la carta sul tavolo: quel che fa dipende da come cade, e non da una regola che un'app possa simulare.",
+        "divergenza": "Il regolamento di riferimento non la bandisce: le dà un'errata che la rende giocabile al tavolo. Il gruppo la bandisce e basta.",
+        "daConfermare": null
+      },
+      {
+        "carta": "Jeweled Bird",
+        "perché": "Si gioca per la posta.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Rebirth",
+        "perché": "Si gioca per la posta.",
+        "divergenza": null,
+        "daConfermare": null
+      },
+      {
+        "carta": "Tempest Efreet",
+        "perché": "Si gioca per la posta.",
+        "divergenza": null,
+        "daConfermare": null
+      }
+    ]
+  }
+}

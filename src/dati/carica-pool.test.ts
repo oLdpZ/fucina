@@ -52,6 +52,21 @@ describe("lettura del pool", () => {
     expect(pool.carte.map((c) => c.tagScryfall)).toEqual([[], []]);
   });
 
+  it("guarda il tetto carta per carta, e non solo sulla prima", () => {
+    // Un pool a cui il campo manca **in mezzo** passerebbe intero se lo si
+    // decidesse dalla prima carta, e quelle carte resterebbero senza tetto —
+    // che `copieMassime` legge come «nessun tetto», cioè sessanta copie.
+    const pool = interpretaPool({
+      generatoIl: "2026-09-02T09:05:48.145+00:00",
+      carte: [
+        { nome: "Goblin Chieftain", testo: "", tipi: ["Creature"], tettoDiCopie: COPIE_MASSIME },
+        { nome: "Negate", testo: "", tipi: ["Instant"] },
+      ],
+    });
+
+    expect(pool.carte.map((c) => c.tettoDiCopie)).toEqual([COPIE_MASSIME, COPIE_MASSIME]);
+  });
+
   it("dà un tetto di copie alle carte di un pool scritto prima che fosse un dato", () => {
     // Un pool conservato sul dispositivo da una versione precedente dell'app
     // non ha il campo, e all'apertura vince su quello incluso se è più fresco

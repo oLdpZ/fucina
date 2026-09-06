@@ -17,8 +17,15 @@ const colori = coloriDelTema(qui("./src/stili/tema.css"), DIREZIONE_VISIVA) as R
 
 type Risorsa = { nome: string; tipo: string; contenuto: Buffer | string };
 
-/** Il pool delle carte, scritto da `npm run dati` e copiato da `public/`. */
-const POOL_INCLUSO = "dati/pool.json";
+/**
+ * I due file di dati inclusi nell'app, copiati da `public/`.
+ *
+ * Sono di due razze opposte e stanno nella stessa riga per una ragione sola:
+ * senza rete l'app deve avere in mano tutti e due. Il **pool** lo scrive
+ * `npm run dati` e non si tocca a mano; il **documento di formato** lo scrive
+ * una persona (ADR-0004) e non lo genera nessun comando.
+ */
+const DATI_INCLUSI = ["dati/pool.json", "dati/formato.json"];
 
 /**
  * Manifest, icone e service worker.
@@ -108,9 +115,10 @@ function pwa(): Plugin {
           "./",
           ...Object.keys(bundle),
           ...risorse.map((risorsa) => risorsa.nome),
-          // Il pool sta in `public/`, che Vite copia fuori dal bundle: senza
-          // nominarlo qui l'app resterebbe senza carte al primo uso senza rete.
-          POOL_INCLUSO,
+          // I dati stanno in `public/`, che Vite copia fuori dal bundle: senza
+          // nominarli qui l'app resterebbe senza carte — e senza sapere che
+          // formato gioca — al primo uso senza rete.
+          ...DATI_INCLUSI,
         ]),
       ]
         // Le icone grandi non servono all'apertura: le scarica il sistema.
@@ -121,14 +129,16 @@ function pwa(): Plugin {
       // La versione della cache cambia quando cambia una qualunque risorsa:
       // così il service worker vecchio non serve un guscio misto.
       //
-      // Il pool entra nell'impronta col suo contenuto e non col suo nome, che
-      // non cambia mai: un aggiornamento dei bandi tocca solo quel file, e
-      // senza questo l'app installata continuerebbe a servire il pool vecchio
+      // I dati entrano nell'impronta col loro contenuto e non col loro nome,
+      // che non cambia mai: un aggiornamento dei bandi tocca solo quei file, e
+      // senza questo l'app installata continuerebbe a servire i dati vecchi
       // per sempre — cioè carte bandite, in silenzio.
       const impronta = somma(
         daMettereInCache.join("|") +
           JSON.stringify(Object.keys(bundle)) +
-          somma(readFileSync(qui(`./public/${POOL_INCLUSO}`), "utf8")),
+          DATI_INCLUSI.map((nome) => somma(readFileSync(qui(`./public/${nome}`), "utf8"))).join(
+            "|",
+          ),
       );
 
       const sorgente = readFileSync(qui("./src/sw.js"), "utf8")

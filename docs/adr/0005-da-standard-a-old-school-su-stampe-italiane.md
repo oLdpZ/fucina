@@ -33,9 +33,20 @@ sorpresa.
 - Il **nome italiano** esiste per tutte e 786. L'**immagine** italiana manca per
   **98** (80 dalla Quarta, 18 da FBB). Il **testo di regole** in italiano **non
   esiste**: è popolato su 7 stampe su 1182.
-- Le **bandite sono 7, non 12**: le sei carte con la posta dentro queste edizioni,
-  più Falling Star. Rebirth e Tempest Efreet *sono* due delle sei — la formula
-  corrente «le carte con la posta più Rebirth e Tempest Efreet» si semplifica.
+- Le **bandite sono 8, non 12**: le sette carte con la posta dentro queste
+  edizioni, più Falling Star. Rebirth e Tempest Efreet *sono* due delle sette —
+  la formula corrente «le carte con la posta più Rebirth e Tempest Efreet» si
+  semplifica.
+
+  > **Corretto il 2026-09-06, scrivendo il documento di formato (ticket 04).**
+  > Questa riga diceva «7, non 12» e «le sei carte con la posta». Le carte con
+  > la posta sono **nove** in tutto Magic, e le due che restano fuori — Amulet
+  > of Quoz e Timmerian Fiends — stanno in un'edizione fuori dal formato: nove
+  > meno due fa **sette**, non sei. Con Falling Star le bandite sono **otto**.
+  > Rimisurato su Scryfall con `oracle:"for ante"`; il conto precedente era
+  > stato fatto con `o:ante`, che è la trappola dichiarata qui sotto e pesca 83
+  > carte per via di «ench**ante**d». Il numero sopra è quello giusto; questa
+  > nota resta perché sapere **come** si era sbagliato vale più del numero.
 - Le **limitate sono 18**: le diciassette del gruppo più **Mind Twist**, che manca
   dalla sua lista ed è limitata in ogni regolamento pubblicato (è una delle
   quattro voci da confermare).

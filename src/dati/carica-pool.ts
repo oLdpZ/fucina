@@ -65,26 +65,30 @@ export function interpretaPool(dati: unknown): Pool {
   // pool a cui nessun formato aveva ancora messo mano. Senza questo rattoppo
   // un tetto assente varrebbe «nessun tetto», e l'app costruirebbe in silenzio
   // mazzi con sessanta copie della stessa carta.
+  // Il tetto si guarda **carta per carta** e non sulla prima: un pool a cui
+  // manca il campo solo in mezzo passerebbe intero, e quelle carte resterebbero
+  // con `undefined`, che `copieMassime` legge come «nessun tetto». Sarebbe
+  // esattamente il guasto che questo rattoppo esiste per impedire, e in più
+  // silenzioso: il tipo dice `number | null`, quindi nessuno lo vedrebbe.
   const senzaTag = !Array.isArray(registroTagScryfall);
-  const senzaTetto = (carte as Carta[])[0]?.tettoDiCopie === undefined;
 
   return {
     generatoIl,
     registroTagScryfall: senzaTag ? [] : (registroTagScryfall as TagDiScryfall[]),
-    carte:
-      senzaTag || senzaTetto
-        ? (carte as Carta[]).map((carta) => ({
-            ...carta,
-            ...(senzaTag ? { tagScryfall: [] } : {}),
-            // Testo e tipi si prendono col beneficio del dubbio: rattoppare un
-            // pool di ieri vuol dire anche non cadere su un campo che quel pool
-            // non aveva. Una carta senza testo e senza tipi prende il tetto di
-            // tutti, che è la risposta giusta per quel che se ne sa.
-            ...(senzaTetto
-              ? { tettoDiCopie: leggiTettoDiCopie(carta.testo ?? "", carta.tipi ?? []) }
-              : {}),
-          }))
-        : (carte as Carta[]),
+    carte: (carte as Carta[]).map((carta) => {
+      if (!senzaTag && carta.tettoDiCopie !== undefined) return carta;
+      return {
+        ...carta,
+        ...(senzaTag ? { tagScryfall: [] } : {}),
+        // Testo e tipi si prendono col beneficio del dubbio: rattoppare un pool
+        // di ieri vuol dire anche non cadere su un campo che quel pool non
+        // aveva. Una carta senza testo e senza tipi prende il tetto di tutti,
+        // che è la risposta giusta per quel che se ne sa.
+        ...(carta.tettoDiCopie === undefined
+          ? { tettoDiCopie: leggiTettoDiCopie(carta.testo ?? "", carta.tipi ?? []) }
+          : {}),
+      };
+    }),
   };
 }
 

@@ -82,15 +82,16 @@ contengono:
 - le carte del 1994 **non cambiano**. Non c'è rotazione, non c'è annuncio bandi
   trimestrale, non c'è un set nuovo ogni tre mesi. La verità che invecchia è
   quella del gruppo, e cambia quando il gruppo decide;
-- la verità che invecchia è **corta**: sette bandite, diciotto limitate, cinque
+- la verità che invecchia è **corta**: otto bandite (sette al momento di
+  scrivere questa riga, corrette al ticket 04), diciotto limitate, cinque
   edizioni. Chiunque la verifica in dieci secondi, e questo era falso per le
   tredici bandite dello Standard in mezzo a 4.886 carte;
 - il documento porta **data e fonte**, così fra un anno si sa a che cosa si
   riferiva.
 
-**Le bandite si scrivono per nome anche dove una regola basterebbe.** Sei delle
-sette sono descrivibili — *le carte che menzionano la posta* — ma la regola vive
-nel campo `perché` accanto alla riga, non al posto della riga. Sette righe si
+**Le bandite si scrivono per nome anche dove una regola basterebbe.** Sette
+delle otto sono descrivibili — *le carte che menzionano la posta* — ma la regola
+vive nel campo `perché` accanto alla riga, non al posto della riga. Otto righe si
 verificano a occhio; una regola come fonte banderebbe in silenzio la prima carta
 che nomina la posta per un altro motivo. La regola resta utile come
 **verifica**: il comando di preparazione può segnalare le carte con quella
