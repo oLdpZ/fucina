@@ -110,3 +110,84 @@ nessun abbonamento, nessun link d'acquisto remunerato.
   `https://oldpz.github.io/fucina/`.
 - **La direzione visiva**: quattro candidate disegnate, la scelta è dell'utente.
 - Nessuna scadenza dichiarata.
+
+## 7. Il cambio di formato del 6 settembre 2026
+
+Il destinatario non gioca in Standard. Gioca **Old School**: le quattro edizioni del
+1994 più Rinascimento, una lista di limitate e bandite decisa dal suo gruppo, e
+le carte **stampate in italiano**. Q5 dice che quest'app è uno strumento per lui, e
+un'app che costruisce mazzi per un formato che il suo unico utente non gioca
+vale zero. Il formato cambia.
+
+Il perché per esteso, coi numeri verificati, sta in
+[ADR-0005](docs/adr/0005-da-standard-a-old-school-su-stampe-italiane.md); il
+vincolo della legalità riformulato sta in
+[ADR-0004](docs/adr/0004-nessuna-verita-di-formato-nel-sorgente.md).
+
+**Da qui in su questo documento non si riscrive**, e il titolo dice ancora
+«Standard» apposta. Le sezioni da 1 a 6 sono il verbale del 2 settembre: il
+ragionamento che ha portato fin qui è la cosa di più valore che contengono, e
+riscriverlo per farlo tornare vorrebbe dire perdere le ragioni insieme alle
+conclusioni. Questa sezione è la correzione, e vince sulle precedenti dove le
+contraddice.
+
+### Quel che non si muove
+
+Il **fulcro** — il tasso di cambio fra tema e potenza, reso visibile dalla
+frontiera — e con lui Q3, Q8, Q14, Q26. I cinque **vincoli non negoziabili** di
+`CLAUDE.md`, di cui uno riformulato nella lettera e non nella sostanza
+(ADR-0004). Il **percorso** di §4: la tappa 3 è già implementata e va rimessa in
+piedi sul pool nuovo, non riprogettata. Le **note legali** di §5, e con loro la
+condizione che le rende valide: l'app resta gratuita.
+
+### Le decisioni che decadono
+
+| # | Che cosa cade | Che cosa resta |
+|---|---|---|
+| **Q1** | *Standard*. Il pool è **Old School su stampe italiane**: 786 nomi in cinque edizioni, 7 bandite, 18 limitate | *Formato unico*. L'app non impara a gestirne due: lo Standard esce e non torna |
+| **Q10** | I 5-8 mazzi di riferimento sono Standard e **si buttano**. Si riparte da cinque o sei archetipi classici, riscritti sul pool solo-italiano e non copiati dalle liste storiche, che girano su carte che qui non esistono | Che l'app conosca il meta come **orologi** e ci si confronti (ADR-0002) |
+| **Q31** | Le liste da incollare | Che il meta lo **compili a mano l'utente**: il meta del suo negozio non è il meta di internet, e su questo formato è ancora più vero |
+| **Q29** | L'*ibrido*: che le carte possano cambiare. Il pool si **congela nell'app** — le carte del 1994 non cambiano, non c'è rotazione e non c'è annuncio bandi | L'aggiornamento in sottofondo, **ristretto** a quel che davvero invecchia: il documento di formato e i prezzi. Il codice si semplifica invece di complicarsi, e «degrada bene se abbandonata» (Q27) diventa vero alla lettera: senza rete l'app resta corretta per sempre |
+
+Toccate ma non decadute: **Q9** (il tetto di spesa c'è ancora, ma **parte
+spento**, se no il budget diventerebbe un secondo tasso di cambio accanto al
+solo che la frontiera deve mostrare) e **Q13** (il modello delle sinergie regge
+intero; è il **vocabolario** dei tag che si riscrive invece di ereditarsi,
+perché i tag `synergy-*` coprono otto carte di 786).
+
+### Le decisioni che reggono con una ragione nuova
+
+**Q24 — lingua delle carte: solo inglese.** Regge, e la ragione non è più quella
+di prima. Il formato è **definito** dalle stampe italiane, e sembrerebbe naturale
+mostrarle; ma il nome italiano esiste per tutte e 786, l'**immagine** italiana
+manca per 98 (tutta la Quarta italiana è un segnaposto) e il **testo di regole**
+italiano su Scryfall **non esiste** — 7 stampe su 1182. L'italiano in
+interfaccia significherebbe nome italiano, immagine a volte inglese e testo
+sempre inglese. In più i prezzi disponibili sono quelli delle stampe inglesi:
+mostrando l'inglese, nome e prezzo parlano della stessa carta.
+
+L'italiano entra dove serve davvero — come **chiave di ricerca**: chi scrive
+«Labirinto di Ith» trova *Maze of Ith*, e il pool conserva il nome italiano di
+ogni carta per questo.
+
+**Q7 — giocatore esperto.** Già corretta il 3 settembre (ADR-0001), e su questo
+pool è ancora più vera: ottocento carte del 1994, di cui la maggior parte non ha
+mai visto giocare. La seconda metà della decisione regge dov'era — *ogni scelta
+va motivata a parole* — e diventa il servizio principale, non una cortesia.
+
+**Q4 — nessun motore di regole.** Regge, con la conseguenza già scritta in
+ADR-0002 e in `HANDOFF.md`: la potenza è una misura da aggro, perché la
+simulazione legge di ogni carta quattro cose e mai il testo. Su un pool con 32
+terre non base su 37 e 44 carte a costo zero — cioè un pool che produce combo e
+prigione — quella misura sbaglia più spesso di prima. È la casella aperta più
+grossa del cambio, e non la chiude questa sezione.
+
+**Q27 — degradare bene se abbandonata.** Vedi Q29 qui sopra: da promessa diventa
+un fatto.
+
+### Il rischio, azzerato
+
+Il rischio serio dichiarato in §4 — *che il motore non abbia buon gusto* — si
+scopre guardando le liste che produce. Le liste guardate finora erano Standard.
+La **sosta e prova reale si rifà da capo** su questo pool, e viene **prima** di
+dichiarare finito il lavoro.
