@@ -10,6 +10,7 @@
  */
 
 import type { Carta, Colore, ColoreMana, Tag } from "../dati/pool.js";
+import { leggiTettoDiCopie } from "../mazzo/copie.js";
 
 type Abbozzo = {
   nome: string;
@@ -30,15 +31,17 @@ const GENERATO_IL = "2026-09-02T09:05:48.145+00:00";
 /** Riempie i campi che al test non interessano, per non ripeterli ogni volta. */
 function carta(abbozzo: Abbozzo): Carta {
   const nome = abbozzo.nome;
+  const tipi = abbozzo.tipi ?? ["Creature"];
+  const testo = abbozzo.testo ?? "";
   return {
     id: `finta-${nome.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     nome,
     costoDiMana: abbozzo.costoDiMana ?? "",
     valoreDiMana: abbozzo.valoreDiMana ?? 0,
     identitaDiColore: abbozzo.identitaDiColore ?? [],
-    tipi: abbozzo.tipi ?? ["Creature"],
+    tipi,
     sottotipi: abbozzo.sottotipi ?? [],
-    testo: abbozzo.testo ?? "",
+    testo,
     forza: abbozzo.forza ?? null,
     costituzione: abbozzo.costituzione ?? null,
     immagine: null,
@@ -49,6 +52,9 @@ function carta(abbozzo: Abbozzo): Carta {
     tagScryfall: [],
     facce: null,
     terra: null,
+    // Il tetto lo scrive la stessa regola che lo scrive nel pool vero: un pool
+    // finto che se lo calcolasse a modo suo proverebbe un gioco diverso.
+    tettoDiCopie: leggiTettoDiCopie(testo, tipi),
   };
 }
 

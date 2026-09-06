@@ -1,4 +1,5 @@
 import type { Carta, Colore, ColoreMana, Faccia, Immagine, Pool, Terra } from "../src/dati/pool.ts";
+import { leggiTettoDiCopie } from "../src/mazzo/copie.ts";
 import { applicaCorrezioni, tagMeccanici, type Correzione } from "./tag-di-sinergia.ts";
 import { registroDeiTag, type IndiceTag } from "./tag-di-scryfall.ts";
 
@@ -268,6 +269,10 @@ function riduci(
     tagScryfall: [...(tag?.perCarta.get(grezza.oracle_id ?? "") ?? [])],
     facce: facce.length > 0 ? facce : null,
     terra: tipi.includes("Land") ? leggiTerra(grezza, testo) : null,
+    // Il tetto di copie si cuoce qui, una volta per carta, e da qui in poi è un
+    // dato come il costo di mana: chi costruisce lo legge e non lo ricalcola.
+    // La regola che lo decide è del gioco e vive dove viveva (`mazzo/copie.ts`).
+    tettoDiCopie: leggiTettoDiCopie(testo, tipi),
   };
 
   // I tag si leggono dalla carta già ridotta, non dai dati grezzi: le regole

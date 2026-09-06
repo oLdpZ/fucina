@@ -153,6 +153,21 @@ di entrambe le razze sta in
 
 ---
 
+## Tetto di copie
+
+**Quante copie di una carta un mazzo può contenere**, scritto sulla carta stessa
+dalla preparazione del pool.
+
+Non è «quattro tranne eccezioni»: è un numero che la carta porta con sé, e
+`null` quando tetto non ce n'è — le terre base, e le carte che si concedono il
+permesso nel proprio testo.
+
+Sta nel pool e non in una funzione del motore perché è così che chi costruisce
+un mazzo non ha bisogno di conoscere il formato: legge un numero. Quando un
+formato limiterà una carta a una copia, cambierà quel numero e nient'altro.
+
+---
+
 ## Parole che questo progetto non usa
 
 - **«tier», «competitivo», «buono»** per dire potenza. La potenza qui ha

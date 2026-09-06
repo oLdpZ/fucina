@@ -153,6 +153,20 @@ export type Carta = {
   facce: Faccia[] | null;
   /** Presente solo se la carta è una terra. */
   terra: Terra | null;
+  /**
+   * Quante copie di questa carta un mazzo può contenere: **un dato della
+   * carta**, scritto dalla preparazione, non un conto che chi costruisce rifà.
+   *
+   * `null` vuol dire *senza tetto*, ed è lo stato di due specie di carte: le
+   * terre base, che il gioco non limita, e quelle che si concedono il permesso
+   * nel proprio testo. Nel JSON `null` è anche l'unico modo onesto di scrivere
+   * «nessun limite»: `Infinity` non attraversa un file di dati.
+   *
+   * Sta qui e non in una funzione perché è la sola cosa che tiene fuori dal
+   * motore la conoscenza del formato: quando le carte limitate a una copia
+   * esisteranno, cambierà questo numero e nient'altro.
+   */
+  tettoDiCopie: number | null;
 };
 
 export type Pool = {

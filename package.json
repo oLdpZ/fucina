@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:guarda": "vitest",
     "tipi": "tsc --noEmit",
-    "dati": "node strumenti/aggiorna-pool.ts"
+    "dati": "node --import ./strumenti/risolvi-ts.mjs strumenti/aggiorna-pool.ts"
   },
   "engines": {
     "node": ">=22.18"

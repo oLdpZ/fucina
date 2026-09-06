@@ -12,6 +12,7 @@
  * sbagliata.
  */
 
+import { leggiTettoDiCopie } from "../mazzo/copie.js";
 import type { Carta, Pool, TagDiScryfall } from "./pool.js";
 
 /** Dov'è il pool, relativo alla base dell'app: l'app gira anche in sottocartella. */
@@ -46,27 +47,44 @@ export function interpretaPool(dati: unknown): Pool {
     throw new Error("Il pool delle carte è vuoto.");
   }
 
-  // Il registro dei tag di Scryfall è l'unico campo che si può non trovare:
-  // esistono pool scritti prima che i tag della comunità entrassero nel file
-  // (ADR-0003), e un registro che manca vuol dire soltanto nessun tag. Un pool
-  // senza carte è un guasto; un pool senza tag è un pool più povero, e basta.
+  // Due campi si possono non trovare, e sono i due che sono nati dopo il pool.
+  // Non è il controllo carta per carta che questo modulo rifiuta di fare —
+  // quello sarebbe un secondo posto in cui è scritta la forma dei dati — è il
+  // rattoppo di un pool di ieri alla forma di oggi. E i pool di ieri arrivano
+  // per davvero: uno più fresco di quello incluso resta nel deposito del
+  // dispositivo e vince all'apertura (`aggiornamento.ts`), anche quando l'app
+  // attorno è stata nel frattempo aggiornata.
   //
-  // Quando manca, mancherà anche sulle carte, e a quelle si rimette mano: non è
-  // il controllo carta per carta che questo modulo rifiuta di fare — quello
-  // sarebbe un secondo posto in cui è scritta la forma dei dati — è il rattoppo
-  // di un pool di ieri a una forma di oggi, e vale per un campo solo.
-  if (!Array.isArray(registroTagScryfall)) {
-    return {
-      generatoIl,
-      registroTagScryfall: [],
-      carte: (carte as Carta[]).map((carta) => ({ ...carta, tagScryfall: [] })),
-    };
-  }
+  // Il **registro dei tag** di Scryfall manca nei pool scritti prima che i tag
+  // della comunità entrassero nel file (ADR-0003): un registro che manca vuol
+  // dire soltanto nessun tag, e mancherà anche sulle carte.
+  //
+  // Il **tetto di copie** manca nei pool scritti prima che diventasse un dato
+  // della carta. Qui si riscrive con la regola del gioco, che è la stessa che
+  // lo scrive in preparazione: non è un ripiego, è la risposta giusta per un
+  // pool a cui nessun formato aveva ancora messo mano. Senza questo rattoppo
+  // un tetto assente varrebbe «nessun tetto», e l'app costruirebbe in silenzio
+  // mazzi con sessanta copie della stessa carta.
+  const senzaTag = !Array.isArray(registroTagScryfall);
+  const senzaTetto = (carte as Carta[])[0]?.tettoDiCopie === undefined;
 
   return {
     generatoIl,
-    registroTagScryfall: registroTagScryfall as TagDiScryfall[],
-    carte: carte as Carta[],
+    registroTagScryfall: senzaTag ? [] : (registroTagScryfall as TagDiScryfall[]),
+    carte:
+      senzaTag || senzaTetto
+        ? (carte as Carta[]).map((carta) => ({
+            ...carta,
+            ...(senzaTag ? { tagScryfall: [] } : {}),
+            // Testo e tipi si prendono col beneficio del dubbio: rattoppare un
+            // pool di ieri vuol dire anche non cadere su un campo che quel pool
+            // non aveva. Una carta senza testo e senza tipi prende il tetto di
+            // tutti, che è la risposta giusta per quel che se ne sa.
+            ...(senzaTetto
+              ? { tettoDiCopie: leggiTettoDiCopie(carta.testo ?? "", carta.tipi ?? []) }
+              : {}),
+          }))
+        : (carte as Carta[]),
   };
 }
 

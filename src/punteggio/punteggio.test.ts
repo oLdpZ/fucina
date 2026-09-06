@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 import { TERRE_FINTE } from "../catalogo/pool-finto.js";
 import type { Carta, Colore, Tag } from "../dati/pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
+import { leggiTettoDiCopie } from "../mazzo/copie.js";
 import { valutaMazzo, type Punteggio } from "./punteggio.js";
 import {
   CURVA_ATTESA_LENTA,
@@ -63,6 +64,7 @@ function magia(abbozzo: {
     tagScryfall: [],
     facce: null,
     terra: null,
+    tettoDiCopie: leggiTettoDiCopie(abbozzo.testo ?? "", abbozzo.tipi ?? ["Creature"]),
   };
 }
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import type { Carta, Pool } from "../src/dati/pool.ts";
+import { COPIE_MASSIME } from "../src/mazzo/taratura.ts";
 import {
   confrontaPool,
   preparaPool,
@@ -131,6 +132,7 @@ describe("preparazione del pool", () => {
         "tag",
         "tagScryfall",
         "terra",
+        "tettoDiCopie",
         "testo",
         "tipi",
         "valoreDiMana",
@@ -274,6 +276,24 @@ describe("carte a più facce", () => {
     const doppia = carta(preparazione().pool, "Fixture Wanderer // Fixture Revenant");
     expect(doppia.immagine?.normale).toBe("https://immagini/wanderer-normale.jpg");
     expect(doppia.facce?.[1]?.immagine?.normale).toBe("https://immagini/revenant-normale.jpg");
+  });
+});
+
+describe("il tetto di copie", () => {
+  const tetto = (nome: string) => carta(preparazione().pool, nome).tettoDiCopie;
+
+  it("è quattro per una carta qualunque", () => {
+    expect(tetto("Fixture Goblin")).toBe(COPIE_MASSIME);
+  });
+
+  it("non c'è per la carta che se lo concede da sé nel testo", () => {
+    // La frase è quella stampata sulle carte vere; il nome è inventato, perché
+    // il permesso si legge dal testo e mai da un elenco di nomi nel codice.
+    expect(tetto("Fixture Swarm")).toBeNull();
+  });
+
+  it("non c'è per le terre base", () => {
+    expect(tetto("Fixture Plains")).toBeNull();
   });
 });
 

@@ -12,8 +12,9 @@ import { fileURLToPath } from "node:url";
  *
  * Questo gancio riscrive `.js` in `.ts` **solo quando il `.js` non c'è e il
  * `.ts` sì**: nessun file vero viene mai scavalcato. Serve agli strumenti del
- * manutentore che fanno girare il motore fuori dal browser — oggi
- * `apparecchia-la-sosta.ts`.
+ * manutentore che leggono codice di `src/` fuori dal browser: la preparazione
+ * del pool, che da lì prende la regola del tetto di copie, e la sosta, che da
+ * lì fa girare il motore intero.
  *
  *     node --import ./strumenti/risolvi-ts.mjs strumenti/<strumento>.ts
  *

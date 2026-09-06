@@ -166,9 +166,9 @@ export function App() {
   const cambiaCopie = (carta: Carta, delta: number) => {
     setCopiePerNome((prima) => {
       const dopo = new Map(prima);
-      // Il tetto lo dice la carta, non il codice: le poche che portano scritto
-      // «any number of cards named …» non ne hanno, e un mazzo costruito
-      // attorno a una di quelle è proprio il mazzo fuori meta che cerchiamo.
+      // Il tetto lo dice la carta, non il codice: è un dato del pool, e le
+      // poche carte che non ne hanno — quelle col permesso nel testo, le terre
+      // base — fanno proprio i mazzi fuori meta che cerchiamo.
       const tetto = Math.min(copieMassime(carta), DIMENSIONE_MAZZO);
       const quante = Math.max(0, Math.min(tetto, (prima.get(carta.nome) ?? 0) + delta));
       if (quante === 0) dopo.delete(carta.nome);
@@ -203,6 +203,12 @@ export function App() {
     for (const voce of salvato.carte) {
       const carta = perNome.get(voce.nome);
       if (carta === undefined) continue;
+      // Le terre non entrano qui nemmeno da un file: la schermata del mazzo le
+      // ricalcola dalle carte (`mettiInMano`), e una terra in questo elenco
+      // sarebbe una carta che l'app conta, salva ed esporta senza mostrarla
+      // e senza lasciarla togliere. Le terre base non hanno tetto, quindi il
+      // tetto non basta più a limitare i danni: è il posto giusto per dirlo.
+      if (carta.terra !== null) continue;
       const tetto = Math.min(copieMassime(carta), DIMENSIONE_MAZZO);
       copie.set(voce.nome, Math.max(1, Math.min(tetto, voce.copie)));
     }

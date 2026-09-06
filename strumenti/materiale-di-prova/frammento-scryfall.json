@@ -410,5 +410,34 @@
     "games": ["paper"], "digital": false, "rarity": "common",
     "prices": { "usd": null, "eur": null },
     "image_uris": { "small": "https://immagini/pauper-nuova-piccola.jpg", "normal": "https://immagini/pauper-nuova-normale.jpg" }
+  },
+  {
+    "_nota": "Carta che nel testo si concede copie illimitate: il tetto di copie deve uscire senza limite.",
+    "object": "card", "id": "tetto-illimitato", "lang": "en", "layout": "normal",
+    "name": "Fixture Swarm", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "11",
+    "mana_cost": "{1}{G}", "cmc": 2,
+    "type_line": "Creature — Insect",
+    "oracle_text": "A deck can have any number of cards named Fixture Swarm.",
+    "power": "1", "toughness": "1",
+    "colors": ["G"], "color_identity": ["G"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "common",
+    "prices": { "usd": "0.10", "eur": "0.08" },
+    "image_uris": { "small": "https://immagini/swarm-piccola.jpg", "normal": "https://immagini/swarm-normale.jpg" }
+  },
+  {
+    "_nota": "Terra base: il tetto di copie non esiste, perche il gioco non gliene mette uno.",
+    "object": "card", "id": "tetto-terra-base", "lang": "en", "layout": "normal",
+    "name": "Fixture Plains", "released_at": "2026-02-14",
+    "set": "fx2", "collector_number": "250",
+    "mana_cost": "", "cmc": 0,
+    "type_line": "Basic Land — Plains",
+    "oracle_text": "({T}: Add {W}.)",
+    "colors": [], "color_identity": ["W"], "produced_mana": ["W"],
+    "legalities": { "standard": "legal" },
+    "games": ["paper"], "digital": false, "rarity": "common",
+    "prices": { "usd": "0.05", "eur": "0.04" },
+    "image_uris": { "small": "https://immagini/plains-piccola.jpg", "normal": "https://immagini/plains-normale.jpg" }
   }
 ]

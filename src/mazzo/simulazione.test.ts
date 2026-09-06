@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Carta, ColoreMana } from "../dati/pool.js";
 import type { CopieDiCarta } from "./base-di-terre.js";
+import { leggiTettoDiCopie } from "./copie.js";
 import { simulaGoldfish } from "./simulazione.js";
 import { PARTITE_SIMULATE } from "./taratura.js";
 
@@ -45,6 +46,7 @@ function magia(abbozzo: {
     tagScryfall: [],
     facce: null,
     terra: null,
+    tettoDiCopie: leggiTettoDiCopie("", abbozzo.tipi ?? ["Creature"]),
   };
 }
 

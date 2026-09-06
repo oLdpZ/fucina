@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { COPIE_MASSIME } from "../mazzo/taratura.js";
 import { dataInItaliano, interpretaPool } from "./carica-pool.js";
 
 /**
@@ -51,14 +52,40 @@ describe("lettura del pool", () => {
     expect(pool.carte.map((c) => c.tagScryfall)).toEqual([[], []]);
   });
 
-  it("non rimette mano alle carte di un pool che i tag ce li ha già", () => {
+  it("dà un tetto di copie alle carte di un pool scritto prima che fosse un dato", () => {
+    // Un pool conservato sul dispositivo da una versione precedente dell'app
+    // non ha il campo, e all'apertura vince su quello incluso se è più fresco
+    // (`aggiornamento.ts`). Senza rattoppo un tetto assente varrebbe «nessun
+    // tetto», e il mazzo uscirebbe con sessanta copie della stessa carta.
+    const pool = interpretaPool({
+      generatoIl: "2026-09-02T09:05:48.145+00:00",
+      carte: [
+        { nome: "Goblin Chieftain", testo: "Haste.", tipi: ["Creature"] },
+        { nome: "Plains", testo: "({T}: Add {W}.)", tipi: ["Basic", "Land"] },
+        {
+          nome: "Hare Apparent",
+          testo: "A deck can have any number of cards named Hare Apparent.",
+          tipi: ["Creature"],
+        },
+      ],
+    });
+
+    expect(pool.carte.map((c) => c.tettoDiCopie)).toEqual([COPIE_MASSIME, null, null]);
+  });
+
+  it("non rimette mano alle carte di un pool che tetto e tag ce li ha già", () => {
+    const carte = [{ nome: "Negate", tagScryfall: ["counterspell"], tettoDiCopie: 1 }];
     const pool = interpretaPool({
       generatoIl: "2026-09-03T09:05:32.000+00:00",
       registroTagScryfall: [{ id: "9f2c", nome: "counterspell" }],
-      carte: [{ nome: "Negate", tagScryfall: ["counterspell"] }],
+      carte,
     });
 
     expect(pool.carte[0]?.tagScryfall).toEqual(["counterspell"]);
+    // Il tetto scritto nel pool resta quello: è il pool a dire quante copie
+    // stanno in un mazzo, e un uno vale quanto un quattro.
+    expect(pool.carte[0]?.tettoDiCopie).toBe(1);
+    expect(pool.carte[0]).toBe(carte[0]);
   });
 
   it("rifiuta a voce alta un file che non è un pool", () => {

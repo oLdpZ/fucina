@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { TERRE_FINTE } from "../catalogo/pool-finto.js";
 import type { Carta } from "../dati/pool.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "./base-di-terre.js";
+import { leggiTettoDiCopie } from "./copie.js";
 import { PERDITA_MASSIMA_PER_I_COLORI } from "./taratura.js";
 
 /** Una carta non-terra inventata sul momento: conta solo il suo costo. */
@@ -34,6 +35,7 @@ function magia(nome: string, costoDiMana: string, valoreDiMana: number): Carta {
     tagScryfall: [],
     facce: null,
     terra: null,
+    tettoDiCopie: leggiTettoDiCopie("", ["Creature"]),
   };
 }
 

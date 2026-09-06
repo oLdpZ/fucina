@@ -18,6 +18,10 @@ export const DIMENSIONE_MAZZO = 60;
  * Le copie massime di una carta: anche questa è una regola, non una taratura —
  * ma è una regola **con un'eccezione scritta sulle carte stesse**, e
  * l'eccezione si legge dai dati come tutto il resto (`CLAUDE.md`).
+ *
+ * La regola si applica **una volta sola**, in preparazione del pool, e da lì in
+ * poi ogni carta porta scritto il proprio `tettoDiCopie`: chi costruisce legge
+ * quel numero e non torna mai qui (`mazzo/copie.ts`).
  */
 export const COPIE_MASSIME = 4;
 

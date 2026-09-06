@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Carta } from "../src/dati/pool.ts";
+import { leggiTettoDiCopie } from "../src/mazzo/copie.ts";
 import {
   applicaCorrezioni,
   leggiCorrezioni,
@@ -35,6 +36,7 @@ function carta(nome: string, testo: string, tipi: string[] = ["Creature"]): Cart
     tagScryfall: [],
     facce: null,
     terra: null,
+    tettoDiCopie: leggiTettoDiCopie(testo, tipi),
   };
 }
 

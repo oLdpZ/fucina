@@ -18,6 +18,7 @@
  */
 
 import type { Carta, ColoreMana } from "../dati/pool.js";
+import { copieMassime } from "./copie.js";
 import { simboliDiColore } from "./costo.js";
 import { probabilitaDiLanciare, type GruppoDiTerre, type Pip } from "./probabilita.js";
 import {
@@ -287,7 +288,16 @@ function scegliTerre(
     let messe = 0;
     for (const { carta } of candidate) {
       if (messe >= tetto) break;
-      const quante = Math.min(COPIE_MASSIME, tetto - messe, restanti - perRiempire.length);
+      // Quante copie ne stanno lo dice la carta, come dappertutto — ma mai
+      // oltre le quattro, per la stessa ragione per cui non ci va oltre una
+      // partenza della ricerca (`costruisci.ts`): una base fatta di dodici
+      // copie della stessa terra doppia è una base legale che non è una base.
+      const quante = Math.min(
+        copieMassime(carta),
+        COPIE_MASSIME,
+        tetto - messe,
+        restanti - perRiempire.length,
+      );
       if (quante <= 0) break;
       scelte.push({ carta, copie: quante });
       messe += quante;
