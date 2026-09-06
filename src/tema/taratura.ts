@@ -2,10 +2,16 @@
  * Le soglie del tema, tutte in un punto solo e **dichiarate provvisorie**.
  *
  * `spec.md` è esplicito: le soglie di «tema stretto» non si decidono a
- * tavolino, si tarano alla sosta sui dati veri. Il primo mockup diceva
- * quattordici Goblin giocabili in Standard; il pool vero ne conta
- * novantacinque. Un numero scritto qui è un punto di partenza da cui misurare,
- * mai una verità sul gioco.
+ * tavolino, si tarano alla sosta sui dati veri. Un numero scritto qui è un punto
+ * di partenza da cui misurare, mai una verità sul gioco.
+ *
+ * **E qui il punto di partenza è di un altro gioco.** Le soglie sotto sono state
+ * scelte su un pool di quasi cinquemila carte, dove un sottotipo popolare ne
+ * contava un centinaio; questo pool ne ha meno di ottocento in tutto, e i suoi
+ * sottotipi si contano sulle dita. Con ogni probabilità dicono «tema stretto» a
+ * temi che qui sono la norma — il che è esattamente l'errore che il progetto
+ * teme di più, perché scoraggia l'idea prima di provarla. Si rimisurano al
+ * ticket 15, e fino a là vanno lette come sospette.
  *
  * La soglia dell'**impossibile** non è qui, ed è apposta: quella non è una
  * taratura ma un conto: se le copie disponibili non arrivano a riempire i

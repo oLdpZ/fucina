@@ -13,9 +13,15 @@ const COLORI_NOTI = new Set(["W", "U", "B", "R", "G"]);
 
 /**
  * Di che colore si dipinge un simbolo. I simboli ibridi e Phyrexiani si
- * scrivono a pezzi separati da una barra — `{G/U}`, `{2/R}`, `{W/P}` — e in
- * Standard sono centinaia: dipingerli tutti incolori toglierebbe alla pastiglia
- * proprio la cosa per cui esiste. Si prende il primo colore che si riconosce.
+ * scrivono a pezzi separati da una barra — `{G/U}`, `{2/R}`, `{W/P}` — e nel
+ * pool di adesso non ce n'è **nemmeno uno**: sono stati inventati vent'anni
+ * dopo le carte che questo formato gioca.
+ *
+ * La riga resta lo stesso, e non per abbondanza. Il pool è un dato, non un
+ * elenco chiuso scritto qui: il giorno che il documento di formato ammettesse
+ * un'edizione più recente, una carta con la barra arriverebbe senza che nessuno
+ * tocchi questo file, e dipingerla incolore toglierebbe alla pastiglia proprio
+ * la cosa per cui esiste. Si prende il primo colore che si riconosce.
  */
 function coloreDelSimbolo(simbolo: string): string {
   return simbolo.split("/").find((pezzo) => COLORI_NOTI.has(pezzo)) ?? "C";

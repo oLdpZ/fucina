@@ -11,11 +11,16 @@
  * Il turno entro cui una combo dichiarata si considera assemblata. **La
  * taratura numero cinque di questa tappa: si fissa alla sosta.**
  *
- * Cinque è il turno in cui, in Standard, una combo che voglia battere sul tempo
- * il resto del tavolo deve essere in mano: prima non ci sono abbastanza carte
- * viste, dopo la partita l'ha già decisa qualcun altro. È un punto di partenza
- * da cui misurare, non una regola: alla sosta si guardano le probabilità vere
- * che escono dai mazzi veri e questo numero si sposta.
+ * Cinque è il turno entro cui una combo che voglia battere sul tempo il resto
+ * del tavolo deve essere in mano: prima non ci sono abbastanza carte viste,
+ * dopo la partita l'ha già decisa qualcun altro.
+ *
+ * Il numero è stato scelto guardando un altro gioco, e **non è stato rimisurato
+ * su questo**. Qui c'è motivo di aspettarsi che sia sbagliato per eccesso: un
+ * pool con quarantaquattro carte a costo zero accelera in un modo che quel
+ * cinque non conosceva. Resta un punto di partenza da cui misurare, non una
+ * regola: alla sosta (ticket 15) si guardano le probabilità vere che escono dai
+ * mazzi veri e questo numero si sposta.
  *
  * Cambiarlo non cambia **nessun mazzo**: la ricerca non lo guarda — i pezzi
  * dichiarati entrano al massimo delle copie qualunque sia il turno — e sposta

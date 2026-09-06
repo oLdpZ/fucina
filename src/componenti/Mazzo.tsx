@@ -108,7 +108,7 @@ export function Mazzo({
           ) : totale > DIMENSIONE_MAZZO ? (
             <>
               {" "}
-              Un mazzo Standard ne vuole {DIMENSIONE_MAZZO}: qui sono{" "}
+              Un mazzo ne vuole {DIMENSIONE_MAZZO}: qui sono{" "}
               {totale - DIMENSIONE_MAZZO} di troppo.
             </>
           ) : null}

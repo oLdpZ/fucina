@@ -175,6 +175,33 @@ export function sottotipiDiCreatura(carte: readonly Carta[]): VoceSottotipo[] {
 }
 
 /**
+ * Il costo più alto che ha senso chiedere: quello che nel pool esiste davvero.
+ *
+ * Era una costante scritta in un componente, accompagnata da una frase sul
+ * gioco — *«oltre non c'è niente»* — che su un pool diverso è diventata falsa
+ * senza che nessuno se ne accorgesse. È la stessa specie di verità che ADR-0004
+ * tiene fuori dal sorgente, e la cura è quella di sempre: chiederlo alle carte.
+ *
+ * Un pool vuoto non dà zero. Zero come tetto chiuderebbe il campo del costo, e
+ * un campo chiuso è peggio di un campo largo: mentre le carte non sono ancora
+ * arrivate è meglio non restringere affatto che restringere a niente.
+ */
+export function costoPiuAlto(carte: readonly Carta[]): number {
+  let massimo = 0;
+  for (const carta of carte) {
+    if (carta.valoreDiMana > massimo) massimo = carta.valoreDiMana;
+  }
+  return massimo === 0 ? COSTO_SENZA_POOL : massimo;
+}
+
+/**
+ * Quanto si lascia chiedere finché non si sa che carte ci sono. Non descrive
+ * nessun gioco: è un numero grande abbastanza da non stare in mezzo, e vale solo
+ * nell'istante in cui il pool non è ancora stato letto.
+ */
+const COSTO_SENZA_POOL = 20;
+
+/**
  * Come si chiama una carta in una riga sola: «Creatura», «Terra», «Istantaneo».
  *
  * Una carta può avere più tipi (un artefatto che è anche creatura): si sceglie

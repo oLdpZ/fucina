@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { POOL_FINTO } from "./pool-finto.js";
-import { sottotipiDiCreatura, tipiPresenti, tipoPrincipale } from "./vocabolario.js";
+import { costoPiuAlto, sottotipiDiCreatura, tipiPresenti, tipoPrincipale } from "./vocabolario.js";
 
 /**
  * Le voci dei filtri si ricavano **dal pool**, mai da un elenco scritto nel
@@ -69,5 +69,19 @@ describe("come si chiama una carta in una riga", () => {
   it("non chiama una carta col suo supertipo", () => {
     expect(tipoPrincipale(["Legendary", "Creature"])).toBe("Creatura");
     expect(tipoPrincipale(["Basic", "Land"])).toBe("Terra");
+  });
+});
+
+describe("il costo più alto che ha senso chiedere", () => {
+  it("è quello che nel pool esiste davvero", () => {
+    // «Oltre non c'è niente» era una frase sul gioco, scritta come costante. Su
+    // un pool diverso era falsa, e a dirlo non era rimasto nessuno.
+    expect(costoPiuAlto(POOL_FINTO)).toBe(7);
+  });
+
+  it("un pool senza carte non fa un limite di zero", () => {
+    // Zero come tetto chiuderebbe il campo: meglio non restringere affatto che
+    // restringere a niente per un pool che non è ancora arrivato.
+    expect(costoPiuAlto([])).toBeGreaterThan(0);
   });
 });

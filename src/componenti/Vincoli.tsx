@@ -22,6 +22,7 @@ import {
   ORDINE_DEI_COLORI,
   TAG_IN_ORDINE,
   etichettaTag,
+  costoPiuAlto,
   sottotipiDiCreatura,
   tipiPresenti,
   type VoceSottotipo,
@@ -53,9 +54,6 @@ const SOTTOTIPI_IN_VISTA = 8;
 /** Quante carte-seme si propongono mentre si scrive: un pollice ne sceglie fra poche. */
 const SEMI_PROPOSTI = 6;
 
-/** Il costo più alto che ha senso chiedere: oltre, in Standard, non c'è niente. */
-const COSTO_PIU_ALTO = 12;
-
 function commuta<T>(voci: readonly T[], voce: T): T[] {
   return voci.includes(voce) ? voci.filter((v) => v !== voce) : [...voci, voce];
 }
@@ -83,6 +81,10 @@ export function Vincoli({
 
   const tipi = useMemo(() => tipiPresenti(pool.carte), [pool]);
   const sottotipi = useMemo(() => sottotipiDiCreatura(pool.carte), [pool]);
+  // Il tetto del costo sta accanto alle altre voci ricavate dal pool, e per la
+  // stessa ragione: era una costante che diceva una cosa sul gioco, ed è durata
+  // esattamente finché il gioco non è cambiato.
+  const costoMassimoChiedibile = useMemo(() => costoPiuAlto(pool.carte), [pool]);
 
   const dichiarato = temaDichiarato(tema);
   // Il verdetto costa un passaggio sul pool — pochi millisecondi sul pool vero —
@@ -209,6 +211,7 @@ export function Vincoli({
           cambia={(inclusioni) => cambiaTema({ ...tema, inclusioni })}
           tipi={tipi}
           sottotipi={sottotipi}
+          costoPiuAlto={costoMassimoChiedibile}
           conColori
           idElenco="sottotipi-inclusi"
         />
@@ -247,6 +250,7 @@ export function Vincoli({
           cambia={(esclusioni) => cambiaTema({ ...tema, esclusioni })}
           tipi={tipi}
           sottotipi={sottotipi}
+          costoPiuAlto={costoMassimoChiedibile}
           idElenco="sottotipi-esclusi"
         />
       </section>
@@ -293,6 +297,7 @@ function FiltroStrutturato({
   cambia,
   tipi,
   sottotipi,
+  costoPiuAlto,
   conColori = false,
   idElenco,
 }: {
@@ -300,6 +305,8 @@ function FiltroStrutturato({
   cambia: (filtro: FiltroTema) => void;
   tipi: readonly VoceTipo[];
   sottotipi: readonly VoceSottotipo[];
+  /** Quanto si lascia chiedere: lo dicono le carte, non una costante. */
+  costoPiuAlto: number;
   conColori?: boolean;
   idElenco: string;
 }) {
@@ -307,12 +314,21 @@ function FiltroStrutturato({
   // Un sottotipo scelto dall'elenco lungo resta visibile fra i bottoni, o non
   // si potrebbe più togliere senza ricordarsi come si chiamava.
   const scelti = filtro.sottotipi.filter((s) => !inVista.some((vista) => vista.sottotipo === s));
+  // Gli esempi vengono dal pool come le voci, per la ragione di sempre: un
+  // elenco scritto a mano nomina il gioco di quando lo si è scritto, e questo
+  // pool è cambiato da capo a fondo senza che nessuno se ne accorgesse. È la
+  // seconda copia della stessa riga — l'altra sta in `PannelloFiltri.tsx` — e
+  // sono due schermate diverse con lo stesso campo, non una duplicazione da
+  // togliere: quel che devono condividere è la regola, e adesso la condividono.
+  const esempi = sottotipi
+    .slice(SOTTOTIPI_IN_VISTA, SOTTOTIPI_IN_VISTA + 3)
+    .map((voce) => voce.sottotipo);
 
   const costo = (quale: "costoMinimo" | "costoMassimo") => (valore: string) => {
     const numero = Number.parseInt(valore, 10);
     cambia({
       ...filtro,
-      [quale]: Number.isNaN(numero) ? null : Math.max(0, Math.min(COSTO_PIU_ALTO, numero)),
+      [quale]: Number.isNaN(numero) ? null : Math.max(0, Math.min(costoPiuAlto, numero)),
     });
   };
 
@@ -379,7 +395,7 @@ function FiltroStrutturato({
           <input
             type="text"
             list={idElenco}
-            placeholder="Dragon, Elf, Vampire…"
+            placeholder={esempi.length === 0 ? "Il sottotipo che cerchi" : `${esempi.join(", ")}…`}
             // Campo non controllato di proposito, come nel catalogo: il
             // sottotipo scelto diventa un bottone qui sopra e il campo torna
             // vuoto, ma imporgli un valore cancellerebbe quel che si scrive.
@@ -430,7 +446,7 @@ function FiltroStrutturato({
               type="number"
               inputMode="numeric"
               min={0}
-              max={COSTO_PIU_ALTO}
+              max={costoPiuAlto}
               value={filtro.costoMinimo ?? ""}
               onInput={(evento) => costo("costoMinimo")(evento.currentTarget.value)}
             />
@@ -441,7 +457,7 @@ function FiltroStrutturato({
               type="number"
               inputMode="numeric"
               min={0}
-              max={COSTO_PIU_ALTO}
+              max={costoPiuAlto}
               value={filtro.costoMassimo ?? ""}
               onInput={(evento) => costo("costoMassimo")(evento.currentTarget.value)}
             />

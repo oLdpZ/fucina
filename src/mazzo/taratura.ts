@@ -11,7 +11,7 @@
  * ragionevole da cui misurare.
  */
 
-/** Le carte di un mazzo Standard costruito: è una regola, non una taratura. */
+/** Le carte di un mazzo costruito: è una regola del gioco, non una taratura. */
 export const DIMENSIONE_MAZZO = 60;
 
 /**
