@@ -5,12 +5,17 @@ import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { createGunzip } from "node:zlib";
 
+import { interpretaFormato } from "../src/dati/carica-formato.ts";
+import type { Formato } from "../src/dati/formato.ts";
 import type { Pool } from "../src/dati/pool.ts";
 import {
   confrontaPool,
+  contaBuchi,
   interessante,
   preparaPool,
+  raccontaBuchi,
   raccontaDiario,
+  raccontaPosta,
   type CartaScryfall,
 } from "./prepara-pool.ts";
 import { leggiCorrezioni, raccontaCorrezioni } from "./tag-di-sinergia.ts";
@@ -23,27 +28,41 @@ import {
 } from "./tag-di-scryfall.ts";
 
 /**
- * Il comando unico di aggiornamento dei dati (user story 60).
+ * Il comando unico di aggiornamento dei dati (storia 30).
  *
  *     npm run dati
  *
- * Scarica l'archivio completo Scryfall, tiene le sole carte legali in Standard
- * cartaceo, le riduce ai campi che servono, riscrive `public/dati/pool.json` e
- * dice a schermo cosa è cambiato.
+ * Scarica l'archivio completo Scryfall, tiene le sole stampe delle edizioni che
+ * il **documento di formato** ammette, le riduce ai campi che servono, riscrive
+ * `public/dati/pool.json` e dice a schermo cosa è cambiato.
  *
- * Gira sul computer del manutentore, **mai nel browser**. La prossima volta che
- * servirà davvero è il 12 ottobre 2026, annuncio di bandi: se lanciarlo è
- * complicato, l'app è già in debito con Q27. Per questo è un comando solo,
- * senza argomenti obbligatori e senza dipendenze da installare.
+ * Il formato non è scritto qui: si legge da `public/dati/formato.json`, che è
+ * il file che una persona apre e corregge
+ * ([ADR-0004](../docs/adr/0004-nessuna-verita-di-formato-nel-sorgente.md)).
+ * Cambiare una carta limitata e rilanciare questo comando è tutto quel che
+ * serve, e non si tocca una riga di codice (storia 26).
+ *
+ * Gira sul computer del manutentore, **mai nel browser**. Per questo è un
+ * comando solo, senza argomenti obbligatori e senza dipendenze da installare.
  *
  * Con `--da <archivio>` legge un archivio Scryfall già sulla macchina invece
  * di scaricarlo — `.jsonl` o `.jsonl.gz`, col nome che gli dà Scryfall: serve
- * per riprovare senza rifare ottanta megabyte di rete. `--tag <archivio>` fa
- * lo stesso per l'archivio dei tag funzionali, che però pesa un ventesimo: con
- * `--da` da solo i tag si riscaricano, ed è un costo che si può pagare.
+ * per riprovare senza rifare quattrocento megabyte di rete. `--tag <archivio>`
+ * fa lo stesso per l'archivio dei tag funzionali, che però pesa un
+ * sessantesimo: con `--da` da solo i tag si riscaricano, ed è un costo che si
+ * può pagare.
  */
 
-const DESCRITTORE = "https://api.scryfall.com/bulk-data/default-cards";
+/**
+ * L'archivio di **tutte** le carte in **tutte le lingue**.
+ *
+ * Non è quello che bastava allo Standard, ed è cinque volte più pesante. È il
+ * prezzo del criterio: una carta è nel formato se ne esiste una stampa in
+ * italiano, e l'archivio predefinito le stampe non inglesi le tiene solo
+ * quando in inglese la carta non esiste affatto — cioè quasi mai, proprio per
+ * le carte di cui qui si deve decidere.
+ */
+const DESCRITTORE = "https://api.scryfall.com/bulk-data/all-cards";
 
 /**
  * I tag funzionali di **Scryfall Tagger**, la seconda razza di tag
@@ -68,6 +87,12 @@ const qui = (percorso: string) => fileURLToPath(new URL(percorso, import.meta.ur
 const POOL = qui("../public/dati/pool.json");
 
 /**
+ * Il documento di formato: lo stesso file che l'app legge nel browser, letto
+ * qui col medesimo interprete. Un solo posto sa che forma ha.
+ */
+const FORMATO = qui("../public/dati/formato.json");
+
+/**
  * Le correzioni a mano ai tag di sinergia: il file che il manutentore scrive e
  * questo comando non riscrive mai. È lì che le correzioni sopravvivono a un
  * aggiornamento dei dati.
@@ -85,19 +110,31 @@ async function principale(): Promise<void> {
   const daFile = leggiOpzione(argomenti, "--da");
   const daFileTag = leggiOpzione(argomenti, "--tag");
 
-  const { grezze, aggiornatoIl } = daFile
-    ? await daArchivioLocale(daFile)
-    : await daScryfall();
+  // Il formato si legge **per primo**: senza di lui non si sa nemmeno quali
+  // stampe tenere mentre l'archivio scorre, e un errore nel documento deve
+  // fermare il comando prima di quattrocento megabyte di rete, non dopo.
+  const formato = leggiFormato();
+  console.log(
+    `Formato «${formato.nome}», lista del ${formato.aggiornatoIl}: ` +
+      `${formato.edizioni.length} edizioni ammesse ` +
+      `(${formato.edizioni.map((e) => e.codice).join(", ")}), ` +
+      `${formato.limitate.carte.length} limitate, ${formato.bandite.carte.length} bandite.`,
+  );
 
-  console.log(`Trovate ${grezze.length} stampe legali o bandite in Standard cartaceo.`);
+  const { grezze, aggiornatoIl } = daFile
+    ? await daArchivioLocale(daFile, formato)
+    : await daScryfall(formato);
+
+  console.log(`Trovate ${grezze.length} stampe nelle edizioni ammesse.`);
 
   // I tag si chiedono per le carte che abbiamo in mano e non per tutta la
-  // storia di Magic: Tagger copre trent'anni, lo Standard è un anno e mezzo, e
+  // storia di Magic: Tagger copre trent'anni, questo formato ne copre uno, e
   // tenere in memoria il resto non servirebbe a nessuno.
   const tag = await tagFunzionali(daFileTag, oracleIdDelle(grezze));
 
   const lettura = leggiCorrezioni(existsSync(CORREZIONI) ? readFileSync(CORREZIONI, "utf8") : "");
   const preparazione = preparaPool(grezze, {
+    formato,
     aggiornatoIl,
     correzioni: lettura.correzioni,
     tag: tag.indice,
@@ -150,6 +187,20 @@ async function principale(): Promise<void> {
   console.log("");
   console.log(raccontaDiario(confrontaPool(precedente, preparazione)));
   console.log("");
+  console.log(raccontaBuchi(contaBuchi(preparazione.pool)));
+
+  // La verifica della posta, che è una verifica e non una fonte: se il pool ne
+  // contiene una che la lista non nomina, lo si dice e si esce con un codice di
+  // errore, perché una carta da posta rimasta in catalogo non deve passare
+  // inosservata. A bandirla resta una riga da scrivere a mano nel documento.
+  const posta = raccontaPosta(preparazione.postaNonBandita);
+  if (posta !== "") {
+    console.log("");
+    console.log(posta);
+    process.exitCode = 1;
+  }
+
+  console.log("");
   console.log(
     `Scritto ${percorsoLeggibile(POOL)}: ${preparazione.pool.carte.length} carte, ` +
       `dati Scryfall del ${aggiornatoIl}.`,
@@ -158,7 +209,9 @@ async function principale(): Promise<void> {
 }
 
 /** Scarica il descrittore, poi l'archivio, e lo setaccia mentre arriva. */
-async function daScryfall(): Promise<{ grezze: CartaScryfall[]; aggiornatoIl: string }> {
+async function daScryfall(
+  formato: Formato,
+): Promise<{ grezze: CartaScryfall[]; aggiornatoIl: string }> {
   console.log(`Chiedo a Scryfall qual è l'archivio più fresco…`);
   const risposta = await fetch(DESCRITTORE, { headers: INTESTAZIONI });
   if (!risposta.ok) {
@@ -181,7 +234,7 @@ async function daScryfall(): Promise<{ grezze: CartaScryfall[]; aggiornatoIl: st
   return {
     // `tsconfig.json` carica anche i tipi del browser, e lì `ReadableStream` è
     // un altro tipo con lo stesso nome: a runtime è quello di Node ed è giusto.
-    grezze: await setaccia(Readable.fromWeb(scaricato.body as never), true),
+    grezze: await setaccia(Readable.fromWeb(scaricato.body as never), true, formato),
     aggiornatoIl: descrittore.updated_at,
   };
 }
@@ -193,17 +246,16 @@ async function daScryfall(): Promise<{ grezze: CartaScryfall[]; aggiornatoIl: st
  */
 async function daArchivioLocale(
   percorso: string,
+  formato: Formato,
 ): Promise<{ grezze: CartaScryfall[]; aggiornatoIl: string }> {
   // Solo il nome del file, non l'intero percorso: una cartella che si chiama
   // con dei numeri darebbe una data plausibile e falsa, e quella data finisce
   // sul prezzo di ogni carta.
-  const impronta = /default-cards-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(
-    basename(percorso),
-  );
+  const impronta = /-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(basename(percorso));
   if (!impronta) {
     throw new Error(
       `Dal nome «${percorso}» non si legge la data dei dati. ` +
-        `Serve il nome che gli dà Scryfall, tipo default-cards-20260902090548.jsonl.gz`,
+        `Serve il nome che gli dà Scryfall, tipo all-cards-20260906091709.jsonl.gz`,
     );
   }
   const [, anno, mese, giorno, ore, minuti, secondi] = impronta;
@@ -211,7 +263,7 @@ async function daArchivioLocale(
 
   console.log(`Leggo ${percorsoLeggibile(percorso)} (dati del ${aggiornatoIl})…`);
   return {
-    grezze: await setaccia(createReadStream(percorso), percorso.endsWith(".gz")),
+    grezze: await setaccia(createReadStream(percorso), percorso.endsWith(".gz"), formato),
     aggiornatoIl,
   };
 }
@@ -221,8 +273,12 @@ async function daArchivioLocale(
  * scorre: in memoria restano solo le poche migliaia di carte che ci riguardano,
  * e non il mezzo gigabyte dell'archivio intero.
  */
-async function setaccia(sorgente: Readable, compresso: boolean): Promise<CartaScryfall[]> {
-  return raccogli(setacciaFlusso(sorgente, compresso));
+async function setaccia(
+  sorgente: Readable,
+  compresso: boolean,
+  formato: Formato,
+): Promise<CartaScryfall[]> {
+  return raccogli(setacciaFlusso(sorgente, compresso), formato);
 }
 
 /** Il flusso pronto da leggere a righe: decompresso se serve. */
@@ -236,12 +292,12 @@ function setacciaFlusso(sorgente: Readable, compresso: boolean): Readable {
   return decompresso;
 }
 
-async function raccogli(flusso: Readable): Promise<CartaScryfall[]> {
+async function raccogli(flusso: Readable, formato: Formato): Promise<CartaScryfall[]> {
   const grezze: CartaScryfall[] = [];
   let lette = 0;
 
   for await (const grezza of righeJson<CartaScryfall>(flusso)) {
-    if (interessante(grezza)) grezze.push(grezza);
+    if (interessante(grezza, formato)) grezze.push(grezza);
 
     lette += 1;
     if (lette % 100_000 === 0) console.log(`  …${lette.toLocaleString("it")} carte lette`);
@@ -367,6 +423,21 @@ function apriArchivioLocaleDeiTag(percorso: string): ArchivioDeiTag {
     flusso: setacciaFlusso(createReadStream(percorso), percorso.endsWith(".gz")),
     aggiornatoIl: null,
   };
+}
+
+/**
+ * Il documento di formato, letto dal disco con lo stesso interprete che usa
+ * l'app: quel che qui non passa non passerebbe nemmeno nel browser, e il
+ * manutentore lo scopre sulla propria macchina invece che sul telefono.
+ */
+function leggiFormato(): Formato {
+  if (!existsSync(FORMATO)) {
+    throw new Error(
+      `Manca ${percorsoLeggibile(FORMATO)}: senza documento di formato non si sa ` +
+        `quale gioco si sta preparando, e non lo si può indovinare.`,
+    );
+  }
+  return interpretaFormato(JSON.parse(readFileSync(FORMATO, "utf8")));
 }
 
 /** Il pool com'era prima di questo giro, se esiste: serve solo al diario. */

@@ -70,16 +70,30 @@ export function interpretaPool(dati: unknown): Pool {
   // con `undefined`, che `copieMassime` legge come «nessun tetto». Sarebbe
   // esattamente il guasto che questo rattoppo esiste per impedire, e in più
   // silenzioso: il tipo dice `number | null`, quindi nessuno lo vedrebbe.
+  //
+  // La **stampa** e il **nome italiano** mancano nei pool scritti prima che il
+  // formato smettesse di essere lo Standard. Qui non c'è niente da ricostruire
+  // — quale stampa descrivesse una carta di allora non lo sa più nessuno — e
+  // l'unica risposta onesta è dirlo: stringa vuota per la stampa, come già fa
+  // la rarità di una carta che non ce l'ha, e nessun nome italiano. Sono valori
+  // che si mostrano come «non lo so» invece di rompersi, e nessuno dei due
+  // decide quante copie entrano in un mazzo.
   const senzaTag = !Array.isArray(registroTagScryfall);
 
   return {
     generatoIl,
     registroTagScryfall: senzaTag ? [] : (registroTagScryfall as TagDiScryfall[]),
     carte: (carte as Carta[]).map((carta) => {
-      if (!senzaTag && carta.tettoDiCopie !== undefined) return carta;
+      if (!senzaTag && carta.tettoDiCopie !== undefined && carta.edizione !== undefined) {
+        return carta;
+      }
       return {
         ...carta,
         ...(senzaTag ? { tagScryfall: [] } : {}),
+        nomeItaliano: carta.nomeItaliano ?? null,
+        edizione: carta.edizione ?? "",
+        numeroDiCollezione: carta.numeroDiCollezione ?? "",
+        linguaDellaStampa: carta.linguaDellaStampa ?? "",
         // Testo e tipi si prendono col beneficio del dubbio: rattoppare un pool
         // di ieri vuol dire anche non cadere su un campo che quel pool non
         // aveva. Una carta senza testo e senza tipi prende il tetto di tutti,

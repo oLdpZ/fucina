@@ -632,10 +632,18 @@ public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 public/dati/formato.json il documento di formato: l'opposto del pool — lo
                          scrive una persona, si corregge a mano, e nessun
                          comando lo rigenera (ADR-0004)
-strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2
+strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2.
+                         Il formato entra come parametro: due passi, chi entra
+                         (stampa italiana) e cosa si mostra (stampa inglese)
+strumenti/materiale-di-prova/frammento-scryfall.json  il frammento d'archivio
+                         dei test, scritto sui casi difficili di questo pool
+strumenti/materiale-di-prova/formato-finto.json  il documento di formato dei
+                         test: la forma di quello vero, e nessun suo contenuto
 strumenti/tag-di-sinergia.ts le nove regole meccaniche + le correzioni a mano
 strumenti/correzioni-tag.txt le correzioni a mano: file dell'uomo, mai riscritto
-strumenti/aggiorna-pool.ts il comando `npm run dati`: scarica, filtra, racconta
+strumenti/aggiorna-pool.ts il comando `npm run dati`: legge il documento di
+                         formato, scarica `all-cards` (tutte le lingue), filtra,
+                         racconta il diario e i buchi
 strumenti/apparecchia-la-sosta.ts  fa girare il motore sui dati veri per sei
                          temi e ne scrive un documento da leggere. Apparecchia
                          il ticket 14, non lo risolve: i giudizi vogliono una

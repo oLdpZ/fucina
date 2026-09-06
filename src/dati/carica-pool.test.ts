@@ -88,8 +88,35 @@ describe("lettura del pool", () => {
     expect(pool.carte.map((c) => c.tettoDiCopie)).toEqual([COPIE_MASSIME, null, null]);
   });
 
-  it("non rimette mano alle carte di un pool che tetto e tag ce li ha già", () => {
-    const carte = [{ nome: "Negate", tagScryfall: ["counterspell"], tettoDiCopie: 1 }];
+  it("dice «non lo so» invece di lasciare vuoti i campi che un pool vecchio non ha", () => {
+    // Un pool scritto prima che il formato cambiasse non sa da quale stampa
+    // venisse una carta, e quel che si sa non lo sa più nessuno: la risposta
+    // onesta è la stringa vuota, che si mostra come niente, e non `undefined`,
+    // che a chi legge il tipo sembra una stampa che c'è.
+    const pool = interpretaPool({
+      generatoIl: "2026-09-03T09:05:32.000+00:00",
+      registroTagScryfall: [],
+      carte: [{ nome: "Negate", tagScryfall: [], tettoDiCopie: 4 }],
+    });
+
+    expect(pool.carte[0]?.edizione).toBe("");
+    expect(pool.carte[0]?.numeroDiCollezione).toBe("");
+    expect(pool.carte[0]?.linguaDellaStampa).toBe("");
+    expect(pool.carte[0]?.nomeItaliano).toBeNull();
+  });
+
+  it("non rimette mano alle carte di un pool che ha già tutto", () => {
+    const carte = [
+      {
+        nome: "Negate",
+        nomeItaliano: null,
+        edizione: "xa",
+        numeroDiCollezione: "7",
+        linguaDellaStampa: "en",
+        tagScryfall: ["counterspell"],
+        tettoDiCopie: 1,
+      },
+    ];
     const pool = interpretaPool({
       generatoIl: "2026-09-03T09:05:32.000+00:00",
       registroTagScryfall: [{ id: "9f2c", nome: "counterspell" }],

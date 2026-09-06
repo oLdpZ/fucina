@@ -119,7 +119,6 @@ export function Costruzione({
       combo,
       seme,
       tempoMassimoMs: TEMPO_MASSIMO_PREDEFINITO_MS,
-      formato: "standard",
     };
     // L'impronta del pool è la data dei suoi dati: cambia quando e solo quando
     // cambiano le carte (ticket 05).

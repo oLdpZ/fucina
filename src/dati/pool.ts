@@ -68,7 +68,9 @@ export type Immagine = {
  * mostrarli senza dire di quando sono sarebbe mentire.
  *
  * `euro` è `null` quando la stampa scelta non ha prezzo: capita, e non è un
- * errore.
+ * errore. Su questo formato capita **spesso** — le stampe italiane non hanno
+ * listino, e le carte che in inglese non esistono dentro le edizioni ammesse si
+ * descrivono con la propria stampa italiana.
  */
 export type Prezzo = {
   euro: number | null;
@@ -104,15 +106,49 @@ export type Terra = {
 };
 
 /**
- * Una carta del pool: **una voce per nome**, non per stampa. La stampa da cui
- * vengono identificativo, immagine, rarità e prezzo è la più economica fra
- * quelle legali in Standard cartaceo.
+ * Una carta del pool: **una voce per nome**, non per stampa.
+ *
+ * La distinzione fra la **carta** e la sua **stampa** qui è dappertutto, e non
+ * lo era finché il formato era lo Standard. Il formato decide chi entra
+ * guardando le stampe — una carta è nel gioco se ne esiste una stampa italiana
+ * dentro le edizioni ammesse — mentre quel che si mostra viene da **un'altra
+ * stampa**, la più economica in inglese fra quelle ammesse. Le due domande sono
+ * distinte, e per questo la carta si porta dietro quale stampa la descrive.
  */
 export type Carta = {
   /** Identificativo Scryfall della stampa scelta. */
   id: string;
   /** Il nome inglese, che è anche la chiave: solo inglese, per decisione Q24. */
   nome: string;
+  /**
+   * Il nome con cui la carta è stampata in italiano, quando una stampa italiana
+   * c'è. Non si mostra: è una **chiave di ricerca** — chi scrive «Labirinto di
+   * Ith» deve trovare *Maze of Ith*.
+   *
+   * `null` è uno stato legittimo: col criterio che ammette un'edizione intera a
+   * prescindere dalla lingua, una carta può entrare senza stampa italiana.
+   */
+  nomeItaliano: string | null;
+  /**
+   * Il codice dell'edizione da cui viene la stampa scelta — lo stesso codice che
+   * il documento di formato ammette.
+   *
+   * Insieme al numero di collezione è quel che si cerca su Cardmarket: il
+   * prezzo qui sotto è di **questa** stampa e di nessun'altra, e dirlo è la
+   * differenza fra una stima e un numero campato per aria (storia 14).
+   */
+  edizione: string;
+  numeroDiCollezione: string;
+  /**
+   * La lingua della stampa scelta.
+   *
+   * Di norma è l'inglese, perché è di lì che vengono prezzo e immagine. Ma
+   * esistono carte del formato che in inglese, **dentro le edizioni ammesse**,
+   * non sono mai state stampate: per quelle la stampa che le descrive è la
+   * italiana, e allora il prezzo non c'è. Chi mostra il prezzo deve poterlo
+   * dire, invece di lasciar credere che la carta sia gratis.
+   */
+  linguaDellaStampa: string;
   /** Il costo della faccia giocabile per prima: è quello che conta per la curva. */
   costoDiMana: string;
   valoreDiMana: number;
@@ -126,12 +162,6 @@ export type Carta = {
   costituzione: string | null;
   immagine: Immagine | null;
   rarita: string;
-  /**
-   * La legalità **letta dai dati**, mai dedotta da una data o da un elenco di
-   * set: è un vincolo non negoziabile di `CLAUDE.md`. Nel pool vale sempre
-   * `"legal"`, ed è conservata proprio perché sia verificabile.
-   */
-  legalitaStandard: string;
   prezzo: Prezzo;
   /**
    * I tag di sinergia, in ordine dichiarato e senza ripetizioni: regole
@@ -162,9 +192,10 @@ export type Carta = {
    * nel proprio testo. Nel JSON `null` è anche l'unico modo onesto di scrivere
    * «nessun limite»: `Infinity` non attraversa un file di dati.
    *
-   * Sta qui e non in una funzione perché è la sola cosa che tiene fuori dal
-   * motore la conoscenza del formato: quando le carte limitate a una copia
-   * esisteranno, cambierà questo numero e nient'altro.
+   * Vale **uno** per le carte che il documento di formato dichiara limitate. Sta
+   * qui e non in una funzione perché è la sola cosa che tiene fuori dal motore
+   * la conoscenza del formato: il giorno che il gruppo limita una carta in più,
+   * cambia questo numero e nient'altro.
    */
   tettoDiCopie: number | null;
 };

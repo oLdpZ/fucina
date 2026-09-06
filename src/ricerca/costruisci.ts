@@ -105,7 +105,6 @@ export type Richiesta = {
   seme: number;
   /** Il tetto di tempo, perché la ricerca gira sul telefono. */
   tempoMassimoMs: number;
-  formato: "standard";
 };
 
 /** Quel che la ricerca racconta di sé mentre lavora, per chi mostra una barra. */

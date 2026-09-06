@@ -14,6 +14,8 @@ import { leggiTettoDiCopie } from "../mazzo/copie.js";
 
 type Abbozzo = {
   nome: string;
+  /** Il nome italiano, quando il test ha bisogno di cercarlo. */
+  nomeItaliano?: string;
   costoDiMana?: string;
   valoreDiMana?: number;
   identitaDiColore?: Colore[];
@@ -36,6 +38,12 @@ function carta(abbozzo: Abbozzo): Carta {
   return {
     id: `finta-${nome.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     nome,
+    nomeItaliano: abbozzo.nomeItaliano ?? null,
+    // La stampa che descriverebbe la carta: inventata come tutto il resto, e
+    // scritta perché la sua forma è quella del pool vero.
+    edizione: "prova",
+    numeroDiCollezione: "1",
+    linguaDellaStampa: "en",
     costoDiMana: abbozzo.costoDiMana ?? "",
     valoreDiMana: abbozzo.valoreDiMana ?? 0,
     identitaDiColore: abbozzo.identitaDiColore ?? [],
@@ -46,7 +54,6 @@ function carta(abbozzo: Abbozzo): Carta {
     costituzione: abbozzo.costituzione ?? null,
     immagine: null,
     rarita: "common",
-    legalitaStandard: "legal",
     prezzo: { euro: abbozzo.euro ?? 0.1, aggiornatoIl: GENERATO_IL },
     tag: abbozzo.tag ?? [],
     tagScryfall: [],

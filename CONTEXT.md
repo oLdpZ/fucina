@@ -162,9 +162,12 @@ Non è «quattro tranne eccezioni»: è un numero che la carta porta con sé, e
 `null` quando tetto non ce n'è — le terre base, e le carte che si concedono il
 permesso nel proprio testo.
 
+Vale **uno** per le carte che il documento di formato dichiara limitate, e il
+formato ha l'ultima parola anche sul permesso scritto nel testo.
+
 Sta nel pool e non in una funzione del motore perché è così che chi costruisce
-un mazzo non ha bisogno di conoscere il formato: legge un numero. Quando un
-formato limiterà una carta a una copia, cambierà quel numero e nient'altro.
+un mazzo non ha bisogno di conoscere il formato: legge un numero. Il giorno che
+il gruppo limita una carta in più, cambia quel numero e nient'altro.
 
 ---
 
@@ -237,6 +240,15 @@ stampa **italiana** e quel che si mostra e si prezza viene dalla stampa
 Il conto di quali carte esistono si fa sempre **per nome** e mai per stampa:
 sottrarre insiemi di stampe dà risposte sbagliate, perché la stampa di
 un'edizione non è la stampa di un'altra anche quando la carta è la stessa.
+
+Ogni carta del pool porta scritto **da quale stampa è descritta** — edizione,
+numero di collezione e lingua — perché il prezzo è di quella stampa e di
+nessun'altra. Settantadue carte del pool in inglese, dentro le edizioni
+ammesse, non sono mai state stampate: FBB e Rinascimento in inglese non
+esistono. Per quelle la stampa che le descrive è la propria **italiana**, il
+nome e il testo restano inglesi lo stesso — Scryfall li scrive in inglese su
+ogni stampa — e il prezzo non c'è. Una stampa di un'altra lingua non si usa mai
+per tappare quel buco: sarebbe un prezzo vero di una carta che non si gioca.
 
 ---
 

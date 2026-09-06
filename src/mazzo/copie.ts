@@ -30,6 +30,16 @@ import { COPIE_MASSIME } from "./taratura.js";
 const PERMESSO = /a deck can have any number of cards named/i;
 
 /**
+ * Quante copie ne ammette un mazzo quando il formato dichiara una carta
+ * **limitata**. Non è verità di formato: è il significato della parola, e sta
+ * qui accanto agli altri numeri di copie invece che sparso in preparazione.
+ *
+ * *Quali* carte siano limitate lo dice il documento di formato, e questo modulo
+ * non lo sa né lo può sapere.
+ */
+export const COPIE_DI_UNA_LIMITATA = 1;
+
+/**
  * Il tetto che il **gioco** mette a una carta, letto dal suo testo e dai suoi
  * tipi: `null` quando tetto non ce n'è.
  *

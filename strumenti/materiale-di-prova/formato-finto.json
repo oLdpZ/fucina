@@ -1,0 +1,47 @@
+{
+  "_nota": "Il documento di formato dei test. Ha la forma esatta di quello vero e non ne ha il contenuto: nomi di carte inventati, codici di edizione inventati. Serve a provare che la preparazione legge il formato invece di conoscerlo.",
+
+  "nome": "Finto · stampe fittizie",
+  "daConfermare": null,
+  "aggiornatoIl": "1994-04-11",
+  "fonte": "Nessuna: è il formato dei test, e non lo gioca nessuno.",
+  "regolamentoDiRiferimento": "",
+
+  "criterio": {
+    "regola": "stampa-italiana",
+    "descrizione": "Una carta è nel formato se esiste una sua stampa in italiano dentro le edizioni ammesse.",
+    "daConfermare": null
+  },
+
+  "edizioni": [
+    { "codice": "xa", "nome": "Prima Fittizia", "perché": "L'edizione più vecchia delle tre.", "daConfermare": null },
+    { "codice": "xb", "nome": "Seconda Fittizia", "perché": "Ristampa parte della prima, a prezzi diversi.", "daConfermare": null },
+    { "codice": "xc", "nome": "Terza Fittizia", "perché": "Uscita solo in italiano, come Rinascimento.", "daConfermare": null }
+  ],
+
+  "limitate": {
+    "perché": "Le carte che il gruppo finto tiene a una copia.",
+    "daConfermare": null,
+    "carte": [
+      {
+        "carta": "Fixture Sigillo",
+        "perché": "Un mana per due, dal primo turno: è la carta più forte del pool finto.",
+        "divergenza": null,
+        "daConfermare": null
+      }
+    ]
+  },
+
+  "bandite": {
+    "perché": "Le carte che nel formato finto non si giocano affatto. Si scrivono per nome anche dove una regola basterebbe.",
+    "daConfermare": null,
+    "carte": [
+      {
+        "carta": "Fixture Contratto",
+        "perché": "Si gioca per la posta: chiede di scommettere una carta vera.",
+        "divergenza": null,
+        "daConfermare": null
+      }
+    ]
+  }
+}

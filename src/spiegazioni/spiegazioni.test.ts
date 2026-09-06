@@ -53,7 +53,6 @@ function richiesta(parti: Partial<Richiesta> = {}): Richiesta {
     combo: COMBO_VUOTA,
     seme: 7,
     tempoMassimoMs: 10_000,
-    formato: "standard",
     ...parti,
   };
 }

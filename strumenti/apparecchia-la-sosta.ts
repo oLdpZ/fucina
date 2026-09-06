@@ -343,7 +343,6 @@ function main(): void {
         combo: COMBO_VUOTA,
         seme: SEME,
         tempoMassimoMs: TEMPO_MASSIMO_MS,
-        formato: "standard",
       },
       carte,
     );
