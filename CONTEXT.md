@@ -265,6 +265,15 @@ stesso gioco con una riga in più, al più con una carta da togliere dal mazzo.
 Un mazzo che **non** dichiara il formato — salvato prima che l'app lo scrivesse
 — non è del formato corrente: «non si sa» non è «è il mio».
 
+Di impronte però ce ne sono **due**, e la seconda risponde a un'altra domanda:
+l'**impronta del documento** (`dati/impronta-del-documento.ts`) dice da quale
+documento di formato viene il pool. Guarda tutto quel che decide il contenuto
+del pool — limitate e bandite comprese, cioè proprio le voci che l'altra lascia
+fuori apposta — perché quelle entrano nel file quando lo si genera e a runtime
+non le rilegge nessuno. Non si mostra e non viaggia dentro i mazzi: la
+confronta la compilazione, che si ferma quando i due file di dati non sono
+stati fatti insieme.
+
 ---
 
 ## Criterio del pool

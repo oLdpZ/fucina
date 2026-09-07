@@ -24,6 +24,21 @@ describe("lettura del pool", () => {
     expect(pool.carte).toHaveLength(1);
   });
 
+  it("legge da quale documento di formato viene il pool, quando il pool lo dice", () => {
+    const pool = interpretaPool({ ...POOL_VALIDO, improntaDelDocumento: "abc123" });
+    expect(pool.improntaDelDocumento).toBe("abc123");
+  });
+
+  it("non cade su un pool che non dice da quale documento viene", () => {
+    // I pool scritti prima che il legame coi due file esistesse non ce l'hanno.
+    // Qui «non lo so» è la stringa vuota e l'app si apre lo stesso: a fermarsi
+    // su un pool così è la compilazione, dove i due file si possono rifare.
+    expect(interpretaPool(POOL_VALIDO).improntaDelDocumento).toBe("");
+    expect(interpretaPool({ ...POOL_VALIDO, improntaDelDocumento: 7 }).improntaDelDocumento).toBe(
+      "",
+    );
+  });
+
   it("legge il registro dei tag di Scryfall quando c'è", () => {
     const pool = interpretaPool({
       ...POOL_VALIDO,

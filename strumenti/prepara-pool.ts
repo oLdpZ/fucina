@@ -11,6 +11,7 @@ import type {
 } from "../src/dati/pool.ts";
 import type { Formato } from "../src/dati/formato.ts";
 import { verificaCarteEsistenti } from "../src/dati/carica-formato.ts";
+import { improntaDelDocumento } from "../src/dati/impronta-del-documento.ts";
 import { COPIE_DI_UNA_LIMITATA, leggiTettoDiCopie } from "../src/mazzo/copie.ts";
 import { applicaCorrezioni, tagMeccanici, type Correzione } from "./tag-di-sinergia.ts";
 import { registroDeiTag, type IndiceTag } from "./tag-di-scryfall.ts";
@@ -441,7 +442,16 @@ export function preparaPool(
         );
 
   return {
-    pool: { generatoIl: opzioni.aggiornatoIl, registroTagScryfall, carte: corrette.carte },
+    pool: {
+      generatoIl: opzioni.aggiornatoIl,
+      // Il pool si porta dietro **da quale documento viene**: è l'unico momento
+      // in cui il legame fra i due file esiste davvero, e senza scriverlo qui
+      // resterebbe soltanto nella testa di chi lancia i due comandi nell'ordine
+      // giusto. La compilazione lo confronta col documento incluso.
+      improntaDelDocumento: improntaDelDocumento(formato),
+      registroTagScryfall,
+      carte: corrette.carte,
+    },
     bandite,
     correzioniOrfane: corrette.orfane,
     postaNonBandita: cartePerLaPosta(corrette.carte),

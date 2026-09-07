@@ -48,10 +48,11 @@ export function interpretaPool(dati: unknown): Pool {
     throw new Error("Il file del pool delle carte non si legge.");
   }
 
-  const { generatoIl, carte, registroTagScryfall } = dati as {
+  const { generatoIl, carte, registroTagScryfall, improntaDelDocumento } = dati as {
     generatoIl?: unknown;
     carte?: unknown;
     registroTagScryfall?: unknown;
+    improntaDelDocumento?: unknown;
   };
 
   if (typeof generatoIl !== "string" || generatoIl === "") {
@@ -109,6 +110,12 @@ export function interpretaPool(dati: unknown): Pool {
 
   return {
     generatoIl,
+    // Da quale documento di formato viene il pool. Qui non si verifica niente:
+    // quel confronto sta nella **compilazione**, dove i due file stanno sullo
+    // stesso disco e uno dei due si può rifare. All'app serve solo aprirsi, e
+    // un pool di ieri non ce l'ha — «non lo so» è la stringa vuota, come per la
+    // stampa di una carta che non la scriveva.
+    improntaDelDocumento: typeof improntaDelDocumento === "string" ? improntaDelDocumento : "",
     registroTagScryfall: senzaTag ? [] : (registroTagScryfall as TagDiScryfall[]),
     carte: (carte as Carta[]).map((carta) => {
       // La scorciatoia va chiesta a **tutti** i campi che il rattoppo scrive, e

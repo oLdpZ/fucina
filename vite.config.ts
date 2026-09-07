@@ -3,7 +3,10 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig, type Plugin } from "vitest/config";
 
+import { interpretaFormato } from "./src/dati/carica-formato.js";
+import { verificaAllineamento } from "./src/dati/impronta-del-documento.js";
 import { NOME_APP, PROMESSA_APP } from "./src/identita.js";
+import { somma } from "./src/somma.js";
 import { DIREZIONE_VISIVA } from "./src/stili/direzione.js";
 // @ts-expect-error strumenti del manutentore: JavaScript semplice, senza tipi.
 import { coloriDelTema, risorsePwa } from "./strumenti/risorse-pwa.mjs";
@@ -20,12 +23,72 @@ type Risorsa = { nome: string; tipo: string; contenuto: Buffer | string };
 /**
  * I due file di dati inclusi nell'app, copiati da `public/`.
  *
- * Sono di due razze opposte e stanno nella stessa riga per una ragione sola:
- * senza rete l'app deve avere in mano tutti e due. Il **pool** lo scrive
+ * Sono di due razze opposte e viaggiano insieme per una ragione sola: senza
+ * rete l'app deve avere in mano tutti e due. Il **pool** lo scrive
  * `npm run dati` e non si tocca a mano; il **documento di formato** lo scrive
  * una persona (ADR-0004) e non lo genera nessun comando.
+ *
+ * Hanno un nome ciascuno perché non si guardano più solo in fila: il controllo
+ * di allineamento qui sotto ne apre uno per volta, e ognuno per una ragione
+ * diversa.
  */
-const DATI_INCLUSI = ["dati/pool.json", "dati/formato.json"];
+const POOL = "dati/pool.json";
+const FORMATO = "dati/formato.json";
+const DATI_INCLUSI = [POOL, FORMATO];
+
+/** Uno dei due file di dati, letto da `public/` come lo legge la compilazione. */
+const leggiDato = (nome: string) => readFileSync(qui(`./public/${nome}`), "utf8");
+
+/**
+ * Da quale documento il pool dice di venire, letto **grezzo**.
+ *
+ * Non passa da `interpretaPool`, ed è voluto: quella lettura rattoppa i pool di
+ * ieri per farli aprire lo stesso, e un'impronta assente le uscirebbe come
+ * stringa vuota — cioè come un pool che dichiara qualcosa. Qui l'assenza deve
+ * restare assenza.
+ */
+function improntaScrittaNelPool(): unknown {
+  const letto: unknown = JSON.parse(leggiDato(POOL));
+  if (typeof letto !== "object" || letto === null) return undefined;
+  return (letto as { improntaDelDocumento?: unknown }).improntaDelDocumento;
+}
+
+/**
+ * La guardia sui due file di dati: il pool viene dal documento incluso?
+ *
+ * I due file di `DATI_INCLUSI` viaggiano insieme e finora niente controllava che
+ * il primo l'avesse prodotto il secondo. Il legame è vero e sta tutto in un
+ * ordine di comandi — `npm run dati`, poi `npm run build` — che nessuno ricorda
+ * per sempre: le limitate e le bandite entrano nel pool quando lo si genera e a
+ * runtime nessuno le rilegge, quindi saltare il primo comando spedisce un'app
+ * che mostra la lista nuova e mette in catalogo le carte che quella lista
+ * bandisce.
+ *
+ * Sta nella **compilazione** e non in un comando a parte per la ragione di
+ * sempre: un controllo che qualcuno deve ricordarsi di lanciare è lo stesso
+ * ordine di comandi di prima, con un passaggio in più da scordare.
+ *
+ * È un plugin suo, con `apply: "build"`, e non una riga dentro quello della PWA.
+ * La ragione è che `buildStart` gira anche quando Vite apre un server — cioè in
+ * sviluppo **e sotto i test**: là un documento appena toccato non farebbe cadere
+ * la compilazione, farebbe cadere l'intera suite prima del primo test, compresi
+ * i test che servono a rimettere le cose a posto. Il documento si corregge una
+ * riga per volta senza compilare niente (ADR-0004), e questa guardia non deve
+ * togliere quella possibilità: deve solo impedire che l'app **parta** così.
+ */
+function allineamentoDeiDati(): Plugin {
+  return {
+    name: "mazzi-allineamento-dei-dati",
+    apply: "build",
+
+    buildStart() {
+      verificaAllineamento(
+        improntaScrittaNelPool(),
+        interpretaFormato(JSON.parse(leggiDato(FORMATO))),
+      );
+    },
+  };
+}
 
 /**
  * Manifest, icone e service worker.
@@ -136,9 +199,7 @@ function pwa(): Plugin {
       const impronta = somma(
         daMettereInCache.join("|") +
           JSON.stringify(Object.keys(bundle)) +
-          DATI_INCLUSI.map((nome) => somma(readFileSync(qui(`./public/${nome}`), "utf8"))).join(
-            "|",
-          ),
+          DATI_INCLUSI.map((nome) => somma(leggiDato(nome))).join("|"),
       );
 
       const sorgente = readFileSync(qui("./src/sw.js"), "utf8")
@@ -149,16 +210,6 @@ function pwa(): Plugin {
       this.emitFile({ type: "asset", fileName: "sw.js", source: sorgente });
     },
   };
-}
-
-/** Impronta breve e stabile di una stringa, per il nome della cache. */
-function somma(testo: string): string {
-  let valore = 0x811c9dc5;
-  for (let i = 0; i < testo.length; i += 1) {
-    valore ^= testo.charCodeAt(i);
-    valore = Math.imul(valore, 0x01000193) >>> 0;
-  }
-  return valore.toString(36);
 }
 
 // Nessun plugin per Preact: basta la trasformazione JSX di esbuild, configurata
@@ -173,7 +224,7 @@ export default defineConfig({
   build: {
     target: "es2022",
   },
-  plugins: [pwa()],
+  plugins: [allineamentoDeiDati(), pwa()],
   test: {
     environment: "node",
     // Due programmi, due posti: l'app sotto `src/`, gli strumenti del

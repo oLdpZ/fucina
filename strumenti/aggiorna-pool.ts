@@ -488,6 +488,10 @@ function scriviPool(pool: Pool): void {
   writeFileSync(
     POOL,
     `{\n"generatoIl": ${JSON.stringify(pool.generatoIl)},\n` +
+      // Da quale documento di formato viene questo pool: una riga sua, come la
+      // data, perché è l'altra metà della stessa domanda — da dove vengono
+      // queste carte — e perché il diff la deve mostrare da sola.
+      `"improntaDelDocumento": ${JSON.stringify(pool.improntaDelDocumento)},\n` +
       `"registroTagScryfall": [\n${tag}\n],\n` +
       `"carte": [\n${carte}\n]\n}\n`,
     "utf8",

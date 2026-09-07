@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { interpretaFormato } from "../src/dati/carica-formato.ts";
+import { improntaDelDocumento } from "../src/dati/impronta-del-documento.ts";
 import type { Formato } from "../src/dati/formato.ts";
 import type { Carta, Pool } from "../src/dati/pool.ts";
 import { COPIE_DI_UNA_LIMITATA } from "../src/mazzo/copie.ts";
@@ -910,6 +911,7 @@ describe("diario delle differenze", () => {
 
   const poolPrecedente = (nomi: string[]): Pool => ({
     generatoIl: "2026-08-01T00:00:00.000+00:00",
+    improntaDelDocumento: "",
     registroTagScryfall: [],
     carte: nomi.map((nome) => ({ ...carta(nuova.pool, "Fixture Goblin"), nome })),
   });
@@ -964,5 +966,36 @@ describe("diario delle differenze", () => {
     expect(racconto).toContain("bandite");
     expect(racconto).toContain("Fixture Contratto");
     expect(racconto).toContain("Fixture Uscita");
+  });
+});
+
+/**
+ * Il pool è un prodotto di compilazione di un file che non compila niente, e
+ * fin qui il legame fra i due stava soltanto nell'ordine in cui il manutentore
+ * lancia i comandi. Da qui in poi il pool se lo porta scritto dentro.
+ */
+describe("il pool dice da quale documento viene", () => {
+  it("porta l'impronta del documento che l'ha prodotto", () => {
+    expect(preparazione().pool.improntaDelDocumento).toBe(improntaDelDocumento(FORMATO));
+  });
+
+  it("ne porta un'altra se il documento bandisce una carta in più", () => {
+    const conUnBando = formatoCon({
+      bandite: {
+        ...FORMATO.bandite,
+        carte: [
+          ...FORMATO.bandite.carte,
+          {
+            carta: "Fixture Goblin",
+            perché: "Per prova.",
+            divergenza: null,
+            daConfermare: null,
+          },
+        ],
+      },
+    });
+    const dopo = preparaPool(FRAMMENTO, { formato: conUnBando, aggiornatoIl: QUANDO });
+
+    expect(dopo.pool.improntaDelDocumento).not.toBe(preparazione().pool.improntaDelDocumento);
   });
 });
