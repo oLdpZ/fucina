@@ -20,9 +20,9 @@
  * del pool, ma l'**immagine** italiana manca per una fetta consistente e il
  * **testo di regole** italiano su Scryfall non esiste quasi per nessuna. Una
  * interfaccia in italiano darebbe nome italiano, immagine a volte inglese e
- * testo sempre inglese — cioè tre lingue in una scheda. In più i prezzi sono
- * quelli delle stampe inglesi: mostrando l'inglese, nome e prezzo parlano della
- * stessa stampa.
+ * testo sempre inglese — cioè tre lingue in una scheda. In più il numero di
+ * collezione mostrato è quello della stampa inglese: mostrando l'inglese, il
+ * nome e il numero da cercare parlano della stessa copia.
  *
  * Da qui la forma di questo modulo: **due chiavi, un risultato**. Si cerca su
  * entrambi i nomi, e quel che esce è sempre la carta — che si mostra in inglese

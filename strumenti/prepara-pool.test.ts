@@ -166,7 +166,7 @@ describe("passo 2 — cosa si mostra", () => {
   });
 
   it("ripiega sulla stampa italiana quando in inglese, fra le ammesse, la carta non esiste", () => {
-    // Nel pool vero sono settantadue carte, e fra loro le terre duali. Il nome
+    // Nel pool vero sono quarantasette carte, e fra loro le terre duali. Il nome
     // e il testo restano inglesi lo stesso, perché Scryfall li scrive in
     // inglese su ogni stampa; quel che manca è il prezzo, e si dice.
     const duale = carta(preparazione().pool, "Fixture Duale");
@@ -175,19 +175,19 @@ describe("passo 2 — cosa si mostra", () => {
     expect(duale.edizione).toBe("xa");
     expect(duale.nome).toBe("Fixture Duale");
     expect(duale.testo).toContain("Add {B} or {U}");
-    expect(duale.prezzo.euro).toBeNull();
     expect(duale.immagine?.normale).toBe("https://immagini/duale-italiana-normale.jpg");
   });
 
-  it("non si lascia comprare da una stampa di un'altra lingua che costa meno", () => {
+  it("non si lascia descrivere da una stampa di un'altra lingua che costa meno", () => {
     // La stessa carta in francese, stessa edizione ammessa, con un prezzo che
-    // l'italiana non ha: è un numero vero di una carta che il destinatario non
-    // gioca, e la lista della spesa manderebbe a comprare quella.
+    // l'italiana non ha. A **descrivere** la carta non ci arriva lo stesso:
+    // è la copia che il destinatario non gioca, e la scheda mostrerebbe un
+    // numero di collezione che al negozio pesca il cartoncino sbagliato.
     const duale = carta(preparazione().pool, "Fixture Duale");
 
     expect(duale.linguaDellaStampa).toBe("it");
+    expect(duale.edizione).toBe("xa");
     expect(duale.nomeItaliano).toBe("Palude Tropicale");
-    expect(duale.prezzo.euro).toBeNull();
   });
 
   it("regge una carta senza prezzo su nessuna stampa, invece di cadere", () => {
@@ -281,6 +281,79 @@ describe("passo 2 — cosa si mostra", () => {
         "valoreDiMana",
       ].sort(),
     );
+  });
+});
+
+describe("passo 3 - quale stampa fa il prezzo", () => {
+  it("prende il prezzo dalla stampa ammessa piu economica che un listino ce l'abbia", () => {
+    // Sono le quarantasette carte di Terza del pool vero: le descrive una
+    // stampa che su Cardmarket non c'è, e il tetto di spesa le teneva fuori
+    // non perché costassero, ma perché non sapeva quanto costano.
+    const duale = carta(preparazione().pool, "Fixture Duale");
+
+    expect(duale.prezzo.euro).toBe(280);
+    expect(duale.prezzo.stampa).toEqual({
+      edizione: "xa",
+      numeroDiCollezione: "288",
+      lingua: "fr",
+    });
+  });
+
+  it("dice quale stampa ha fatto il prezzo anche quando è quella che descrive", () => {
+    // Il caso normale non ha niente di speciale da dire, e proprio per questo
+    // lo dice come tutti gli altri: chi legge il prezzo non deve indovinare
+    // quando la provenienza c'è e quando manca.
+    const goblin = carta(preparazione().pool, "Fixture Goblin");
+
+    expect(goblin.prezzo.euro).toBe(0.09);
+    expect(goblin.prezzo.stampa).toEqual({
+      edizione: "xb",
+      numeroDiCollezione: "7",
+      lingua: "en",
+    });
+  });
+
+  it("cerca il prezzo anche nelle altre edizioni ammesse, non solo in quella che descrive", () => {
+    const ristampa = carta(preparazione().pool, "Fixture Ristampa");
+
+    expect(ristampa.edizione).toBe("xa");
+    expect(ristampa.linguaDellaStampa).toBe("en");
+    expect(ristampa.prezzo.euro).toBe(1.5);
+    expect(ristampa.prezzo.stampa).toEqual({
+      edizione: "xb",
+      numeroDiCollezione: "12",
+      lingua: "it",
+    });
+  });
+
+  it("non prezza da un'edizione che il formato non ammette, per quanto costi poco", () => {
+    // Il pavimento è il prezzo di una copia **legale**: la stampa da cinque
+    // centesimi di un'edizione fuori formato è un numero vero di una carta che
+    // al tavolo l'arbitro respinge.
+    expect(carta(preparazione().pool, "Fixture Ristampa").prezzo.euro).not.toBe(0.05);
+  });
+
+  it("non guarda le stampe che non esistono su carta nemmeno per il prezzo", () => {
+    // La stampa digitale del materiale di prova costa un centesimo, cioè meno
+    // di ogni altra: se il prezzo la guardasse, sarebbe lei a vincere. Si
+    // controlla l'euro e non l'identificativo, perché è l'euro che l'utente
+    // legge — e perché il prezzo della digitale non è il prezzo di niente che
+    // si possa portare al tavolo.
+    expect(carta(preparazione().pool, "Fixture Goblin").prezzo.euro).toBe(0.09);
+  });
+
+  it("lascia il prezzo assente e **senza** provenienza quando nessuna stampa ammessa ha listino", () => {
+    // Non si prende il prezzo di una copia non ammessa per tappare il buco: una
+    // provenienza scritta su un euro che non c'è sarebbe una mezza verità.
+    const pauper = carta(preparazione().pool, "Fixture Pauper");
+
+    expect(pauper.prezzo.euro).toBeNull();
+    expect(pauper.prezzo.stampa).toBeNull();
+    expect(pauper.prezzo.aggiornatoIl).toBe(QUANDO);
+  });
+
+  it("non cade su una carta che un listino non ce l'ha da nessuna parte", () => {
+    expect(() => preparazione()).not.toThrow();
   });
 });
 

@@ -4,6 +4,7 @@ import { POOL_FINTO, TERRE_FINTE } from "../catalogo/pool-finto.js";
 import type { Carta } from "../dati/pool.js";
 import type { CopieDiCarta } from "./base-di-terre.js";
 import {
+  altraStampaDelPrezzo,
   AVVISO_STIMA_AL_RIBASSO,
   descriviLaStampa,
   listaDellaSpesa,
@@ -19,7 +20,14 @@ const carta = (nome: string): Carta => {
 
 /** Una carta del pool finto con un prezzo scelto dal test. */
 const a = (nome: string, euro: number | null, copie: number): CopieDiCarta => ({
-  carta: { ...carta(nome), prezzo: { euro, aggiornatoIl: "2026-09-06T09:17:09.373+00:00" } },
+  carta: {
+    ...carta(nome),
+    prezzo: {
+      euro,
+      aggiornatoIl: "2026-09-06T09:17:09.373+00:00",
+      stampa: euro === null ? null : { edizione: "prova", numeroDiCollezione: "1", lingua: "en" },
+    },
+  },
   copie,
 });
 
@@ -28,10 +36,10 @@ describe("il prezzo di una carta", () => {
     expect(prezzoDiUnaCopia(a("Goblin Chieftain", 3.5, 1).carta)).toBe(3.5);
   });
 
-  it("è «non lo so» e non zero quando la stampa scelta non ha listino", () => {
-    // Sono le carte che in inglese, dentro le edizioni ammesse, non esistono:
-    // le descrive la loro stampa italiana, che su Cardmarket non ha prezzo.
-    // Contarle zero direbbe che sono gratis, che è la bugia più cara di tutte.
+  it("è «non lo so» e non zero quando nessuna copia ammessa ha listino", () => {
+    // Sono le carte di cui Cardmarket non quota nessuna copia che il formato
+    // ammetta. Contarle zero direbbe che sono gratis, che è la bugia più cara
+    // di tutte.
     expect(prezzoDiUnaCopia(a("Goblin Chieftain", null, 1).carta)).toBeNull();
   });
 });
@@ -139,15 +147,29 @@ describe("quale stampa ha fatto il conto", () => {
     expect(descriviLaStampa(duale)).toBe("LEG 288, italiano");
   });
 
-  it("non inventa il nome di una lingua che non conosce: ne scrive il codice", () => {
+  it("chiama col suo nome anche una lingua che il prezzo può portare", () => {
+    // Da quando il prezzo si stacca dalla stampa mostrata, la lingua è spesso
+    // l'unico pezzo che distingue le due: un codice di due lettere in mezzo a
+    // una frase italiana sarebbe la confusione che la riga esiste per togliere.
     const francese: Carta = {
       ...carta("Goblin Chieftain"),
-      edizione: "leg",
-      numeroDiCollezione: "288",
+      edizione: "fbb",
+      numeroDiCollezione: "139",
       linguaDellaStampa: "fr",
     };
 
-    expect(descriviLaStampa(francese)).toBe("LEG 288, fr");
+    expect(descriviLaStampa(francese)).toBe("FBB 139, francese");
+  });
+
+  it("non inventa il nome di una lingua che non conosce: ne scrive il codice", () => {
+    const ignota: Carta = {
+      ...carta("Goblin Chieftain"),
+      edizione: "leg",
+      numeroDiCollezione: "288",
+      linguaDellaStampa: "ru",
+    };
+
+    expect(descriviLaStampa(ignota)).toBe("LEG 288, ru");
   });
 
   it("dice «non lo so» per una carta che la stampa non ce l'ha", () => {
@@ -164,10 +186,61 @@ describe("quale stampa ha fatto il conto", () => {
   });
 });
 
+describe("quale stampa ha fatto il prezzo, quando non è quella mostrata", () => {
+  const goblin = (): Carta => ({
+    ...carta("Goblin Chieftain"),
+    edizione: "leg",
+    numeroDiCollezione: "288",
+    linguaDellaStampa: "it",
+  });
+
+  it("la dice quando il prezzo viene da un'altra copia ammessa", () => {
+    // Sono le carte che l'app descrive con una stampa che listino non ha: chi
+    // legge il prezzo deve sapere quale delle due cercare su Cardmarket, o
+    // confronterebbe il proprio numero con quello di un'altra copia.
+    const carta: Carta = {
+      ...goblin(),
+      prezzo: {
+        euro: 280,
+        aggiornatoIl: "2026-09-06T09:17:09.373+00:00",
+        stampa: { edizione: "leg", numeroDiCollezione: "288", lingua: "fr" },
+      },
+    };
+
+    expect(altraStampaDelPrezzo(carta)).toBe("LEG 288, francese");
+  });
+
+  it("non dice niente quando a prezzare è la stessa copia che si mostra", () => {
+    // È il caso normale, e non ha niente di speciale da dire: ripeterla
+    // sarebbe rumore che insegna a non leggere la riga quando conta.
+    const carta: Carta = {
+      ...goblin(),
+      prezzo: {
+        euro: 3,
+        aggiornatoIl: "2026-09-06T09:17:09.373+00:00",
+        stampa: { edizione: "leg", numeroDiCollezione: "288", lingua: "it" },
+      },
+    };
+
+    expect(altraStampaDelPrezzo(carta)).toBeNull();
+  });
+
+  it("non dice niente quando un prezzo non c'è affatto", () => {
+    const carta: Carta = {
+      ...goblin(),
+      prezzo: { euro: null, aggiornatoIl: "2026-09-06T09:17:09.373+00:00", stampa: null },
+    };
+
+    expect(altraStampaDelPrezzo(carta)).toBeNull();
+  });
+});
+
 describe("l'avviso che accompagna ogni prezzo", () => {
   it("dice che è una stima al ribasso, e perché", () => {
     expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/stima al ribasso/i);
-    expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/inglesi/i);
-    expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/italiane/i);
+    // Il pavimento è il prezzo di una copia che al tavolo si può giocare: è una
+    // promessa più forte di quella di prima, e va detta per quella che è.
+    expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/listino/i);
+    expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/copi/i);
   });
 });

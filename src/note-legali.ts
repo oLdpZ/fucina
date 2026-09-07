@@ -49,11 +49,12 @@ export const NOTE_LEGALI: readonly NotaLegale[] = [
     // `PROGETTO.md` §5 la chiede fra le note: «prezzi a titolo informativo, con
     // data di aggiornamento». La data non si scrive qui — è quella del pool, e
     // cambia — ma qui si dice **da dove vengono** e **di quali stampe sono**,
-    // che è la parte che il giocatore non potrebbe indovinare: le stampe
-    // italiane che comprerà su Cardmarket un listino non ce l'hanno.
+    // che è la parte che il giocatore non potrebbe indovinare: il prezzo è
+    // quello della copia ammessa più economica che un listino ce l'abbia, e la
+    // copia che troverà da comprare può essere un'altra.
     id: "prezzi",
     testo:
-      "I prezzi sono a titolo informativo: vengono da Cardmarket attraverso Scryfall, portano sempre la data del giorno in cui sono stati presi, e sono quelli delle stampe inglesi più economiche fra quelle ammesse. Le stampe italiane costano di più.",
+      "I prezzi sono a titolo informativo: vengono da Cardmarket attraverso Scryfall, portano sempre la data del giorno in cui sono stati presi, e sono quelli delle copie più economiche, fra quelle che il formato ammette, che un listino ce l'abbiano. La copia che troverai da comprare può costare di più.",
   },
   {
     id: "gratuita",

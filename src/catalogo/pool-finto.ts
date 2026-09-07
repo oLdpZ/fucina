@@ -70,7 +70,14 @@ function carta(abbozzo: Abbozzo): Carta {
     immagine: null,
     rarita: "common",
     riservata: abbozzo.riservata ?? false,
-    prezzo: { euro: abbozzo.euro ?? 0.1, aggiornatoIl: GENERATO_IL },
+    // Il caso normale: a prezzare è la stessa copia che descrive, e la
+    // provenienza coincide. Il caso interessante — un prezzo che viene da
+    // un'altra copia ammessa — si prova a cucitura, dove i dati sono veri.
+    prezzo: {
+      euro: abbozzo.euro ?? 0.1,
+      aggiornatoIl: GENERATO_IL,
+      stampa: { edizione: "prova", numeroDiCollezione: "1", lingua: "en" },
+    },
     tag: abbozzo.tag ?? [],
     tagScryfall: [],
     facce: null,

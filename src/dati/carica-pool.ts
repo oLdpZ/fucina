@@ -13,7 +13,7 @@
  */
 
 import { leggiTettoDiCopie } from "../mazzo/copie.js";
-import type { Carta, Pool, TagDiScryfall } from "./pool.js";
+import type { Carta, Pool, Prezzo, TagDiScryfall } from "./pool.js";
 
 /** Dov'è il pool, relativo alla base dell'app: l'app gira anche in sottocartella. */
 const PERCORSO_POOL = `${import.meta.env.BASE_URL}dati/pool.json`;
@@ -92,6 +92,12 @@ export function interpretaPool(dati: unknown): Pool {
   // tetto di spesa, che è nato dopo. Un pool che non la porta non fa dire
   // niente di sbagliato all'app — fa dire di meno.
   //
+  // La **provenienza del prezzo** manca nei pool scritti prima che il prezzo si
+  // staccasse dalla stampa che descrive la carta. Qui, unico caso, c'è qualcosa
+  // da ricostruire e non da dichiarare ignoto: in quei pool l'invariante era
+  // «il prezzo è di quella stampa e di nessun'altra», quindi scrivere la stampa
+  // mostrata non inventa niente, ripete quel che quel file diceva.
+  //
   // La **stampa** e il **nome italiano** mancano nei pool scritti prima che il
   // formato smettesse di essere lo Standard. Qui non c'è niente da ricostruire
   // — quale stampa descrivesse una carta di allora non lo sa più nessuno — e
@@ -110,7 +116,16 @@ export function interpretaPool(dati: unknown): Pool {
       // arriveranno tutti insieme la prossima volta: chiedendone solo alcuni,
       // un pool a metà strada passa intero e gli altri restano a `undefined` -
       // che il tipo dichiara impossibile, quindi nessuno lo cercherebbe lì.
-      if (!senzaTag && CAMPI_DEL_RATTOPPO.every((campo) => carta[campo] !== undefined)) {
+      // La provenienza del prezzo non sta in `CAMPI_DEL_RATTOPPO` per una
+      // ragione sola: quella lista guarda i campi della carta, e questo campo
+      // sta **dentro** il prezzo. Va chiesto a parte, ma va chiesto — se no la
+      // scorciatoia lo lascia passare a `undefined`, che il tipo dichiara
+      // impossibile e nessuno andrebbe a cercare lì.
+      if (
+        !senzaTag &&
+        CAMPI_DEL_RATTOPPO.every((campo) => carta[campo] !== undefined) &&
+        carta.prezzo?.stampa !== undefined
+      ) {
         return carta;
       }
       return {
@@ -125,6 +140,7 @@ export function interpretaPool(dati: unknown): Pool {
         // totalità delle carte, e l'unica che non inventa niente: al massimo
         // l'app tace su una carta di cui avrebbe potuto dire qualcosa.
         riservata: carta.riservata ?? false,
+        prezzo: conLaSuaStampa(carta),
         // Testo e tipi si prendono col beneficio del dubbio: rattoppare un pool
         // di ieri vuol dire anche non cadere su un campo che quel pool non
         // aveva. Una carta senza testo e senza tipi prende il tetto di tutti,
@@ -134,6 +150,36 @@ export function interpretaPool(dati: unknown): Pool {
           : {}),
       };
     }),
+  };
+}
+
+/**
+ * Il prezzo di una carta di ieri, con scritto da quale copia viene.
+ *
+ * Nei pool scritti prima che il prezzo si staccasse dalla stampa mostrata la
+ * risposta è nota e sta nella carta stessa: era il prezzo di **quella** stampa
+ * e di nessun'altra. Si scrive, invece di dire «non lo so» di una cosa che si sa.
+ *
+ * Due volte però `null` è l'unica risposta onesta: quando quel pool un euro non
+ * ce l'aveva — euro e provenienza vanno a coppia — e quando la stampa mostrata
+ * non la scriveva nemmeno lei, che è il pool dei tempi dello Standard.
+ */
+function conLaSuaStampa(carta: Carta): Prezzo {
+  const prezzo: Prezzo | undefined = carta.prezzo;
+  const euro = prezzo?.euro ?? null;
+  const edizione = carta.edizione ?? "";
+  return {
+    euro,
+    aggiornatoIl: prezzo?.aggiornatoIl ?? "",
+    stampa:
+      prezzo?.stampa ??
+      (euro === null || edizione === ""
+        ? null
+        : {
+            edizione,
+            numeroDiCollezione: carta.numeroDiCollezione ?? "",
+            lingua: carta.linguaDellaStampa ?? "",
+          }),
   };
 }
 

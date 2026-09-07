@@ -293,21 +293,29 @@ meccanismo solo: quale **stampa** descrive e prezza una carta.
 
 **La carta e la sua edizione sono due cose diverse.** In Standard non serviva mai
 distinguerle; qui la distinzione è dappertutto, perché il criterio guarda la
-stampa **italiana** e quel che si mostra e si prezza viene dalla stampa
-**inglese** più economica fra quelle ammesse.
+stampa **italiana** mentre quel che si mostra viene da un'altra stampa.
 
 Il conto di quali carte esistono si fa sempre **per nome** e mai per stampa:
 sottrarre insiemi di stampe dà risposte sbagliate, perché la stampa di
 un'edizione non è la stampa di un'altra anche quando la carta è la stessa.
 
-Ogni carta del pool porta scritto **da quale stampa è descritta** — edizione,
-numero di collezione e lingua — perché il prezzo è di quella stampa e di
-nessun'altra. Settantadue carte del pool in inglese, dentro le edizioni
-ammesse, non sono mai state stampate: FBB e Rinascimento in inglese non
-esistono. Per quelle la stampa che le descrive è la propria **italiana**, il
-nome e il testo restano inglesi lo stesso — Scryfall li scrive in inglese su
-ogni stampa — e il prezzo non c'è. Una stampa di un'altra lingua non si usa mai
-per tappare quel buco: sarebbe un prezzo vero di una carta che non si gioca.
+Ogni carta del pool porta scritte **due** stampe, perché sono due mestieri
+diversi.
+
+La stampa che **descrive** la carta — edizione, numero di collezione, lingua e
+immagine — è quella che il giocatore vedrà e che verosimilmente comprerà: la
+più economica in inglese fra le ammesse, e l'italiana quando in inglese, dentro
+quelle edizioni, la carta non è mai stata stampata. Sono quarantasette carte,
+tutte di Terza: quell'edizione in inglese non esiste. Il nome e il testo restano
+inglesi lo stesso, perché Scryfall li scrive in inglese su ogni stampa.
+
+La stampa che **prezza** la carta è la copia più economica, fra quelle delle
+edizioni ammesse, che su Cardmarket un listino ce l'abbia davvero — di
+qualunque lingua sia. Non è detto sia la stessa che descrive, e quando non lo è
+il prezzo se la porta dietro e l'app lo dice: senza, chi confronta su
+Cardmarket starebbe guardando un altro cartoncino senza accorgersene. Quando
+nessuna copia ammessa ha listino il prezzo non c'è, e la provenienza nemmeno:
+una copia **non** ammessa non si usa mai per tappare quel buco.
 
 ---
 
@@ -323,7 +331,8 @@ italiano sta nel pool per questo, e per niente altro.
 
 Non è una lingua d'interfaccia a metà: mostrarlo darebbe nome italiano,
 immagine a volte inglese e testo di regole sempre inglese — tre lingue in una
-scheda — e un prezzo che parla di una stampa diversa da quella nominata. Il
+scheda — e un numero di collezione che parla di una stampa diversa da
+quella nominata. Il
 perché per esteso, coi numeri, sta in `PROGETTO.md` §7 sotto Q24.
 
 Chi legge «ricerca» in questo progetto guardi il contesto: qui è la ricerca del
@@ -361,11 +370,16 @@ versione ambiziosa e sta fuori: vedi `spec.md`, «Out of Scope».
 
 **Ogni prezzo che l'app mostra è un pavimento, mai un prezzo.**
 
-I prezzi vengono da Cardmarket attraverso Scryfall e sono quelli della **stampa
-inglese** più economica fra le ammesse. Le stampe che il giocatore comprerà
-davvero sono le **italiane**, che su Cardmarket listino non ne hanno e che al
-banchetto costano di più. La distanza fra i due numeri nessuno la conosce, e per
-questo non si stima: si dichiara che c'è, ovunque un prezzo compaia.
+I prezzi vengono da Cardmarket attraverso Scryfall e sono quelli della copia più
+economica, **fra quelle che il formato ammette**, che un listino ce l'abbia. È un
+pavimento vero: sotto quella cifra la carta non si compra in nessuna copia che al
+tavolo passi.
+
+Resta un pavimento e non un prezzo per due ragioni. La copia che il giocatore
+troverà da comprare può essere **un'altra** fra quelle ammesse, e costare di più;
+e i prezzi di Cardmarket sono di ieri. La distanza nessuno la conosce, e per
+questo non si stima: si dichiara che c'è, ovunque un prezzo compaia — insieme a
+**da quale copia** il numero viene, che è l'unico modo di renderla verificabile.
 
 La **Reserved List** è l'altra metà della stessa onestà: 118 carte del pool non
 saranno mai ristampate, e il loro prezzo non scenderà aspettando. Quando il

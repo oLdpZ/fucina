@@ -143,7 +143,7 @@ export type SpesaDellaRicerca = {
    */
   troppoCareRiservate: number;
   /**
-   * Quante sono rimaste fuori perché la stampa scelta **non ha listino**. Col
+   * Quante sono rimaste fuori perché **nessuna copia ammessa ha listino**. Col
    * tetto acceso l'app promette un conto, e non può promettere quel che non sa
    * contare — contarle zero direbbe che sono gratis.
    */

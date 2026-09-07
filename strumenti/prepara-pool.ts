@@ -1,4 +1,14 @@
-import type { Carta, Colore, ColoreMana, Faccia, Immagine, Pool, Terra } from "../src/dati/pool.ts";
+import type {
+  Carta,
+  Colore,
+  ColoreMana,
+  Faccia,
+  Immagine,
+  Pool,
+  Prezzo,
+  Stampa,
+  Terra,
+} from "../src/dati/pool.ts";
 import type { Formato } from "../src/dati/formato.ts";
 import { verificaCarteEsistenti } from "../src/dati/carica-formato.ts";
 import { COPIE_DI_UNA_LIMITATA, leggiTettoDiCopie } from "../src/mazzo/copie.ts";
@@ -233,8 +243,8 @@ function nataDaUnUnione(grezza: CartaScryfall): boolean {
 /**
  * L'archivio grezzo diventa il pool: una voce per nome, i soli campi usati.
  *
- * La preparazione lavora in **due passi**, e sono due domande diverse fatte a
- * due stampe diverse della stessa carta. Chi rilegge questo codice deve sapere
+ * La preparazione lavora in **tre passi**, e sono tre domande diverse fatte a
+ * tre stampe diverse della stessa carta. Chi rilegge questo codice deve sapere
  * che è voluto:
  *
  * 1. **Chi entra** si decide sull'esistenza della stampa italiana. Il conto è
@@ -243,9 +253,11 @@ function nataDaUnUnione(grezza: CartaScryfall): boolean {
  *    naturale di scriverlo — conta per stampa e dà risposte sbagliate.
  * 2. **Cosa si mostra** viene dalla stampa **inglese** più economica fra quelle
  *    ammesse. Perché l'italiano non si mostra sta in `spec.md`: il testo di
- *    regole in italiano su Scryfall non esiste, l'immagine italiana manca per
- *    un'ottantina di carte, e i prezzi delle stampe italiane non ci sono
- *    affatto. Mostrando l'inglese, nome e prezzo parlano della stessa carta.
+ *    regole in italiano su Scryfall non esiste e l'immagine italiana manca per
+ *    un'ottantina di carte.
+ * 3. **Quanto costa** viene da una **terza** stampa: la copia ammessa più
+ *    economica che un listino ce l'abbia, di qualunque lingua sia. Il prezzo se
+ *    la porta dietro, perché da qui non lo si deduce più dalle altre due.
  *
  * `aggiornatoIl` è la data che Scryfall dichiara per l'archivio scaricato.
  * Entra come argomento e non viene letta da un orologio, perché la stessa
@@ -301,7 +313,7 @@ export function preparaPool(
       continue;
     }
 
-    /* --- Passo 2: cosa si mostra ---------------------------------------- */
+    /* --- Passi 2 e 3: cosa si mostra, e quanto costa --------------------- */
     carte.push(
       riduci({
         nome,
@@ -365,26 +377,24 @@ function ammessaDalCriterio(stampe: CartaScryfall[], formato: Formato): boolean 
  * La stampa che descrive la carta, cercata in **quest'ordine di lingue**, e la
  * più economica dentro la prima che dia qualcosa.
  *
- * 1. **inglese**, che è il caso normale e la ragione della scelta: prezzo,
- *    immagine e nome parlano tutti della stessa carta;
+ * 1. **inglese**, che è il caso normale: immagine e figura sono quelle che il
+ *    giocatore riconosce, e il numero di collezione è quello che cerca;
  * 2. **italiano**, quando in inglese, dentro le edizioni ammesse, la carta non
- *    è mai stata stampata. Nel pool vero sono settantadue — settantasei prima
- *    che le bandite uscissero — e fra loro le terre duali e metà delle
- *    limitate. Nome, testo e tipi restano inglesi lo stesso,
- *    perché Scryfall li scrive in inglese su ogni stampa; quel che manca è il
- *    prezzo, e in genere manca davvero — le stampe italiane su Cardmarket non
- *    hanno listino;
+ *    è mai stata stampata. Nel pool vero sono quarantasette, tutte di Terza, e
+ *    fra loro dieci terre e cinque limitate. Nome, testo e tipi restano inglesi
+ *    lo stesso, perché Scryfall li scrive in inglese su ogni stampa;
  * 3. **qualunque altra**, che serve solo al criterio a elenco: là dentro può
  *    entrare una carta che né in inglese né in italiano esiste.
  *
  * L'ordine è per **lingua** e non per prezzo, ed è la differenza che conta.
- * Prendendo la più economica fra tutte, queste settantadue carte finivano
- * descritte dalla stampa **francese**: la stessa edizione, la stessa figura, un
- * prezzo che su Cardmarket esiste — e una carta che il destinatario non gioca.
- * Un prezzo preso di lì sarebbe un numero vero di un'altra carta, e la lista
- * della spesa manderebbe a comprare la cosa sbagliata. Meglio dire che il
- * prezzo non si sa: è quel che succede davvero a chi compra quelle carte, e il
- * diario conta quante sono.
+ * Prendendo la più economica fra tutte, queste quarantasette carte finirebbero
+ * descritte dalla stampa **francese**: la stessa edizione, la stessa figura, e
+ * una copia che il destinatario in mano non avrà. Il numero di collezione
+ * manderebbe a comprare la cosa sbagliata.
+ *
+ * Il **prezzo** non si sceglie qui, e da questo è la differenza fra le due
+ * funzioni: la copia francese non descrive la carta e la prezza eccome, perché
+ * è una copia che il gruppo ammette. Vedi `stampaChePrezza`.
  */
 function stampaCheDescrive(stampe: CartaScryfall[]): CartaScryfall {
   for (const lingua of [INGLESE, ITALIANO]) {
@@ -395,15 +405,27 @@ function stampaCheDescrive(stampe: CartaScryfall[]): CartaScryfall {
 }
 
 /**
- * La stampa che **prezza** la carta: per ora la stessa che la descrive.
+ * La stampa che **prezza** la carta: la copia ammessa più economica che un
+ * prezzo in euro ce l'abbia davvero. `null` quando non ce n'è nessuna.
  *
- * Esiste separata prima di comportarsi in modo separato, ed è voluto: le due
- * domande — quale copia si mostra, quale copia fa il prezzo — sono diverse da
- * sempre, e finché una funzione sola rispondeva a tutte e due non c'era posto
- * dove scrivere la differenza.
+ * Qui non si sceglie cosa mostrare — quello lo fa `stampaCheDescrive`, e la
+ * lingua è la sua prima domanda — si cerca il **pavimento più basso fra le
+ * copie legali**. Per questo la lingua non entra: le stampe che arrivano qui
+ * sono già tutte di edizioni che il formato ammette, e fra copie tutte
+ * giocabili la più economica è la più economica.
+ *
+ * È la mossa che recupera le quarantasette carte di Terza del pool vero: le
+ * descrive la loro stampa italiana, che su Cardmarket un listino non ce l'ha, e
+ * col tetto di spesa acceso l'app le teneva fuori — non perché costassero, ma
+ * perché non sapeva quanto costano. La stessa carta in Terza francese è quotata,
+ * ed è una copia che il gruppo ammette.
+ *
+ * Il prezzo si porta dietro **da quale copia viene** (`Prezzo.stampa`), perché
+ * da qui in poi non lo si deduce più da quella che descrive la carta.
  */
-function stampaChePrezza(stampe: CartaScryfall[]): CartaScryfall {
-  return stampaCheDescrive(stampe);
+function stampaChePrezza(stampe: CartaScryfall[]): CartaScryfall | null {
+  const conListino = stampe.filter((stampa) => prezzoInEuro(stampa) !== null);
+  return conListino.length === 0 ? null : piuEconomica(conListino);
 }
 
 /**
@@ -440,6 +462,32 @@ function piuEconomica(stampe: CartaScryfall[]): CartaScryfall {
   return ordinate[0] as CartaScryfall;
 }
 
+/**
+ * Il prezzo come lo legge l'app: l'euro, la data dei dati, e la copia da cui
+ * viene.
+ *
+ * Senza stampa che prezzi, `euro` e `stampa` sono `null` **insieme**: una
+ * provenienza scritta accanto a un euro che non c'è direbbe di che copia è un
+ * prezzo che nessuno ha.
+ */
+function prezzoDi(stampa: CartaScryfall | null, aggiornatoIl: string): Prezzo {
+  if (stampa === null) return { euro: null, aggiornatoIl, stampa: null };
+  return {
+    euro: prezzoInEuro(stampa),
+    aggiornatoIl,
+    stampa: quale(stampa),
+  };
+}
+
+/** Una stampa grezza ridotta a come la si cerca al negozio. */
+function quale(grezza: CartaScryfall): Stampa {
+  return {
+    edizione: codiceDiEdizione(grezza.set),
+    numeroDiCollezione: grezza.collector_number ?? "",
+    lingua: grezza.lang ?? "",
+  };
+}
+
 function prezzoInEuro(grezza: CartaScryfall): number | null {
   const grezzo = grezza.prices?.["eur"];
   if (grezzo === undefined || grezzo === null || grezzo === "") return null;
@@ -451,8 +499,11 @@ function prezzoInEuro(grezza: CartaScryfall): number | null {
 function riduci(quale: {
   nome: string;
   stampa: CartaScryfall;
-  /** La stampa da cui viene il prezzo, che non è detto sia quella che descrive. */
-  stampaDelPrezzo: CartaScryfall;
+  /**
+   * La stampa da cui viene il prezzo, che non è detto sia quella che descrive.
+   * `null` quando nessuna copia ammessa ha un listino.
+   */
+  stampaDelPrezzo: CartaScryfall | null;
   nomeItaliano: string | null;
   limitata: boolean;
   aggiornatoIl: string;
@@ -519,7 +570,7 @@ function riduci(quale: {
     // c'è: dire «riservata» per prudenza terrebbe fuori dal tetto di spesa
     // carte che si ristampano ogni due anni.
     riservata: grezza.reserved === true,
-    prezzo: { euro: prezzoInEuro(quale.stampaDelPrezzo), aggiornatoIl: quale.aggiornatoIl },
+    prezzo: prezzoDi(quale.stampaDelPrezzo, quale.aggiornatoIl),
     tag: [],
     // I tag della comunità arrivano già pronti dall'indice: qui non si deduce
     // nulla, si aggancia e basta. L'assenza è uno stato legittimo. La copia

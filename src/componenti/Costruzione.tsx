@@ -530,7 +530,7 @@ function CosaHaLasciatoFuori({ spesa }: { spesa: SpesaDellaRicerca }) {
           <strong>
             {spesa.senzaPrezzo === 1 ? "una carta" : `${NUMERI.format(spesa.senzaPrezzo)} carte`}
           </strong>{" "}
-          che un listino non ce l&rsquo;hanno: le descrive la loro stampa italiana, e con un tetto
+          che un listino non ce l&rsquo;hanno in nessuna copia ammessa, e con un tetto
           acceso l&rsquo;app non mette nel mazzo quel che non sa contare
         </>
       ) : null}

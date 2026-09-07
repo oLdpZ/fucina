@@ -153,6 +153,11 @@ describe("lettura del pool", () => {
         numeroDiCollezione: "7",
         linguaDellaStampa: "en",
         riservata: false,
+        prezzo: {
+          euro: 0.1,
+          aggiornatoIl: "2026-09-03T09:05:32.000+00:00",
+          stampa: { edizione: "xa", numeroDiCollezione: "7", lingua: "en" },
+        },
         tagScryfall: ["counterspell"],
         tettoDiCopie: 1,
       },
@@ -168,6 +173,60 @@ describe("lettura del pool", () => {
     // stanno in un mazzo, e un uno vale quanto un quattro.
     expect(pool.carte[0]?.tettoDiCopie).toBe(1);
     expect(pool.carte[0]).toBe(carte[0]);
+  });
+
+  it("dice da quale stampa è il prezzo di un pool che il prezzo lo legava alla stampa mostrata", () => {
+    // Prima che il prezzo si staccasse, l'invariante era «il prezzo è di quella
+    // stampa e di nessun'altra»: qui non si inventa niente, si scrive quel che
+    // quel pool diceva. Un pool più fresco di quello incluso resta nel deposito
+    // del dispositivo e vince all'apertura, anche dopo un aggiornamento
+    // dell'app: succede per davvero.
+    const pool = interpretaPool({
+      generatoIl: "2026-09-03T09:05:32.000+00:00",
+      registroTagScryfall: [],
+      carte: [
+        {
+          nome: "Negate",
+          nomeItaliano: null,
+          edizione: "xa",
+          numeroDiCollezione: "7",
+          linguaDellaStampa: "en",
+          riservata: false,
+          prezzo: { euro: 0.1, aggiornatoIl: "2026-09-03T09:05:32.000+00:00" },
+          tagScryfall: [],
+          tettoDiCopie: 4,
+        },
+      ],
+    });
+
+    expect(pool.carte[0]?.prezzo.stampa).toEqual({
+      edizione: "xa",
+      numeroDiCollezione: "7",
+      lingua: "en",
+    });
+  });
+
+  it("non attacca una provenienza a un prezzo che quel pool non aveva", () => {
+    // Euro e provenienza vanno a coppia: dire di quale copia è un prezzo che
+    // nessuno ha sarebbe una mezza verità, e la carta senza listino ne
+    // uscirebbe con l'aria di averne uno.
+    const pool = interpretaPool({
+      generatoIl: "2026-09-03T09:05:32.000+00:00",
+      registroTagScryfall: [],
+      carte: [
+        {
+          nome: "Negate",
+          edizione: "xa",
+          numeroDiCollezione: "7",
+          linguaDellaStampa: "en",
+          prezzo: { euro: null, aggiornatoIl: "2026-09-03T09:05:32.000+00:00" },
+          tagScryfall: [],
+          tettoDiCopie: 4,
+        },
+      ],
+    });
+
+    expect(pool.carte[0]?.prezzo.stampa).toBeNull();
   });
 
   it("rifiuta a voce alta un file che non è un pool", () => {

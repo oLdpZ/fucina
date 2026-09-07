@@ -53,13 +53,15 @@ describe("note legali", () => {
     // `PROGETTO.md` §5 chiede i prezzi «a titolo informativo, con data di
     // aggiornamento», e il ticket 09 aggiunge le due cose che il giocatore non
     // può indovinare: la catena Cardmarket-Scryfall, e che il listino è quello
-    // delle stampe inglesi.
+    // della copia ammessa più economica che ne abbia uno — non per forza quella
+    // che si troverà da comprare (ticket 01).
     const nota = NOTE_LEGALI.find((n) => n.id === "prezzi");
 
     expect(nota?.testo).toMatch(/Cardmarket/);
     expect(nota?.testo).toMatch(/Scryfall/);
     expect(nota?.testo).toMatch(/data/i);
-    expect(nota?.testo).toMatch(/inglesi/i);
+    expect(nota?.testo).toMatch(/listino/i);
+    expect(nota?.testo).toMatch(/copi/i);
   });
 
   it("rimanda alla politica sui contenuti dei fan", () => {

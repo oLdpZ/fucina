@@ -45,7 +45,11 @@ function magia(abbozzo: {
     edizione: "prova",
     numeroDiCollezione: "1",
     linguaDellaStampa: "en",
-    prezzo: { euro: 0.1, aggiornatoIl: "2026-09-02" },
+    prezzo: {
+      euro: 0.1,
+      aggiornatoIl: "2026-09-02",
+      stampa: { edizione: "prova", numeroDiCollezione: "1", lingua: "en" },
+    },
     tag: [],
     tagScryfall: [],
     facce: null,

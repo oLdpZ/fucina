@@ -63,7 +63,11 @@ function magia(abbozzo: {
     edizione: "prova",
     numeroDiCollezione: "1",
     linguaDellaStampa: "en",
-    prezzo: { euro: abbozzo.euro ?? 0.1, aggiornatoIl: "2026-09-02" },
+    prezzo: {
+      euro: abbozzo.euro ?? 0.1,
+      aggiornatoIl: "2026-09-02",
+      stampa: { edizione: "prova", numeroDiCollezione: "1", lingua: "en" },
+    },
     tag: abbozzo.tag ?? [],
     tagScryfall: [],
     facce: null,
@@ -294,7 +298,11 @@ describe("il punteggio a componenti separate", () => {
   it("non guarda né il prezzo né la rarità", () => {
     const caro = AGGRO.map((voce) => ({
       ...voce,
-      carta: { ...voce.carta, prezzo: { euro: 99, aggiornatoIl: "2026-09-02" }, rarita: "mythic" },
+      carta: {
+        ...voce.carta,
+        prezzo: { ...voce.carta.prezzo, euro: 99 },
+        rarita: "mythic",
+      },
     }));
     expect(valuta(caro).punteggio).toEqual(valuta(AGGRO).punteggio);
   });

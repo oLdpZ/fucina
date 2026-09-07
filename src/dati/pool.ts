@@ -87,18 +87,41 @@ export type Immagine = {
 };
 
 /**
- * Il prezzo porta sempre con sé la sua data: i prezzi Scryfall vengono da
- * Cardmarket e sono aggiornati una volta al giorno (`PROGETTO.md` §3), quindi
- * mostrarli senza dire di quando sono sarebbe mentire.
+ * Quale copia di una carta si sta guardando: quel che si scrive nella casella
+ * di ricerca del negozio, e senza cui il nome da solo pesca cinque edizioni a
+ * prezzi diversi.
  *
- * `euro` è `null` quando la stampa scelta non ha prezzo: capita, e non è un
- * errore. Su questo formato capita **spesso** — le stampe italiane non hanno
- * listino, e le carte che in inglese non esistono dentro le edizioni ammesse si
- * descrivono con la propria stampa italiana.
+ * La carta ne porta **due**, e sono due mestieri diversi: la stampa che la
+ * **descrive** — edizione, numero, lingua e immagine, i campi qui sotto in
+ * `Carta` — e la stampa che la **prezza**, dentro `Prezzo`. Di norma sono la
+ * stessa; quando non lo sono, l'app lo dice invece di lasciarlo credere.
+ */
+export type Stampa = {
+  edizione: string;
+  numeroDiCollezione: string;
+  lingua: string;
+};
+
+/**
+ * Il prezzo porta sempre con sé due cose: la sua **data** e la **stampa** da cui
+ * viene.
+ *
+ * La data, perché i prezzi Scryfall vengono da Cardmarket e sono aggiornati una
+ * volta al giorno (`PROGETTO.md` §3): mostrarli senza dire di quando sono
+ * sarebbe mentire. La stampa, per la stessa ragione esatta — un prezzo mostrato
+ * senza dire di quale copia è lo è allo stesso modo, e da quando il prezzo si è
+ * staccato dalla stampa che descrive la carta non lo si può più dedurre.
+ *
+ * `euro` è `null` quando **nessuna** stampa ammessa ha un listino: capita, e non
+ * è un errore. Allora `stampa` è `null` a sua volta: non si prende il prezzo di
+ * una copia non ammessa per tappare il buco, e una provenienza scritta accanto a
+ * un euro che non c'è sarebbe una mezza verità.
  */
 export type Prezzo = {
   euro: number | null;
   aggiornatoIl: string;
+  /** La copia da cui l'euro viene; `null` insieme a lui, e mai da sola. */
+  stampa: Stampa | null;
 };
 
 /** Una faccia di una carta a più facce. Le carte normali non ne hanno. */
@@ -136,8 +159,10 @@ export type Terra = {
  * lo era finché il formato era lo Standard. Il formato decide chi entra
  * guardando le stampe — una carta è nel gioco se ne esiste una stampa italiana
  * dentro le edizioni ammesse — mentre quel che si mostra viene da **un'altra
- * stampa**, la più economica in inglese fra quelle ammesse. Le due domande sono
- * distinte, e per questo la carta si porta dietro quale stampa la descrive.
+ * stampa**, la più economica in inglese fra quelle ammesse, e il prezzo da una
+ * **terza**, la copia ammessa più economica che un listino ce l'abbia. Sono tre
+ * domande distinte, e per questo la carta si porta dietro quale stampa la
+ * descrive e quale la prezza.
  */
 export type Carta = {
   /** Identificativo Scryfall della stampa scelta. */
@@ -157,20 +182,21 @@ export type Carta = {
    * Il codice dell'edizione da cui viene la stampa scelta — lo stesso codice che
    * il documento di formato ammette.
    *
-   * Insieme al numero di collezione è quel che si cerca su Cardmarket: il
-   * prezzo qui sotto è di **questa** stampa e di nessun'altra, e dirlo è la
-   * differenza fra una stima e un numero campato per aria (storia 14).
+   * Insieme al numero di collezione è quel che si cerca su Cardmarket per
+   * comprare **questa** copia. Il prezzo qui sotto non è detto sia il suo: viene
+   * dalla copia ammessa più economica che un listino ce l'abbia, e se la porta
+   * dietro (`Prezzo.stampa`).
    */
   edizione: string;
   numeroDiCollezione: string;
   /**
    * La lingua della stampa scelta.
    *
-   * Di norma è l'inglese, perché è di lì che vengono prezzo e immagine. Ma
+   * Di norma è l'inglese, perché è di lì che vengono immagine e figura. Ma
    * esistono carte del formato che in inglese, **dentro le edizioni ammesse**,
    * non sono mai state stampate: per quelle la stampa che le descrive è la
-   * italiana, e allora il prezzo non c'è. Chi mostra il prezzo deve poterlo
-   * dire, invece di lasciar credere che la carta sia gratis.
+   * italiana. Il prezzo, quello, può venire da un'altra copia ammessa — e lo
+   * dichiara.
    */
   linguaDellaStampa: string;
   /** Il costo della faccia giocabile per prima: è quello che conta per la curva. */

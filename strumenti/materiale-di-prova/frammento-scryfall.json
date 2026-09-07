@@ -74,6 +74,69 @@
   },
 
   {
+    "_nota": "IL CASO DELLE QUARANTASETTE. A descriverla resta la sua stampa inglese di xa, che un listino non ce l'ha. Il prezzo pero esiste: su un'altra edizione ammessa, in un'altra lingua. Va preso di li, e va detto da dove viene.",
+    "object": "card", "id": "ristampa-xa-en", "oracle_id": "oracolo-ristampa", "lang": "en", "layout": "normal",
+    "name": "Fixture Ristampa", "released_at": "1994-04-11",
+    "set": "xa", "collector_number": "90",
+    "mana_cost": "{2}{W}", "cmc": 3,
+    "type_line": "Creature — Human Cleric",
+    "oracle_text": "Vigilance",
+    "power": "2", "toughness": "3",
+    "colors": ["W"], "color_identity": ["W"],
+    "games": ["paper"], "digital": false, "rarity": "common",
+    "prices": { "usd": null, "eur": null },
+    "image_status": "highres_scan",
+    "image_uris": { "small": "https://immagini/ristampa-inglese-piccola.jpg", "normal": "https://immagini/ristampa-inglese-normale.jpg" }
+  },
+
+  {
+    "object": "card", "id": "ristampa-xa-it", "oracle_id": "oracolo-ristampa", "lang": "it", "layout": "normal",
+    "name": "Fixture Ristampa", "printed_name": "Ristampa di Prova", "released_at": "1994-04-11",
+    "set": "xa", "collector_number": "90",
+    "mana_cost": "{2}{W}", "cmc": 3,
+    "type_line": "Creature — Human Cleric", "printed_type_line": "Creatura — Chierico Umano",
+    "oracle_text": "Vigilance",
+    "power": "2", "toughness": "3",
+    "colors": ["W"], "color_identity": ["W"],
+    "games": ["paper"], "digital": false, "rarity": "common",
+    "prices": { "usd": null, "eur": null },
+    "image_status": "highres_scan",
+    "image_uris": { "small": "https://immagini/ristampa-italiana-piccola.jpg", "normal": "https://immagini/ristampa-italiana-normale.jpg" }
+  },
+
+  {
+    "_nota": "La stampa che prezza: altra edizione ammessa, altra lingua, e un listino che le due di xa non hanno.",
+    "object": "card", "id": "ristampa-xb-it", "oracle_id": "oracolo-ristampa", "lang": "it", "layout": "normal",
+    "name": "Fixture Ristampa", "printed_name": "Ristampa di Prova", "released_at": "1995-04-01",
+    "set": "xb", "collector_number": "12",
+    "mana_cost": "{2}{W}", "cmc": 3,
+    "type_line": "Creature — Human Cleric", "printed_type_line": "Creatura — Chierico Umano",
+    "oracle_text": "Vigilance",
+    "power": "2", "toughness": "3",
+    "colors": ["W"], "color_identity": ["W"],
+    "games": ["paper"], "digital": false, "rarity": "common",
+    "prices": { "usd": "1.70", "eur": "1.50" },
+    "image_status": "highres_scan",
+    "image_uris": { "small": "https://immagini/ristampa-seconda-piccola.jpg", "normal": "https://immagini/ristampa-seconda-normale.jpg" }
+  },
+
+  {
+    "_nota": "Cinque centesimi in un'edizione che il formato non ammette: non descrive la carta e non la prezza. Il pavimento e la copia legale piu economica, non la piu economica che c'e.",
+    "object": "card", "id": "ristampa-zz-en", "oracle_id": "oracolo-ristampa", "lang": "en", "layout": "normal",
+    "name": "Fixture Ristampa", "released_at": "2015-01-01",
+    "set": "zz", "collector_number": "3",
+    "mana_cost": "{2}{W}", "cmc": 3,
+    "type_line": "Creature — Human Cleric",
+    "oracle_text": "Vigilance",
+    "power": "2", "toughness": "3",
+    "colors": ["W"], "color_identity": ["W"],
+    "games": ["paper"], "digital": false, "rarity": "common",
+    "prices": { "usd": "0.06", "eur": "0.05" },
+    "image_status": "highres_scan",
+    "image_uris": { "small": "https://immagini/ristampa-fuori-piccola.jpg", "normal": "https://immagini/ristampa-fuori-normale.jpg" }
+  },
+
+  {
     "_nota": "CARTA CHE IN INGLESE, DENTRO LE EDIZIONI AMMESSE, NON ESISTE. Nel pool vero sono settantadue, e sono le terre duali e mezza lista delle limitate. A descriverla resta la sua stampa italiana: nome e testo inglesi ci sono lo stesso, perche Scryfall li scrive in inglese su ogni stampa; il prezzo no, e va detto invece che finto.",
     "object": "card", "id": "duale-xa-it", "oracle_id": "oracolo-duale", "lang": "it", "layout": "normal",
     "name": "Fixture Duale", "printed_name": "Palude Tropicale", "released_at": "1994-04-11",

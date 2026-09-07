@@ -8,18 +8,20 @@
  * vuoto.
  *
  * Il prezzo si mostra con la sua data, perché i prezzi Cardmarket sono di ieri
- * (`PROGETTO.md` §3) e mostrarli nudi sarebbe una mezza bugia. Con la data
- * viene **quale stampa** ha fatto il conto — il prezzo è di quella e di
- * nessun'altra — e l'avviso che è una **stima al ribasso**: le stampe italiane,
- * che sono quelle che si giocheranno, listino non ne hanno e costano di più
- * (ticket 09).
+ * (`PROGETTO.md` §3) e mostrarli nudi sarebbe una mezza bugia. Con la data viene
+ * **quale copia si compra**, e — quando il prezzo viene da un'altra copia
+ * ammessa — anche da quale: sono due stampe e non una, e chi confronta su
+ * Cardmarket deve sapere quale delle due sta guardando (ticket 01).
+ *
+ * Sotto, l'avviso che è una **stima al ribasso**: il pavimento è il prezzo di
+ * una copia giocabile, e quella che si troverà da comprare può costare di più.
  */
 
 import { useEffect, useRef, useState } from "preact/hooks";
 
 import { dataInItaliano } from "../dati/carica-pool.js";
 import type { Carta, Faccia } from "../dati/pool.js";
-import { AVVISO_STIMA_AL_RIBASSO, descriviLaStampa } from "../mazzo/spesa.js";
+import { altraStampaDelPrezzo, AVVISO_STIMA_AL_RIBASSO, descriviLaStampa } from "../mazzo/spesa.js";
 import { tipoPrincipale } from "../catalogo/vocabolario.js";
 import { CostoDiMana } from "./CostoDiMana.js";
 import { PassiDelleCopie } from "./PassiDelleCopie.js";
@@ -96,6 +98,10 @@ export function SchedaCarta({
 
   const indirizzo = carta.immagine?.normale;
 
+  // `null` nel caso normale, che è quello in cui a prezzare è la stessa copia
+  // che si mostra: allora non c'è niente di speciale da dire.
+  const altraStampa = altraStampaDelPrezzo(carta);
+
   return (
     <div class="velo" onClick={chiudi}>
       <div
@@ -168,9 +174,18 @@ export function SchedaCarta({
                     carta.prezzo.aggiornatoIl,
                   )}`}
               {/* La stampa si dice **sempre**, anche quando il prezzo non c'è:
-                  quando non c'è è proprio perché la stampa è italiana, e dirlo
-                  spiega l'assenza invece di lasciarla lì come un guasto. */}
+                  è la copia che si compra, e serve a cercarla al negozio tanto
+                  quanto serviva a spiegare l'assenza del prezzo. */}
               <span class="stampa"> · {descriviLaStampa(carta)}</span>
+              {/* E quando a prezzare è un'altra copia ammessa, si dice pure
+                  quella: senza, il numero qui sopra e il numero su Cardmarket
+                  sarebbero di due cartoncini diversi senza che si veda. */}
+              {altraStampa === null ? null : (
+                <>
+                  {" · prezzo di "}
+                  <span class="stampa">{altraStampa}</span>
+                </>
+              )}
             </p>
             {carta.prezzo.euro === null ? null : (
               <p class="avviso-prezzi">{AVVISO_STIMA_AL_RIBASSO}</p>

@@ -754,7 +754,7 @@ describe("il tetto di spesa", () => {
     // listino, e entrerebbero gratis in ogni mazzo.
     const senzaListino = POOL.map((carta) =>
       carta.nome === "Vile Extraction"
-        ? { ...carta, prezzo: { euro: null, aggiornatoIl: carta.prezzo.aggiornatoIl } }
+        ? { ...carta, prezzo: { ...carta.prezzo, euro: null, stampa: null } }
         : carta,
     );
     const frontiera = costruisciMazzo(
