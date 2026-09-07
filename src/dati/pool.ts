@@ -62,7 +62,7 @@ export type Tag =
 /**
  * Un tag di **Scryfall Tagger**, la seconda razza (ADR-0003): quel che la
  * comunità dice che una carta faccia — `counterspell`, `removal`,
- * `win-condition` — dove i nove nostri non arrivano.
+ * `win-condition` — dove i nostri non arrivano.
  *
  * Non è un elenco chiuso: sono migliaia e cambiano nel tempo, e per questo il
  * pool ne porta il **registro** invece di scriverli nel codice. Di ciascuno si

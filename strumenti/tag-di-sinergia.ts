@@ -66,9 +66,60 @@ const NIENTE_RIGENERAZIONE = /\bcan't be regenerated\b/gi;
  * defending player controls an Island» come **proprio difetto**, e sono
  * l'opposto di una carta che imbriglia il campo altrui. Mana Vault non è una
  * prigione: è un mostro che paga il proprio costo.
+ *
+ * Il difetto si scrive anche **appeso a un'altra clausola** — «this creature
+ * enters tapped **and** doesn't untap during your untap step», che è Leviathan:
+ * la stessa frase detta al rovescio, e per un po' è costata una riga a mano nel
+ * file delle correzioni.
+ *
+ * Quel che il setaccio **non** deve prendere è la stessa frase **fra
+ * virgolette**: lì «this creature» non parla di sé, ma del permanente altrui a
+ * cui la carta sta regalando il difetto. È quel che fa Glyph of Delusion, e
+ * toglierlo la lasciava uscire dal pool con zero tag — cioè invisibile al
+ * motore dei temi, che è il modo peggiore di sbagliare un tag.
  */
 const SU_SE_STESSO =
-  /\bthis (?:creature|artifact|land|enchantment) (?:can't attack|can't block|doesn't untap|attacks each combat if able|blocks each combat if able)[^.]*\./gi;
+  /(?<!["“])\bthis (?:creature|artifact|land|enchantment) (?:enters tapped and )?(?:can't attack|can't block|doesn't untap|attacks each combat if able|blocks each combat if able)[^.]*\./gi;
+
+/**
+ * L'aura che si posa su un permanente **proprio**: «Enchant creature you
+ * control». Da quella riga in poi ogni «enchanted creature» del testo parla di
+ * una carta di chi gioca l'aura, anche dove il «you control» non è ripetuto — e
+ * Cocoon, che gira la propria creatura per farla crescere, non è una prigione
+ * più di quanto lo sia Mana Vault.
+ */
+const INCANTA_UN_PROPRIO = /\benchant\b[^.\n]*\byou control\b/i;
+
+/** «Creatures you control can't attack»: il difetto di chi gioca, non altrui. */
+const SUI_PROPRI = /\byou control\b/i;
+
+/**
+ * Il testo ridotto a quel che la carta fa **al campo altrui**. Solo la regola
+ * della prigione legge di qui, ed è la sola che ne ha bisogno.
+ *
+ * Toglie due cose, per la stessa ragione per cui `rimozione-mirata` non guarda
+ * quel che «you control»: una carta che tappa, blocca o non fa stappare i
+ * **propri** permanenti non fa a nessuno quel che il tag promette.
+ *
+ * 1. Le clausole che la carta scrive su se stessa (`SU_SE_STESSO`).
+ * 2. Le frasi che nominano i propri permanenti — dicendolo con «you control»,
+ *    oppure dicendo «enchanted» quando l'aura si posa su una carta propria.
+ *
+ * Il taglio è **per frase** e non sul testo intero, com'è già `[^.]*` in
+ * `rimozione-mirata`: una carta che tiene fermo il campo altrui in una riga e
+ * potenzia il proprio in un'altra resta una prigione. Quel che resta si ricuce
+ * con un punto, perché la regola guarda anche quanto lontano stia una parola
+ * dall'altra **dentro la stessa frase**.
+ */
+function soloSulCampoAltrui(testo: string): string {
+  const senzaSe = testo.replace(SU_SE_STESSO, " ");
+  const proprio = INCANTA_UN_PROPRIO.test(senzaSe);
+  return senzaSe
+    .split(/[.\n]/)
+    .filter((frase) => !SUI_PROPRI.test(frase))
+    .filter((frase) => !(proprio && /\benchanted\b/i.test(frase)))
+    .join(". ");
+}
 
 /**
  * Il bersaglio di una distruzione, guardato da vicino: «target land», «target
@@ -241,13 +292,14 @@ const REGOLE: Record<Tag, (carta: Carta, testo: string) => boolean> = {
    * Manipulator, Moat, The Abyss — è metà di quel che questo formato sa fare, e
    * nello Standard di oggi non esiste quasi più.
    *
-   * La regola legge il testo **senza le clausole che una carta scrive su se
-   * stessa** (`SU_SE_STESSO`): Mana Vault, Colossus of Sardia e le dodici
-   * creature che «can't attack unless defending player controls an Island» non
-   * imbrigliano nessuno, pagano un prezzo.
+   * La regola legge il **campo altrui** e non il testo intero
+   * (`soloSulCampoAltrui`): Mana Vault, Colossus of Sardia e le dodici creature
+   * che «can't attack unless defending player controls an Island» non
+   * imbrigliano nessuno, pagano un prezzo; ed Energy Tap, che gira una creatura
+   * «you control» per farne mana, è quello stesso prezzo detto all'incontrario.
    */
   imbriglia: (_, testo) => {
-    const altrui = testo.replace(SU_SE_STESSO, " ");
+    const altrui = soloSulCampoAltrui(testo);
     return (
       /\btap\b[^.]{0,24}\btarget\b/i.test(altrui) ||
       /\btap all\b/i.test(altrui) ||

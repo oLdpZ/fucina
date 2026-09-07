@@ -19,7 +19,7 @@ import {
   raccontaPosta,
   type CartaScryfall,
 } from "./prepara-pool.ts";
-import { leggiCorrezioni, raccontaCorrezioni } from "./tag-di-sinergia.ts";
+import { leggiCorrezioni, raccontaCorrezioni, TAG } from "./tag-di-sinergia.ts";
 import {
   indicizzaTag,
   riduciTag,
@@ -67,8 +67,8 @@ const DESCRITTORE = "https://api.scryfall.com/bulk-data/all-cards";
 
 /**
  * I tag funzionali di **Scryfall Tagger**, la seconda razza di tag
- * (ADR-0003): `counterspell`, `removal`, `win-condition` — quel che i nove
- * tag nostri, che leggono le regole meccaniche, non sanno dire.
+ * (ADR-0003): `counterspell`, `removal`, `win-condition` — quel che i tag
+ * nostri, che leggono le regole meccaniche, non sanno dire.
  *
  * Si scaricano qui e si congelano nel pool. L'app non li chiede mai a runtime.
  */
@@ -384,8 +384,8 @@ async function tagFunzionali(
     console.log("");
     console.log(
       `I tag funzionali di Scryfall non si sono presi: ${(guaio as Error).message}\n` +
-        `  Il pool si scrive lo stesso, senza. Le carte e i nove tag nostri ci sono ` +
-        `tutti;\n  quel che manca è il vocabolario della comunità. Riprova più tardi.`,
+        `  Il pool si scrive lo stesso, senza. Le carte e i ${TAG.length} tag nostri ci ` +
+        `sono tutti;\n  quel che manca è il vocabolario della comunità. Riprova più tardi.`,
     );
     process.exitCode = 1;
     return { aggiornatoIl: null };

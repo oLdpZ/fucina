@@ -36,11 +36,6 @@
 # Quel che le regole dicono di troppo
 # ---------------------------------------------------------------------------
 
-# Il difetto scritto in mezzo a un'altra frase: «enters tapped and doesn't
-# untap during your untap step». La regola sa saltare la clausola quando sta da
-# sola, non quando è appesa a un'altra.
-Leviathan: -imbriglia
-
 # Distrugge un'aura *attaccata* a una terra: la terra non la tocca.
 Savaen Elves: -attacca-le-terre
 

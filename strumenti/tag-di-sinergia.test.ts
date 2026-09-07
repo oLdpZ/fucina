@@ -216,6 +216,75 @@ describe("le regole meccaniche", () => {
     expect(tag("Players skip their untap steps.")).toEqual(["imbriglia"]);
   });
 
+  it("né quella che il difetto se lo scrive addosso in mezzo a un'altra frase", () => {
+    // Leviathan: «enters tapped **and** doesn't untap», la forma rovesciata. La
+    // regola la saltava solo quando la clausola stava da sola, e per questo la
+    // carta è stata a mano in `correzioni-tag.txt` fino a qui.
+    expect(
+      tag(
+        "Trample\nThis creature enters tapped and doesn't untap during your untap step.\n" +
+          "At the beginning of your upkeep, you may sacrifice two Islands. " +
+          "If you do, untap this creature.",
+      ),
+    ).toEqual([]);
+  });
+
+  it("non chiama prigione chi gira o blocca i propri permanenti", () => {
+    // Energy Tap gira una creatura **propria** per farne mana: è l'opposto di
+    // una prigione, ed è la stessa ragione per cui `rimozione-mirata` salta chi
+    // colpisce quel che «you control».
+    expect(
+      tag(
+        "Tap target untapped creature you control. If you do, add an amount of {C} equal to " +
+          "that creature's mana value.",
+      ),
+    ).toEqual(["accelerazione-di-mana"]);
+    // Akron Legionnaire ed Evil Eye of Orms-by-Gore: difetti puri di chi le gioca.
+    expect(
+      tag(
+        "Except for creatures named Akron Legionnaire and artifact creatures, creatures you " +
+          "control can't attack.",
+      ),
+    ).toEqual([]);
+    expect(
+      tag(
+        "Non-Eye creatures you control can't attack.\n" +
+          "This creature can't be blocked except by Walls.",
+      ),
+    ).toEqual(["evasione"]);
+  });
+
+  it("legge «enchanted» come «mio» quando la carta incanta un proprio permanente", () => {
+    // Cocoon dice «Enchant creature you control» una riga sola, e da lì in poi
+    // ogni «enchanted creature» è roba sua: girarla non imbriglia nessuno.
+    expect(
+      tag(
+        "Enchant creature you control\n" +
+          "When this Aura enters, tap enchanted creature and put three pupa counters on this Aura.\n" +
+          "Enchanted creature doesn't untap during your untap step if this Aura has a pupa " +
+          "counter on it.",
+      ),
+    ).toEqual([]);
+    // La stessa frase su un'aura che incanta quel che vuole resta una prigione.
+    expect(
+      tag("Enchant creature\nEnchanted creature doesn't untap during your untap step."),
+    ).toEqual(["imbriglia"]);
+  });
+
+  it("non toglie il difetto proprio quando è un'abilità data a un permanente altrui", () => {
+    // Glyph of Delusion incolla «This creature doesn't untap…» addosso a una
+    // creatura che non è sua: fra virgolette, «this creature» non parla di sé.
+    // Senza questo la carta usciva dal pool con zero tag, invisibile ai temi.
+    expect(
+      tag(
+        "Put X glyph counters on target creature that target Wall blocked this turn, where X is " +
+          "the power of that blocked creature. The creature gains \"This creature doesn't " +
+          "untap during your untap step if it has a glyph counter on it\" and \"At the " +
+          "beginning of your upkeep, remove a glyph counter from this creature.\"",
+      ),
+    ).toEqual(["imbriglia"]);
+  });
+
   it("non chiama rigenerazione la frase che la vieta", () => {
     expect(tag("{B}: Regenerate this creature.")).toEqual(["rigenera"]);
     expect(tag("Destroy all creatures. They can't be regenerated.")).toEqual(["spazza-via"]);
