@@ -80,6 +80,7 @@ export function interpretaFormato(dati: unknown): Formato {
   }
 
   const edizioni = leggiEdizioni(grezzo["edizioni"]);
+  controllaEdizioniRipetute(edizioni);
 
   const limitate = leggiElenco(grezzo["limitate"], "limitate");
   const bandite = leggiElenco(grezzo["bandite"], "bandite");
@@ -122,6 +123,38 @@ function controllaNomiRipetuti(limitate: ElencoDiCarte, bandite: ElencoDiCarte):
   if (ripetute.size > 0) {
     throw new Error(
       `Il documento di formato nomina più di una volta: ${[...ripetute].join(", ")}.`,
+    );
+  }
+}
+
+/**
+ * La stessa edizione nominata due volte.
+ *
+ * Nell'impronta del formato sarebbe innocua — si deduplica — ma da quando
+ * l'edizione porta le proprie `lingue` è una **contraddizione**: due righe
+ * dicono quali copie sono legali, e quale delle due valga lo deciderebbe
+ * l'ordine in cui il codice legge il file. È l'errore che fa una mano che
+ * incolla una riga e dimentica di cancellare l'originale, e senza questo
+ * controllo cambierebbe in silenzio la stampa che descrive ogni carta di
+ * quell'edizione.
+ *
+ * Il confronto è sul codice ripulito, come lo ripuliscono l'impronta e la
+ * preparazione: due righe che differiscono per uno spazio non sono due
+ * edizioni.
+ */
+function controllaEdizioniRipetute(edizioni: Edizione[]): void {
+  const viste = new Set<string>();
+  const ripetute = new Set<string>();
+
+  for (const edizione of edizioni) {
+    const codice = edizione.codice.trim().toLowerCase();
+    if (viste.has(codice)) ripetute.add(codice);
+    viste.add(codice);
+  }
+
+  if (ripetute.size > 0) {
+    throw new Error(
+      `Il documento di formato ammette più di una volta l'edizione: ${[...ripetute].join(", ")}.`,
     );
   }
 }

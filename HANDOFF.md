@@ -633,8 +633,10 @@ public/dati/formato.json il documento di formato: l'opposto del pool — lo
                          scrive una persona, si corregge a mano, e nessun
                          comando lo rigenera (ADR-0004)
 strumenti/prepara-pool.ts  da archivio Scryfall a pool — la cucitura di test 2.
-                         Il formato entra come parametro: due passi, chi entra
-                         (stampa italiana) e cosa si mostra (stampa inglese)
+                         Il formato entra come parametro: tre passi, chi entra
+                         (il criterio, oggi l'edizione), cosa si mostra (la
+                         prima lingua ammessa che esista) e quanto costa (la
+                         copia ammessa più economica col listino)
 strumenti/materiale-di-prova/frammento-scryfall.json  il frammento d'archivio
                          dei test, scritto sui casi difficili di questo pool
 strumenti/materiale-di-prova/formato-finto.json  il documento di formato dei

@@ -105,6 +105,25 @@ describe("lettura del documento di formato", () => {
     expect(() => interpretaFormato({ ...COMPLETO, edizioni: [] })).toThrow(/edizion/);
   });
 
+  it("non accetta la stessa edizione nominata due volte", () => {
+    // Da quando l'edizione porta le proprie lingue è una contraddizione: due
+    // righe dicono quali copie sono legali, e quale valga lo deciderebbe
+    // l'ordine di lettura. Lo spazio in coda non fa due edizioni.
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioni: [COMPLETO.edizioni[0], { ...COMPLETO.edizioni[0], lingue: ["fr"] }],
+      }),
+    ).toThrow(/aaa/);
+
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioni: [COMPLETO.edizioni[0], { ...COMPLETO.edizioni[0], codice: " AAA " }],
+      }),
+    ).toThrow(/aaa/);
+  });
+
   it("non accetta un'edizione che non dichiara le proprie lingue ammesse", () => {
     // L'assenza non si legge come «tutte le lingue»: un valore predefinito qui
     // sarebbe verità di formato scritta nel sorgente sotto forma di

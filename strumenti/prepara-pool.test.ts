@@ -157,7 +157,7 @@ describe("passo 1 — chi entra", () => {
 });
 
 describe("passo 2 — cosa si mostra", () => {
-  it("prende immagine, prezzo e rarità dalla stampa inglese più economica fra le ammesse", () => {
+  it("prende immagine, prezzo e rarità dalla prima lingua dichiarata, la più economica", () => {
     const goblin = carta(preparazione().pool, "Fixture Goblin");
 
     expect(goblin.prezzo.euro).toBe(0.09);
@@ -178,10 +178,11 @@ describe("passo 2 — cosa si mostra", () => {
     expect(carta(preparazione().pool, "Fixture Goblin").id).not.toBe("goblin-xb-digitale");
   });
 
-  it("ripiega sulla stampa italiana quando in inglese, fra le ammesse, la carta non esiste", () => {
-    // Nel pool vero sono quarantasette carte, e fra loro le terre duali. Il nome
-    // e il testo restano inglesi lo stesso, perché Scryfall li scrive in
-    // inglese su ogni stampa; quel che manca è il prezzo, e si dice.
+  it("scende alla lingua dopo quando della prima non esiste nessuna stampa", () => {
+    // `xa` dichiara «en, it, fr» e la Duale in inglese non esiste: la descrive
+    // l'italiana, che è la seconda dell'elenco. Il nome e il testo restano
+    // inglesi lo stesso, perché Scryfall li scrive in inglese su ogni stampa;
+    // quel che manca è il prezzo, e viene da un'altra copia ammessa.
     const duale = carta(preparazione().pool, "Fixture Duale");
 
     expect(duale.linguaDellaStampa).toBe("it");
@@ -191,11 +192,11 @@ describe("passo 2 — cosa si mostra", () => {
     expect(duale.immagine?.normale).toBe("https://immagini/duale-italiana-normale.jpg");
   });
 
-  it("non si lascia descrivere da una stampa di un'altra lingua che costa meno", () => {
-    // La stessa carta in francese, stessa edizione ammessa, con un prezzo che
-    // l'italiana non ha. A **descrivere** la carta non ci arriva lo stesso:
-    // è la copia che il destinatario non gioca, e la scheda mostrerebbe un
-    // numero di collezione che al negozio pesca il cartoncino sbagliato.
+  it("non si lascia descrivere da una lingua più in basso nell'ordine che costa meno", () => {
+    // La stessa carta in francese, stessa edizione, e il francese `xa` lo
+    // ammette: al tavolo quella copia passa. A **descrivere** la carta non ci
+    // arriva lo stesso, perché nell'elenco viene dopo l'italiano — l'ordine è
+    // la preferenza, e il prezzo non la scavalca.
     const duale = carta(preparazione().pool, "Fixture Duale");
 
     expect(duale.linguaDellaStampa).toBe("it");
@@ -215,9 +216,27 @@ describe("passo 2 — cosa si mostra", () => {
     expect(carta(pool, "Fixture Goblin").prezzo.aggiornatoIl).toBe(QUANDO);
   });
 
-  it("ripiega sull'inglese senza rumore quando l'immagine italiana è un segnaposto", () => {
-    const segnaposto = carta(preparazione().pool, "Fixture Segnaposto");
-    expect(segnaposto.immagine?.normale).toBe("https://immagini/segnaposto-normale.jpg");
+  it("prende l'immagine dalla stampa che descrive, e mai da un'altra che ce l'ha", () => {
+    // Il Segnaposto ha la figura buona sull'inglese e un segnaposto
+    // sull'italiana: quale delle due si veda dipende **solo** da quale stampa
+    // descrive la carta.
+    expect(carta(preparazione().pool, "Fixture Segnaposto").immagine?.normale).toBe(
+      "https://immagini/segnaposto-normale.jpg",
+    );
+
+    const { pool } = preparaPool(FRAMMENTO, {
+      formato: conLingue("xa", ["it", "en", "fr"]),
+      aggiornatoIl: QUANDO,
+    });
+
+    // Mostrata l'italiana, l'immagine sparisce — benché l'inglese ce l'abbia e
+    // continui a prezzare la carta. È il costo dichiarato dalla specifica: il
+    // ripiego è **dentro** la stampa, mai verso un'altra, e nel pool vero sono
+    // 129 carte su 753 a restare senza figura. Un ripiego verso un'altra
+    // stampa mostrerebbe l'immagine di un cartoncino diverso da quello che il
+    // numero di collezione manda a comprare.
+    expect(carta(pool, "Fixture Segnaposto").immagine).toBeNull();
+    expect(carta(pool, "Fixture Segnaposto").prezzo.euro).toBe(0.25);
   });
 
   it("non spaccia per immagine il dorso di una carta quando altro non c'è", () => {
