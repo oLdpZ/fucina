@@ -624,5 +624,272 @@
       { "component": "meld_part", "name": "Fixture Bolt" },
       { "component": "meld_result", "name": "Fixture Colossus" }
     ]
+  },
+  {
+    "_nota": "TRE LINGUE NELLA STESSA EDIZIONE, A TRE PREZZI DIVERSI. A descriverla vince l'inglese, che e la prima lingua dichiarata da xa e non la piu economica; a prezzarla vince la francese, che e la piu economica fra le ammesse. Le due domande sono diverse, e questa carta e il posto dove si vede.",
+    "object": "card",
+    "id": "trilingue-xa-en",
+    "oracle_id": "oracolo-trilingue",
+    "lang": "en",
+    "layout": "normal",
+    "name": "Fixture Trilingue",
+    "released_at": "1994-04-11",
+    "set": "xa",
+    "collector_number": "701",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "type_line": "Creature — Elf Scout",
+    "oracle_text": "Vigilance",
+    "power": "1",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "games": [
+      "paper"
+    ],
+    "digital": false,
+    "rarity": "common",
+    "prices": {
+      "usd": null,
+      "eur": "3.00"
+    },
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://immagini/trilingue-xa-en-piccola.jpg",
+      "normal": "https://immagini/trilingue-xa-en-normale.jpg"
+    }
+  },
+  {
+    "object": "card",
+    "id": "trilingue-xa-it",
+    "oracle_id": "oracolo-trilingue",
+    "lang": "it",
+    "layout": "normal",
+    "name": "Fixture Trilingue",
+    "printed_name": "Trilingue di Prova",
+    "released_at": "1994-04-11",
+    "set": "xa",
+    "collector_number": "701",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "type_line": "Creature — Elf Scout",
+    "oracle_text": "Vigilance",
+    "power": "1",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "games": [
+      "paper"
+    ],
+    "digital": false,
+    "rarity": "common",
+    "prices": {
+      "usd": null,
+      "eur": "2.00"
+    },
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://immagini/trilingue-xa-it-piccola.jpg",
+      "normal": "https://immagini/trilingue-xa-it-normale.jpg"
+    }
+  },
+  {
+    "_nota": "La piu economica fra le lingue che xa ammette: prezza la carta senza descriverla.",
+    "object": "card",
+    "id": "trilingue-xa-fr",
+    "oracle_id": "oracolo-trilingue",
+    "lang": "fr",
+    "layout": "normal",
+    "name": "Fixture Trilingue",
+    "released_at": "1994-04-11",
+    "set": "xa",
+    "collector_number": "701",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "type_line": "Creature — Elf Scout",
+    "oracle_text": "Vigilance",
+    "power": "1",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "games": [
+      "paper"
+    ],
+    "digital": false,
+    "rarity": "common",
+    "prices": {
+      "usd": null,
+      "eur": "0.50"
+    },
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://immagini/trilingue-xa-fr-piccola.jpg",
+      "normal": "https://immagini/trilingue-xa-fr-normale.jpg"
+    }
+  },
+  {
+    "_nota": "UN CENTESIMO IN UNA LINGUA CHE xa NON AMMETTE. Non descrive la carta e non la prezza: se vincesse, il pavimento sarebbe il prezzo di un cartoncino che al tavolo l'arbitro respinge.",
+    "object": "card",
+    "id": "trilingue-xa-de",
+    "oracle_id": "oracolo-trilingue",
+    "lang": "de",
+    "layout": "normal",
+    "name": "Fixture Trilingue",
+    "released_at": "1994-04-11",
+    "set": "xa",
+    "collector_number": "701",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "type_line": "Creature — Elf Scout",
+    "oracle_text": "Vigilance",
+    "power": "1",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "games": [
+      "paper"
+    ],
+    "digital": false,
+    "rarity": "common",
+    "prices": {
+      "usd": null,
+      "eur": "0.01"
+    },
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://immagini/trilingue-xa-de-piccola.jpg",
+      "normal": "https://immagini/trilingue-xa-de-normale.jpg"
+    }
+  },
+  {
+    "_nota": "LA STESSA LINGUA AMMESSA DA UN'EDIZIONE E NON DALL'ALTRA. Questa la descrive: e la lingua ammessa piu alta nell'ordine di xa fra quelle che esistono.",
+    "object": "card",
+    "id": "straniera-xa-it",
+    "oracle_id": "oracolo-straniera",
+    "lang": "it",
+    "layout": "normal",
+    "name": "Fixture Straniera",
+    "printed_name": "Straniera di Prova",
+    "released_at": "1994-04-11",
+    "set": "xa",
+    "collector_number": "600",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "type_line": "Creature — Elf Scout",
+    "oracle_text": "Vigilance",
+    "power": "1",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "games": [
+      "paper"
+    ],
+    "digital": false,
+    "rarity": "common",
+    "prices": {
+      "usd": null,
+      "eur": null
+    },
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://immagini/straniera-xa-it-piccola.jpg",
+      "normal": "https://immagini/straniera-xa-it-normale.jpg"
+    }
+  },
+  {
+    "_nota": "Francese in xa, che il francese lo ammette: prezza la carta.",
+    "object": "card",
+    "id": "straniera-xa-fr",
+    "oracle_id": "oracolo-straniera",
+    "lang": "fr",
+    "layout": "normal",
+    "name": "Fixture Straniera",
+    "released_at": "1994-04-11",
+    "set": "xa",
+    "collector_number": "600",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "type_line": "Creature — Elf Scout",
+    "oracle_text": "Vigilance",
+    "power": "1",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "games": [
+      "paper"
+    ],
+    "digital": false,
+    "rarity": "common",
+    "prices": {
+      "usd": null,
+      "eur": "1.00"
+    },
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://immagini/straniera-xa-fr-piccola.jpg",
+      "normal": "https://immagini/straniera-xa-fr-normale.jpg"
+    }
+  },
+  {
+    "_nota": "Francese in xb, che il francese NON lo ammette: costa un decimo dell'altra e non prezza niente. E il cuore della regola per edizione, e un formato finto con un elenco di lingue solo non la proverebbe.",
+    "object": "card",
+    "id": "straniera-xb-fr",
+    "oracle_id": "oracolo-straniera",
+    "lang": "fr",
+    "layout": "normal",
+    "name": "Fixture Straniera",
+    "released_at": "1995-04-01",
+    "set": "xb",
+    "collector_number": "601",
+    "mana_cost": "{1}{G}",
+    "cmc": 2,
+    "type_line": "Creature — Elf Scout",
+    "oracle_text": "Vigilance",
+    "power": "1",
+    "toughness": "2",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "games": [
+      "paper"
+    ],
+    "digital": false,
+    "rarity": "common",
+    "prices": {
+      "usd": null,
+      "eur": "0.10"
+    },
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://immagini/straniera-xb-fr-piccola.jpg",
+      "normal": "https://immagini/straniera-xb-fr-normale.jpg"
+    }
   }
 ]

@@ -292,8 +292,9 @@ meccanismo solo: quale **stampa** descrive e prezza una carta.
 ## Stampa
 
 **La carta e la sua edizione sono due cose diverse.** In Standard non serviva mai
-distinguerle; qui la distinzione è dappertutto, perché il criterio guarda la
-stampa **italiana** mentre quel che si mostra viene da un'altra stampa.
+distinguerle; qui la distinzione è dappertutto, perché il criterio guarda le
+edizioni mentre quale copia si porti al tavolo è una domanda a parte — e quel
+che si mostra e quel che si prezza vengono da due stampe diverse.
 
 Il conto di quali carte esistono si fa sempre **per nome** e mai per stampa:
 sottrarre insiemi di stampe dà risposte sbagliate, perché la stampa di
@@ -304,18 +305,50 @@ diversi.
 
 La stampa che **descrive** la carta — edizione, numero di collezione, lingua e
 immagine — è quella che il giocatore vedrà e che verosimilmente comprerà: la
-più economica in inglese fra le ammesse, e l'italiana quando in inglese, dentro
-quelle edizioni, la carta non è mai stata stampata. Sono quarantasette carte,
-tutte di Terza: quell'edizione in inglese non esiste. Il nome e il testo restano
-inglesi lo stesso, perché Scryfall li scrive in inglese su ogni stampa.
+prima [lingua ammessa](#lingue-ammesse) che esista, nell'ordine in cui
+l'edizione la dichiara, e la più economica dentro quella lingua. Nessun codice
+di lingua sta nel codice: l'ordine è dato, e cambiarlo cambia il cartoncino che
+l'app indica. Il nome e il testo restano **inglesi** comunque, perché Scryfall
+li scrive in inglese su ogni stampa.
 
-La stampa che **prezza** la carta è la copia più economica, fra quelle delle
-edizioni ammesse, che su Cardmarket un listino ce l'abbia davvero — di
-qualunque lingua sia. Non è detto sia la stessa che descrive, e quando non lo è
-il prezzo se la porta dietro e l'app lo dice: senza, chi confronta su
-Cardmarket starebbe guardando un altro cartoncino senza accorgersene. Quando
+La stampa che **prezza** la carta è la copia più economica, fra quelle ammesse,
+che su Cardmarket un listino ce l'abbia davvero — di qualunque lingua ammessa
+sia; qui la preferenza non conta, perché non si sceglie cosa mostrare ma il
+pavimento più basso fra le copie giocabili. Non è detto sia la stessa che
+descrive, e quando non lo è il prezzo se la porta dietro e l'app lo dice: senza,
+chi confronta su Cardmarket starebbe guardando un altro cartoncino senza
+accorgersene. Quando
 nessuna copia ammessa ha listino il prezzo non c'è, e la provenienza nemmeno:
 una copia **non** ammessa non si usa mai per tappare quel buco.
+
+---
+
+## Lingue ammesse
+
+**Quali copie di una carta il gruppo accetta al tavolo. È una regola
+sull'edizione, non sul formato, e non toglie nessun nome dal pool.**
+
+Ogni edizione del documento di formato dichiara le lingue delle stampe che il
+gruppo ammette — e l'elenco è obbligatorio: un'edizione che non lo scrive fa
+rifiutare il documento. L'assenza **non** vale «tutte». Un valore predefinito
+sarebbe verità di formato scritta nel sorgente sotto forma di comportamento
+implicito, che è quel che ADR-0004 vieta: la regola la dichiara il documento
+sempre, anche quando è generosa.
+
+**L'ordine è la preferenza.** `["it", "en"]` dice due cose insieme: queste due
+lingue si giocano, e fra le stampe che esistono si mostra l'italiana. Il campo
+fa due mestieri di proposito — un secondo campo per la preferenza andrebbe
+tenuto in accordo col primo, e nessuno lo leggerebbe mai come diverso.
+
+La lingua **non è un criterio**: non decide quali carte esistono, decide quale
+copia è legale portare al tavolo (ADR-0006, dove sta anche la misura su cui
+questo poggia). Per la stessa ragione le lingue non entrano nell'[ambito](#ambito):
+cambiarle non chiude nessun mazzo salvato.
+
+Una carta di un'edizione ammessa che non avesse **nessuna** stampa in una lingua
+ammessa entrerebbe lo stesso nel pool, e la preparazione la nominerebbe nel
+resoconto: oggi non ne esiste nessuna, e il giorno che ne esistesse una la
+decisione andrebbe rifatta invece che aggirata.
 
 ---
 
@@ -324,16 +357,19 @@ una copia **non** ammessa non si usa mai per tappare quel buco.
 **Il nome italiano di una carta: quello con cui la si cerca, mai quello con cui
 la si mostra.**
 
-Il formato è definito dalle stampe italiane, e chi ci gioca alle carte pensa col
-nome che ha letto sul cartoncino: chi scrive *«Labirinto di Ith»* deve trovare
-*Maze of Ith*, con la stessa tolleranza ai refusi che ha l'inglese. Il nome
-italiano sta nel pool per questo, e per niente altro.
+Le copie che il gruppo porta al tavolo sono in gran parte italiane, e chi ci
+gioca alle carte pensa col nome che ha letto sul cartoncino: chi scrive
+*«Labirinto di Ith»* deve trovare *Maze of Ith*, con la stessa tolleranza ai
+refusi che ha l'inglese. Il nome italiano sta nel pool per questo, e per niente
+altro.
 
-Non è una lingua d'interfaccia a metà: mostrarlo darebbe nome italiano,
-immagine a volte inglese e testo di regole sempre inglese — tre lingue in una
-scheda — e un numero di collezione che parla di una stampa diversa da
-quella nominata. Il
-perché per esteso, coi numeri, sta in `PROGETTO.md` §7 sotto Q24.
+Non è una lingua d'interfaccia a metà: mostrarlo darebbe nome italiano, testo di
+regole sempre inglese e per un sesto delle carte nessuna immagine — due lingue
+in una scheda, e un riquadro vuoto. Il perché per esteso, coi numeri, sta in
+`PROGETTO.md` §7 sotto Q24. Un pezzo di quella motivazione è **decaduto** da
+quando le lingue ammesse le dichiara il documento: il numero di collezione
+mostrato non è più quello di una stampa inglese, ma quello della copia che il
+giocatore avrà in mano. La decisione resta, sugli argomenti che le restano.
 
 Chi legge «ricerca» in questo progetto guardi il contesto: qui è la ricerca del
 **catalogo** — trovare una carta — e in `src/ricerca/` è la ricerca del

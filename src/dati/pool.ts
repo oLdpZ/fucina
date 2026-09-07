@@ -157,9 +157,9 @@ export type Terra = {
  *
  * La distinzione fra la **carta** e la sua **stampa** qui è dappertutto, e non
  * lo era finché il formato era lo Standard. Il formato decide chi entra
- * guardando le stampe — una carta è nel gioco se ne esiste una stampa italiana
- * dentro le edizioni ammesse — mentre quel che si mostra viene da **un'altra
- * stampa**, la più economica in inglese fra quelle ammesse, e il prezzo da una
+ * guardando le stampe — una carta è nel gioco se ne esiste una dentro le
+ * edizioni ammesse — mentre quel che si mostra viene da **un'altra stampa**, la
+ * prima lingua che l'edizione dichiara e che esista, e il prezzo da una
  * **terza**, la copia ammessa più economica che un listino ce l'abbia. Sono tre
  * domande distinte, e per questo la carta si porta dietro quale stampa la
  * descrive e quale la prezza.
@@ -192,11 +192,11 @@ export type Carta = {
   /**
    * La lingua della stampa scelta.
    *
-   * Di norma è l'inglese, perché è di lì che vengono immagine e figura. Ma
-   * esistono carte del formato che in inglese, **dentro le edizioni ammesse**,
-   * non sono mai state stampate: per quelle la stampa che le descrive è la
-   * italiana. Il prezzo, quello, può venire da un'altra copia ammessa — e lo
-   * dichiara.
+   * È la prima delle lingue che l'edizione dichiara ammesse per la quale una
+   * stampa esiste davvero: l'ordine di quell'elenco è la preferenza, e sta nel
+   * documento di formato. Quale lingua esca di qui è quindi **dato**, e cambia
+   * senza toccare il codice. Il prezzo, quello, può venire da un'altra copia
+   * ammessa — e lo dichiara.
    */
   linguaDellaStampa: string;
   /** Il costo della faccia giocabile per prima: è quello che conta per la curva. */

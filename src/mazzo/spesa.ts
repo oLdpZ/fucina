@@ -182,12 +182,13 @@ const NOMI_DELLE_LINGUE: Readonly<Record<string, string>> = {
 };
 
 /**
- * Quale stampa ha fatto il conto, come si scriverebbe su un foglietto da
- * portare al negozio: `4ED 212, inglese`.
+ * La stampa che descrive la carta, come si scriverebbe su un foglietto da
+ * portare al negozio: `FBB 139, italiano`.
  *
- * Serve perché il prezzo è di **quella** stampa e di nessun'altra (storia 14):
- * senza, il numero sarebbe una cifra campata per aria, e chi cerca su
- * Cardmarket non saprebbe quale delle cinque edizioni guardare.
+ * Serve perché il pool ammette più edizioni della stessa carta: senza questa
+ * riga, chi cerca su Cardmarket non saprebbe quale guardare né in che lingua.
+ * È la copia che il giocatore comprerà; da quale copia venga il **prezzo** lo
+ * dice `altraStampaDelPrezzo`, che non è detto sia la stessa.
  */
 export function descriviLaStampa(carta: Carta): string {
   return descrivi({

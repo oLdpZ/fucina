@@ -36,7 +36,13 @@ const COMPLETO = {
     daConfermare: null,
   },
   edizioni: [
-    { codice: "aaa", nome: "Prima edizione", perché: "È l'era.", daConfermare: null },
+    {
+      codice: "aaa",
+      nome: "Prima edizione",
+      perché: "È l'era.",
+      lingue: ["it", "en"],
+      daConfermare: null,
+    },
   ],
   limitate: {
     perché: "Sono le carte che il gruppo trova troppo forti.",
@@ -97,6 +103,62 @@ describe("lettura del documento di formato", () => {
 
   it("non accetta un documento senza edizioni ammesse", () => {
     expect(() => interpretaFormato({ ...COMPLETO, edizioni: [] })).toThrow(/edizion/);
+  });
+
+  it("non accetta un'edizione che non dichiara le proprie lingue ammesse", () => {
+    // L'assenza non si legge come «tutte le lingue»: un valore predefinito qui
+    // sarebbe verità di formato scritta nel sorgente sotto forma di
+    // comportamento implicito, ed è quel che ADR-0004 vieta.
+    const { lingue: _, ...senzaLingue } = COMPLETO.edizioni[0] as Record<string, unknown>;
+
+    expect(() => interpretaFormato({ ...COMPLETO, edizioni: [senzaLingue] })).toThrow(/lingue/);
+  });
+
+  it("dice quale edizione guardare quando le lingue mancano", () => {
+    // Chi legge il messaggio ha il file aperto davanti: «manca un campo» lo
+    // manderebbe a rileggere quattro voci per trovare quella storta.
+    const { lingue: _, ...senzaLingue } = COMPLETO.edizioni[0] as Record<string, unknown>;
+
+    expect(() => interpretaFormato({ ...COMPLETO, edizioni: [senzaLingue] })).toThrow(/aaa/);
+  });
+
+  it("non accetta un elenco di lingue vuoto", () => {
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioni: [{ ...COMPLETO.edizioni[0], lingue: [] }],
+      }),
+    ).toThrow(/lingue/);
+  });
+
+  it("non accetta lingue che non sono un elenco di testi", () => {
+    // Una mano che scrive `"lingue": "it"` invece di `["it"]` non deve
+    // ritrovarsi un'edizione che ammette le lettere «i» e «t».
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioni: [{ ...COMPLETO.edizioni[0], lingue: "it" }],
+      }),
+    ).toThrow(/lingue/);
+
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioni: [{ ...COMPLETO.edizioni[0], lingue: ["it", 7] }],
+      }),
+    ).toThrow(/lingue/);
+  });
+
+  it("conserva l'ordine in cui le lingue sono scritte, che è la preferenza", () => {
+    // Il campo fa due mestieri: dice quali copie il gruppo ammette, e in quale
+    // ordine si preferisce mostrarle. Riordinarlo qui sarebbe togliere la
+    // seconda metà senza dirlo.
+    const formato = interpretaFormato({
+      ...COMPLETO,
+      edizioni: [{ ...COMPLETO.edizioni[0], lingue: ["fr", "it", "en"] }],
+    });
+
+    expect(formato.edizioni[0]?.lingue).toEqual(["fr", "it", "en"]);
   });
 
   it("non accetta un criterio che il codice non sa eseguire", () => {
@@ -269,6 +331,17 @@ describe("il documento vero", () => {
 
     expect(aperte.length).toBeGreaterThan(0);
     expect(aperte.every((voce) => voce.domanda.length > 10)).toBe(true);
+  });
+
+  it("dichiara per ogni edizione almeno una lingua ammessa", () => {
+    // **Quali** lingue non si fissa qui: sono dati, e cambieranno il giorno che
+    // il gruppo risponde. Che ce ne sia almeno una per edizione sì: è la regola
+    // che il documento deve eseguire invece di raccontarla nel proprio perché.
+    const formato = interpretaFormato(documentoVero);
+
+    for (const edizione of formato.edizioni) {
+      expect(edizione.lingue.length).toBeGreaterThan(0);
+    }
   });
 
   it("non nomina la stessa carta due volte", () => {

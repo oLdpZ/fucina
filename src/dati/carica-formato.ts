@@ -172,9 +172,34 @@ function leggiEdizioni(grezzo: unknown): Edizione[] {
       codice,
       nome: testo(voce["nome"]) ?? codice,
       perché,
+      lingue: leggiLingue(voce["lingue"], codice),
       daConfermare: testo(voce["daConfermare"]),
     };
   });
+}
+
+/**
+ * Le lingue ammesse di un'edizione, nell'ordine in cui sono scritte.
+ *
+ * Un elenco assente o vuoto **non** vale «tutte le lingue»: sarebbe una regola
+ * di formato che il codice si inventa al posto del documento, e ADR-0004 la
+ * vieta. Si rifiuta, e il rifiuto nomina l'edizione — chi legge il messaggio ha
+ * il file aperto davanti e deve sapere quale riga guardare.
+ *
+ * L'ordine si conserva com'è scritto, perché **è la preferenza**: riordinarlo
+ * qui sarebbe togliere metà del significato del campo senza dirlo.
+ */
+function leggiLingue(grezzo: unknown, codice: string): string[] {
+  const lingue = Array.isArray(grezzo) ? grezzo.map((voce: unknown) => testo(voce)) : null;
+
+  if (lingue === null || lingue.length === 0 || lingue.some((lingua) => lingua === null)) {
+    throw new Error(
+      `L'edizione «${codice}» del documento non dichiara le lingue delle copie ammesse. ` +
+        `Un elenco assente o vuoto non vuol dire «tutte»: la regola va scritta, anche quando è generosa.`,
+    );
+  }
+
+  return lingue as string[];
 }
 
 function leggiElenco(grezzo: unknown, quale: string): ElencoDiCarte {

@@ -14,6 +14,7 @@ import {
   preparaPool,
   raccontaBuchi,
   raccontaDiario,
+  raccontaLingue,
   raccontaPosta,
   type CartaScryfall,
 } from "./prepara-pool.ts";
@@ -55,6 +56,18 @@ const preparazione = () => preparaPool(FRAMMENTO, { formato: FORMATO, aggiornato
 /** Lo stesso formato con una voce cambiata: i test che toccano una riga sola. */
 function formatoCon(cambio: Partial<Formato>): Formato {
   return { ...FORMATO, ...cambio };
+}
+
+/**
+ * Lo stesso formato con le lingue di **una** edizione cambiate: è il modo in
+ * cui questi test provano che la regola arriva dal documento e non dal codice.
+ */
+function conLingue(codice: string, lingue: string[]): Formato {
+  return formatoCon({
+    edizioni: FORMATO.edizioni.map((edizione) =>
+      edizione.codice === codice ? { ...edizione, lingue } : edizione,
+    ),
+  });
 }
 
 function carta(pool: Pool, nome: string): Carta {
@@ -284,11 +297,132 @@ describe("passo 2 — cosa si mostra", () => {
   });
 });
 
+describe("le lingue ammesse, che il documento dichiara per edizione", () => {
+  it("descrive la carta con la prima lingua dell'ordine dichiarato, e non con la più economica", () => {
+    // La Trilingue esiste in tre lingue ammesse dalla stessa edizione, a tre
+    // prezzi diversi. A descriverla vince l'inglese perché è la **prima**
+    // dell'elenco, non perché costi meno: costa il triplo della francese.
+    const trilingue = carta(preparazione().pool, "Fixture Trilingue");
+
+    expect(trilingue.linguaDellaStampa).toBe("en");
+    expect(trilingue.edizione).toBe("xa");
+  });
+
+  it("cambia la stampa mostrata quando il documento cambia l'ordine delle lingue", () => {
+    // È la prova che l'ordine **è** la preferenza, e non un caso: si sposta una
+    // parola in un file di dati, e centinaia di carte del pool vero cambiano
+    // stampa senza un commit di codice.
+    const { pool } = preparaPool(FRAMMENTO, {
+      formato: conLingue("xa", ["it", "en", "fr"]),
+      aggiornatoIl: QUANDO,
+    });
+
+    expect(carta(pool, "Fixture Trilingue").linguaDellaStampa).toBe("it");
+  });
+
+  it("non si fa descrivere da una stampa in una lingua che l'edizione non ammette", () => {
+    // La tedesca della Trilingue costa un centesimo: è la più economica di
+    // tutte, e non descrive niente. Che resti fuori non è una proprietà del
+    // tedesco — dichiarata, la stessa stampa descrive la carta: è la prova che
+    // la lingua non è cablata da nessuna parte, e che l'unica cosa che la tiene
+    // fuori è l'elenco del documento.
+    expect(carta(preparazione().pool, "Fixture Trilingue").linguaDellaStampa).toBe("en");
+
+    const { pool } = preparaPool(FRAMMENTO, {
+      formato: conLingue("xa", ["de", "en", "it", "fr"]),
+      aggiornatoIl: QUANDO,
+    });
+
+    expect(carta(pool, "Fixture Trilingue").linguaDellaStampa).toBe("de");
+  });
+
+  it("non prezza da una stampa in una lingua che l'edizione non ammette", () => {
+    // Il pavimento è il prezzo di una copia **legale**: se la tedesca entrasse,
+    // il tetto di spesa conterebbe un cartoncino che al tavolo l'arbitro
+    // respinge.
+    const trilingue = carta(preparazione().pool, "Fixture Trilingue");
+
+    expect(trilingue.prezzo.euro).toBe(0.5);
+    expect(trilingue.prezzo.stampa?.lingua).toBe("fr");
+  });
+
+  it("tratta la stessa lingua in modo diverso in due edizioni con elenchi diversi", () => {
+    // È il cuore della regola. La Straniera ha una stampa francese in ciascuna
+    // delle due edizioni: xa il francese lo ammette, xb no. Vince quella di xa,
+    // che costa dieci volte tanto — e un formato con un elenco di lingue solo
+    // non lo proverebbe.
+    const straniera = carta(preparazione().pool, "Fixture Straniera");
+
+    expect(straniera.prezzo.euro).toBe(1);
+    expect(straniera.prezzo.stampa).toEqual({
+      edizione: "xa",
+      numeroDiCollezione: "600",
+      lingua: "fr",
+    });
+  });
+
+  it("cambia risposta sulla stessa carta se l'altra edizione ammette quella lingua", () => {
+    const { pool } = preparaPool(FRAMMENTO, {
+      formato: conLingue("xb", ["en", "it", "fr"]),
+      aggiornatoIl: QUANDO,
+    });
+
+    expect(carta(pool, "Fixture Straniera").prezzo.euro).toBe(0.1);
+  });
+
+  it("regge una lingua dichiarata per la quale non esiste nessuna stampa", () => {
+    // Un'edizione dichiarata generosamente resta lecita: il documento è scritto
+    // a mano, e chi lo scrive non ha davanti l'elenco delle stampe che esistono.
+    const { pool } = preparaPool(FRAMMENTO, {
+      formato: conLingue("xc", ["ja", "it", "ru"]),
+      aggiornatoIl: QUANDO,
+    });
+
+    expect(carta(pool, "Fixture Velo").linguaDellaStampa).toBe("it");
+  });
+
+  it("fa entrare lo stesso la carta che in nessuna lingua ammessa esiste, e lo dice", () => {
+    // Il caso che ADR-0006 dichiara impossibile oggi. La lingua non è un
+    // criterio e non deve togliere nomi: la carta entra, e la preparazione lo
+    // dice a voce alta invece di lasciarlo sparire.
+    const esito = preparaPool(FRAMMENTO, {
+      formato: conLingue("xc", ["en"]),
+      aggiornatoIl: QUANDO,
+    });
+
+    expect(esito.pool.carte.map((c) => c.nome)).toContain("Fixture Velo");
+    expect(esito.senzaLinguaAmmessa).toEqual(["Fixture Velo"]);
+  });
+
+  it("non tappa il buco della carta che segnala col prezzo di una copia non ammessa", () => {
+    // La Trilingue ha un listino su tutte e quattro le sue stampe. Con
+    // un'edizione che non ne ammette nessuna, il prezzo deve sparire del tutto:
+    // prendere il più basso che c'è sarebbe il prezzo di una carta che al
+    // tavolo non si può giocare, cioè il contrario di un pavimento.
+    const esito = preparaPool(FRAMMENTO, {
+      formato: conLingue("xa", ["ja"]),
+      aggiornatoIl: QUANDO,
+    });
+
+    const trilingue = carta(esito.pool, "Fixture Trilingue");
+    expect(esito.senzaLinguaAmmessa).toContain("Fixture Trilingue");
+    expect(trilingue.prezzo.euro).toBeNull();
+    expect(trilingue.prezzo.stampa).toBeNull();
+  });
+
+  it("resta muta quando ogni carta ha una copia ammessa", () => {
+    expect(preparazione().senzaLinguaAmmessa).toEqual([]);
+    expect(raccontaLingue([])).toBe("");
+    expect(raccontaLingue(["Fixture Velo"])).toContain("Fixture Velo");
+  });
+});
+
 describe("passo 3 - quale stampa fa il prezzo", () => {
   it("prende il prezzo dalla stampa ammessa piu economica che un listino ce l'abbia", () => {
-    // Sono le quarantasette carte di Terza del pool vero: le descrive una
-    // stampa che su Cardmarket non c'è, e il tetto di spesa le teneva fuori
-    // non perché costassero, ma perché non sapeva quanto costano.
+    // È il caso normale del pool vero: le stampe italiane, che sono quelle
+    // mostrate, su Cardmarket un listino non ce l'hanno, e il tetto di spesa
+    // teneva fuori quelle carte non perché costassero ma perché non sapeva
+    // quanto costano.
     const duale = carta(preparazione().pool, "Fixture Duale");
 
     expect(duale.prezzo.euro).toBe(280);

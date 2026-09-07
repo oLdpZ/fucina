@@ -7,7 +7,7 @@
 
   "criterio": {
     "regola": "solo-edizioni",
-    "descrizione": "Una carta è nel formato se sta in una delle edizioni ammesse, che ne esista o meno una stampa italiana. Il conto è per nome e mai per stampa: la stampa di un'edizione non è la stampa di un'altra anche quando la carta è la stessa. Quali lingue di ciascuna edizione si possano portare al tavolo sta scritto nel «perché» di ogni edizione: è una regola sulle copie e non sulle carte, e non toglie nessun nome dal formato.",
+    "descrizione": "Una carta è nel formato se sta in una delle edizioni ammesse, che ne esista o meno una stampa italiana. Il conto è per nome e mai per stampa: la stampa di un'edizione non è la stampa di un'altra anche quando la carta è la stessa. Quali lingue di ciascuna edizione si possano portare al tavolo lo dice il campo «lingue» dell'edizione: è una regola sulle copie e non sulle carte, e non toglie nessun nome dal formato.",
     "daConfermare": null
   },
 
@@ -15,25 +15,29 @@
     {
       "codice": "fbb",
       "nome": "Terza edizione a bordo nero, straniera",
-      "perché": "È la Terza edizione stampata fuori dall'inglese, e la porta d'ingresso del formato: la maggior parte delle carte giocate viene di qui. Il gruppo ammette le stampe italiane, francesi e tedesche. Una stampa inglese di questa edizione non esiste — è un'edizione straniera per definizione — e la Terza inglese è un'altra edizione, che il formato non ammette.",
+      "perché": "È la Terza edizione stampata fuori dall'inglese, e la porta d'ingresso del formato: la maggior parte delle carte giocate viene di qui. Quali copie si portino al tavolo lo dice «lingue» qui sotto; quel che il campo non dice è perché l'inglese non c'è, ed è che una stampa inglese di questa edizione non esiste — è un'edizione straniera per definizione — mentre la Terza inglese è un'altra edizione, che il formato non ammette.",
+      "lingue": ["it", "fr", "de"],
       "daConfermare": null
     },
     {
       "codice": "4ed",
       "nome": "Quarta edizione",
-      "perché": "Dentro l'era per il gruppo, e porta carte che le altre tre non hanno. Il gruppo ha nominato le stampe italiane, francesi e tedesche; l'inglese è ammesso per decisione presa il 2026-09-07 da chi tiene l'app, e non perché il gruppo l'abbia detto — vedi la domanda qui accanto.",
-      "daConfermare": "Il gruppo ha elencato le lingue di questa edizione come «italiano francese tedesco» senza nominare l'inglese, mentre per Leggende e L'Oscurità l'inglese l'ha nominato: un contrasto che sembra voluto. L'inglese qui dentro è una scelta di chi tiene l'app, non una risposta. Da questo dipende quale stampa descrive e prezza 363 carte del pool: è la prima domanda del prossimo giro."
+      "perché": "Dentro l'era per il gruppo, e porta carte che le altre tre non hanno. Quel che «lingue» non dice è che l'inglese sta in quell'elenco per decisione presa il 2026-09-07 da chi tiene l'app, e non perché il gruppo l'abbia detto: il gruppo ha nominato soltanto italiano, francese e tedesco — vedi la domanda qui accanto.",
+      "lingue": ["it", "en", "fr", "de"],
+      "daConfermare": "Il gruppo ha elencato le lingue di questa edizione come «italiano francese tedesco» senza nominare l'inglese, mentre per Leggende e L'Oscurità l'inglese l'ha nominato: un contrasto che sembra voluto. L'inglese qui dentro è una scelta di chi tiene l'app, non una risposta. Da questo dipende da quale copia viene il prezzo di 358 carte del pool, misurate sul pool del 2026-09-07: sono quelle prezzate oggi da una stampa inglese di Quarta. La stampa che le descrive non cambierebbe — è già l'italiana, che «lingue» mette per prima. È la prima domanda del prossimo giro."
     },
     {
       "codice": "leg",
       "nome": "Leggende",
-      "perché": "Uscita in italiano col proprio nome, ed è l'espansione che dà al formato le sue carte più caratteristiche. Il gruppo ammette le stampe inglesi e italiane.",
+      "perché": "Uscita in italiano col proprio nome, ed è l'espansione che dà al formato le sue carte più caratteristiche. Le copie ammesse le dice «lingue»: qui il gruppo l'inglese l'ha nominato per primo, a differenza di Terza e Quarta.",
+      "lingue": ["it", "en"],
       "daConfermare": null
     },
     {
       "codice": "drk",
       "nome": "L'Oscurità",
-      "perché": "Uscita in italiano col proprio nome, ed è l'ultima espansione dell'era. Il gruppo ammette le stampe inglesi e italiane.",
+      "perché": "Uscita in italiano col proprio nome, ed è l'ultima espansione dell'era. Le copie ammesse le dice «lingue», e sono le stesse di Leggende: il gruppo ha risposto per le due insieme.",
+      "lingue": ["it", "en"],
       "daConfermare": null
     }
   ],

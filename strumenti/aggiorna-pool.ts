@@ -15,6 +15,7 @@ import {
   preparaPool,
   raccontaBuchi,
   raccontaDiario,
+  raccontaLingue,
   raccontaPosta,
   type CartaScryfall,
 } from "./prepara-pool.ts";
@@ -188,6 +189,21 @@ async function principale(): Promise<void> {
   console.log(raccontaDiario(confrontaPool(precedente, preparazione)));
   console.log("");
   console.log(raccontaBuchi(contaBuchi(preparazione.pool)));
+
+  // Le carte che nessuna copia ammessa descrive. ADR-0006 dà questo caso per
+  // impossibile — le stampe straniere di queste edizioni sono complete, ed è
+  // misurato — quindi qui non stampa niente. Se stampasse, sarebbe scattata la
+  // clausola «si riaprirebbe se» di quell'ADR.
+  //
+  // Non esce con un codice di errore, a differenza della posta qui sotto, e la
+  // differenza è vera: la carta da posta rimasta in catalogo è un documento da
+  // correggere, mentre questa è una carta che nel pool ci va e ci sta bene. Il
+  // pool scritto è giusto; è la decisione a monte che va riguardata.
+  const lingue = raccontaLingue(preparazione.senzaLinguaAmmessa);
+  if (lingue !== "") {
+    console.log("");
+    console.log(lingue);
+  }
 
   // La verifica della posta, che è una verifica e non una fonte: se il pool ne
   // contiene una che la lista non nomina, lo si dice e si esce con un codice di

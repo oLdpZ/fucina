@@ -148,7 +148,7 @@ describe("normalizzazione del testo", () => {
  * È una decisione che si disfa da sé. Il nome italiano è lì, sulla carta, a un
  * campo di distanza da ogni componente che già scrive `carta.nome`: il primo che
  * passa lo mostrerà in buona fede, e verrà fuori una scheda con nome italiano,
- * immagine a volte inglese e testo di regole sempre inglese. Il controllo è
+ * immagine a volte assente e testo di regole sempre inglese. Il controllo è
  * grossolano — guarda il codice come testo — e va bene così: il confine da
  * difendere è grossolano quanto lui.
  */

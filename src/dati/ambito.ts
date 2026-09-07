@@ -31,6 +31,12 @@
  * e il mazzo salvato resta un mazzo di questo gioco — al più con dentro una
  * carta da togliere, che è una cosa che si vede aprendolo. Se entrassero, ogni
  * ripensamento del gruppo chiuderebbe in silenzio tutti i mazzi salvati.
+ *
+ * Le **lingue ammesse** stanno con le limitate e le bandite, per la stessa
+ * ragione e per una in più: dicono quale copia si porta al tavolo, non quali
+ * carte esistono. Il giorno che il gruppo rispondesse che la Quarta inglese non
+ * si gioca, l'app cambierebbe la copia da cui prende il prezzo per centinaia di
+ * carte — e non cambierebbe un solo nome. Deciso in ADR-0006.
  */
 
 import type { Formato } from "./formato.js";

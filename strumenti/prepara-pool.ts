@@ -139,6 +139,17 @@ export type Preparazione = {
   bandite: string[];
   correzioniOrfane: string[];
   postaNonBandita: string[];
+  /**
+   * Le carte di un'edizione ammessa che **non hanno nessuna stampa in una
+   * lingua ammessa** per quell'edizione.
+   *
+   * Oggi resta vuota, ed è misurato in ADR-0006: le stampe straniere delle
+   * edizioni di questo formato sono complete. Il giorno che nominasse qualcuno,
+   * sarebbe scattata la clausola «si riaprirebbe se» di quell'ADR, e la
+   * decisione andrebbe rifatta invece che aggirata. La carta entra nel pool lo
+   * stesso — la lingua non è un criterio e non deve togliere nomi.
+   */
+  senzaLinguaAmmessa: string[];
 };
 
 export type Diario = {
@@ -162,9 +173,31 @@ export type Buchi = {
 const COLORI: readonly string[] = ["W", "U", "B", "R", "G"];
 const COLORI_MANA: readonly string[] = [...COLORI, "C"];
 
-/** Le due lingue che questa preparazione guarda, e a che cosa serve ciascuna. */
+/**
+ * L'unico codice di lingua che resta scritto qui, e perché non è verità di
+ * formato.
+ *
+ * **Quali** copie il gruppo ammetta non si legge più dal sorgente: sta nel campo
+ * `lingue` di ogni edizione del documento, e la preparazione non ha altra strada
+ * per saperlo che leggerlo di lì (ADR-0004). Le due costanti che c'erano fino a
+ * ieri — la lingua preferita e il suo ripiego — sono sparite con quella lettura.
+ *
+ * Questa non le sostituisce, perché non risponde alla stessa domanda. Serve a
+ * due cose che non cambiano quando il gruppo cambia idea sulle copie:
+ *
+ * 1. la regola `stampa-italiana`, il cui **nome è la sua definizione** —
+ *    «esiste una stampa in italiano»: è uno dei due comportamenti che il codice
+ *    sa eseguire, e quale valga lo dice il documento;
+ * 2. il **nome italiano** come chiave di ricerca, che è una funzione dell'app
+ *    per chi la usa e non una regola del tavolo: chi scrive «Labirinto di Ith»
+ *    deve trovare *Maze of Ith* anche il giorno che l'italiano non si giocasse
+ *    più.
+ *
+ * Nessuna delle due si può leggere da `lingue` senza dire una falsità: un
+ * formato che ammettesse solo l'inglese non smetterebbe di volere la ricerca in
+ * italiano, e la regola `stampa-italiana` diventerebbe un'altra regola.
+ */
 const ITALIANO = "it";
-const INGLESE = "en";
 
 /**
  * Le immagini che Scryfall dichiara di non avere. Gli indirizzi ci sono lo
@@ -222,6 +255,58 @@ function codiceDiEdizione(codice: string | undefined): string {
 }
 
 /**
+ * Le lingue ammesse edizione per edizione, nell'ordine in cui il documento le
+ * scrive — e quell'ordine **è la preferenza**.
+ *
+ * Si ricorda per documento come le edizioni, e per la stessa ragione: la
+ * domanda si fa su ogni stampa di ogni carta.
+ */
+const LINGUE_DI: WeakMap<Formato, Map<string, string[]>> = new WeakMap();
+
+function lingueAmmesse(formato: Formato): Map<string, string[]> {
+  const gia = LINGUE_DI.get(formato);
+  if (gia !== undefined) return gia;
+
+  const per = new Map<string, string[]>(
+    formato.edizioni.map((edizione) => [
+      codiceDiEdizione(edizione.codice),
+      // Ripulite come i codici di edizione, e per lo stesso motivo: uno spazio
+      // in coda a «it » è invisibile a chi scrive il documento, e svuoterebbe
+      // un'edizione senza che nessuno se ne accorga.
+      edizione.lingue.map((lingua) => lingua.trim().toLowerCase()),
+    ]),
+  );
+  LINGUE_DI.set(formato, per);
+  return per;
+}
+
+/**
+ * Il posto di una stampa nell'ordine di preferenza della **propria** edizione,
+ * e `-1` quando la sua lingua quell'edizione non la ammette.
+ *
+ * È per edizione e non per formato perché la regola vera è per edizione: la
+ * stessa lingua può essere giocabile in una e non nell'altra, e un unico ordine
+ * di formato sarebbe una media che nessun gruppo ha detto.
+ */
+function rangoDiLingua(grezza: CartaScryfall, formato: Formato): number {
+  const lingue = lingueAmmesse(formato).get(codiceDiEdizione(grezza.set));
+  if (lingue === undefined) return -1;
+  return lingue.indexOf((grezza.lang ?? "").trim().toLowerCase());
+}
+
+/**
+ * Le stampe che il gruppo ammette davvero: quelle la cui lingua è dichiarata
+ * dall'edizione da cui vengono.
+ *
+ * Sono le uniche che possono descrivere la carta e le uniche che possono
+ * prezzarla. Una copia che al tavolo l'arbitro respinge non è la carta che il
+ * giocatore comprerà, e non è il pavimento del suo prezzo.
+ */
+function stampeAmmesse(stampe: CartaScryfall[], formato: Formato): CartaScryfall[] {
+  return stampe.filter((stampa) => rangoDiLingua(stampa, formato) >= 0);
+}
+
+/**
  * Il risultato di un'unione (*meld*): i dati lo dichiarano una carta, e hanno
  * ragione, ma in un mazzo non ci va — arriva in gioco solo unendo le due carte
  * che lo compongono, e quelle sì che sono nel pool.
@@ -251,13 +336,13 @@ function nataDaUnUnione(grezza: CartaScryfall): boolean {
  *    per **nome** e mai per stampa: una carta ristampata in due edizioni
  *    ammesse è una carta sola, e sottrarre insiemi di edizioni — che è il modo
  *    naturale di scriverlo — conta per stampa e dà risposte sbagliate.
- * 2. **Cosa si mostra** viene dalla stampa **inglese** più economica fra quelle
- *    ammesse. Perché l'italiano non si mostra sta in `spec.md`: il testo di
- *    regole in italiano su Scryfall non esiste e l'immagine italiana manca per
- *    un'ottantina di carte.
+ * 2. **Cosa si mostra** viene dalla prima lingua che l'edizione dichiara e che
+ *    esista davvero: l'ordine di `lingue` è la preferenza, e il documento lo
+ *    scrive edizione per edizione. Nessun codice di lingua si decide qui.
  * 3. **Quanto costa** viene da una **terza** stampa: la copia ammessa più
- *    economica che un listino ce l'abbia, di qualunque lingua sia. Il prezzo se
- *    la porta dietro, perché da qui non lo si deduce più dalle altre due.
+ *    economica che un listino ce l'abbia, di qualunque lingua ammessa sia. Il
+ *    prezzo se la porta dietro, perché da qui non lo si deduce più dalle altre
+ *    due.
  *
  * `aggiornatoIl` è la data che Scryfall dichiara per l'archivio scaricato.
  * Entra come argomento e non viene letta da un orologio, perché la stessa
@@ -302,6 +387,7 @@ export function preparaPool(
 
   const carte: Carta[] = [];
   const bandite: string[] = [];
+  const senzaLinguaAmmessa: string[] = [];
 
   for (const [nome, stampe] of perNome) {
     if (!ammessaDalCriterio(stampe, formato)) continue;
@@ -314,11 +400,17 @@ export function preparaPool(
     }
 
     /* --- Passi 2 e 3: cosa si mostra, e quanto costa --------------------- */
+    // Le copie che il gruppo ammette si cercano una volta sola: le due domande
+    // che seguono partono tutte e due da lì, e chiederlo due volte vorrebbe
+    // dire poterlo chiedere in due modi.
+    const ammesse = stampeAmmesse(stampe, formato);
+    if (ammesse.length === 0) senzaLinguaAmmessa.push(nome);
+
     carte.push(
       riduci({
         nome,
-        stampa: stampaCheDescrive(stampe),
-        stampaDelPrezzo: stampaChePrezza(stampe),
+        stampa: stampaCheDescrive(stampe, ammesse, formato),
+        stampaDelPrezzo: stampaChePrezza(ammesse),
         nomeItaliano: nomeItalianoDi(stampe),
         limitata: limitate.has(nome),
         aggiornatoIl: opzioni.aggiornatoIl,
@@ -331,6 +423,7 @@ export function preparaPool(
   // un diff deve mostrare quel che è cambiato, non come Scryfall ha ordinato.
   carte.sort((a, b) => confrontaTesti(a.nome, b.nome));
   bandite.sort(confrontaTesti);
+  senzaLinguaAmmessa.sort(confrontaTesti);
 
   // Prima le regole meccaniche, poi le correzioni a mano sopra di esse: è
   // l'ordine deciso in Q13, ed è quel che rende le correzioni l'ultima parola.
@@ -352,6 +445,7 @@ export function preparaPool(
     bandite,
     correzioniOrfane: corrette.orfane,
     postaNonBandita: cartePerLaPosta(corrette.carte),
+    senzaLinguaAmmessa,
   };
 }
 
@@ -374,34 +468,39 @@ function ammessaDalCriterio(stampe: CartaScryfall[], formato: Formato): boolean 
 }
 
 /**
- * La stampa che descrive la carta, cercata in **quest'ordine di lingue**, e la
- * più economica dentro la prima che dia qualcosa.
+ * La stampa che descrive la carta: la **prima lingua che l'edizione dichiara**
+ * e che esista davvero, e la più economica dentro quella.
  *
- * 1. **inglese**, che è il caso normale: immagine e figura sono quelle che il
- *    giocatore riconosce, e il numero di collezione è quello che cerca;
- * 2. **italiano**, quando in inglese, dentro le edizioni ammesse, la carta non
- *    è mai stata stampata. Nel pool vero sono quarantasette, tutte di Terza, e
- *    fra loro dieci terre e cinque limitate. Nome, testo e tipi restano inglesi
- *    lo stesso, perché Scryfall li scrive in inglese su ogni stampa;
- * 3. **qualunque altra**, che serve solo al criterio a elenco: là dentro può
- *    entrare una carta che né in inglese né in italiano esiste.
+ * L'ordine non è scritto qui. Sta nel campo `lingue` di ogni edizione del
+ * documento, dove è insieme l'elenco delle copie ammesse e la preferenza con
+ * cui si mostrano: `["it", "en"]` dice «queste due si giocano, e fra le stampe
+ * che esistono mostra l'italiana». Cambiare quella riga cambia quale cartoncino
+ * l'app indica, e non chiede un commit di codice — è la promessa di ADR-0004
+ * applicata alla lingua.
  *
  * L'ordine è per **lingua** e non per prezzo, ed è la differenza che conta.
- * Prendendo la più economica fra tutte, queste quarantasette carte finirebbero
- * descritte dalla stampa **francese**: la stessa edizione, la stessa figura, e
- * una copia che il destinatario in mano non avrà. Il numero di collezione
- * manderebbe a comprare la cosa sbagliata.
+ * Prendendo la più economica fra tutte, le 293 carte di Terza del pool vero
+ * finirebbero descritte dalla stampa **francese**: la stessa edizione, la
+ * stessa figura, e una copia che il destinatario in mano non avrà. Il numero di
+ * collezione manderebbe a comprare la cosa sbagliata.
  *
  * Il **prezzo** non si sceglie qui, e da questo è la differenza fra le due
  * funzioni: la copia francese non descrive la carta e la prezza eccome, perché
  * è una copia che il gruppo ammette. Vedi `stampaChePrezza`.
+ *
+ * Il ripiego finale — la più economica fra **tutte** le stampe, ammesse o no —
+ * serve alla carta che in nessuna lingua ammessa è mai stata stampata. Non è un
+ * caso che si nasconde: quella carta finisce in `senzaLinguaAmmessa` e la
+ * preparazione la dice a voce alta. Descriverla con niente sarebbe togliere una
+ * carta dal catalogo per un motivo che il criterio non contempla.
  */
-function stampaCheDescrive(stampe: CartaScryfall[]): CartaScryfall {
-  for (const lingua of [INGLESE, ITALIANO]) {
-    const nella = stampe.filter((stampa) => stampa.lang === lingua);
-    if (nella.length > 0) return piuEconomica(nella);
-  }
-  return piuEconomica(stampe);
+function stampaCheDescrive(
+  stampe: CartaScryfall[],
+  ammesse: CartaScryfall[],
+  formato: Formato,
+): CartaScryfall {
+  if (ammesse.length === 0) return piuEconomica(stampe);
+  return scegli(ammesse, (stampa) => rangoDiLingua(stampa, formato));
 }
 
 /**
@@ -410,21 +509,24 @@ function stampaCheDescrive(stampe: CartaScryfall[]): CartaScryfall {
  *
  * Qui non si sceglie cosa mostrare — quello lo fa `stampaCheDescrive`, e la
  * lingua è la sua prima domanda — si cerca il **pavimento più basso fra le
- * copie legali**. Per questo la lingua non entra: le stampe che arrivano qui
- * sono già tutte di edizioni che il formato ammette, e fra copie tutte
- * giocabili la più economica è la più economica.
+ * copie legali**. Per questo la **preferenza** di lingua non entra: le stampe
+ * che arrivano qui sono già state setacciate da `stampeAmmesse`, che ha tolto
+ * le edizioni fuori formato e le lingue che quelle edizioni non ammettono. Fra
+ * copie tutte giocabili la più economica è la più economica, in qualunque
+ * lingua sia stampata.
  *
- * È la mossa che recupera le quarantasette carte di Terza del pool vero: le
- * descrive la loro stampa italiana, che su Cardmarket un listino non ce l'ha, e
- * col tetto di spesa acceso l'app le teneva fuori — non perché costassero, ma
- * perché non sapeva quanto costano. La stessa carta in Terza francese è quotata,
- * ed è una copia che il gruppo ammette.
+ * È la mossa che tiene in piedi il tetto di spesa da quando le stampe mostrate
+ * sono italiane: su Cardmarket **nessuna** stampa italiana di queste quattro
+ * edizioni ha un listino, e senza sdoppiamento il pool uscirebbe senza un
+ * prezzo. Nel pool vero sono 748 carte su 753 a essere prezzate da una copia
+ * diversa da quella che le descrive — quasi sempre la stampa inglese della
+ * stessa edizione, e per le 49 di Terza la francese.
  *
  * Il prezzo si porta dietro **da quale copia viene** (`Prezzo.stampa`), perché
  * da qui in poi non lo si deduce più da quella che descrive la carta.
  */
-function stampaChePrezza(stampe: CartaScryfall[]): CartaScryfall | null {
-  const conListino = stampe.filter((stampa) => prezzoInEuro(stampa) !== null);
+function stampaChePrezza(ammesse: CartaScryfall[]): CartaScryfall | null {
+  const conListino = ammesse.filter((stampa) => prezzoInEuro(stampa) !== null);
   return conListino.length === 0 ? null : piuEconomica(conListino);
 }
 
@@ -444,12 +546,19 @@ function nomeItalianoDi(stampe: CartaScryfall[]): string | null {
 }
 
 /**
- * La più economica fra le stampe date. A parità di prezzo — e le carte senza
- * prezzo sono tutte a pari — si sceglie la stampa più vecchia, e a parità di
- * tutto l'identificativo: serve solo che la scelta sia sempre la stessa.
+ * La scelta fra le stampe di una carta: prima il `rango` che chi chiama dà a
+ * ciascuna — è lì che entra la preferenza di lingua — poi il prezzo, poi la
+ * stampa più vecchia, poi l'identificativo.
+ *
+ * Le ultime tre servono solo a far sì che la scelta sia **sempre la stessa**:
+ * il pool finisce in git, e due preparazioni sugli stessi dati devono scrivere
+ * lo stesso file.
  */
-function piuEconomica(stampe: CartaScryfall[]): CartaScryfall {
+function scegli(stampe: CartaScryfall[], rango: (stampa: CartaScryfall) => number): CartaScryfall {
   const ordinate = [...stampe].sort((a, b) => {
+    const rangoA = rango(a);
+    const rangoB = rango(b);
+    if (rangoA !== rangoB) return rangoA - rangoB;
     // Confronto e non sottrazione: due carte senza prezzo valgono entrambe
     // «infinito», e la loro differenza non è un numero.
     const prezzoA = prezzoInEuro(a) ?? Infinity;
@@ -460,6 +569,14 @@ function piuEconomica(stampe: CartaScryfall[]): CartaScryfall {
     return confrontaTesti(a.id ?? "", b.id ?? "");
   });
   return ordinate[0] as CartaScryfall;
+}
+
+/**
+ * La più economica fra le stampe date, senza preferenze di lingua: è `scegli`
+ * con tutte le stampe a pari merito.
+ */
+function piuEconomica(stampe: CartaScryfall[]): CartaScryfall {
+  return scegli(stampe, () => 0);
 }
 
 /**
@@ -828,6 +945,29 @@ export function raccontaPosta(nomi: string[]): string {
     nomi.map((nome) => `    ${nome}`).join("\n") +
     `\n  È una verifica e non una fonte: se vanno bandite, si aggiunge una riga al ` +
     `documento di formato.`
+  );
+}
+
+/**
+ * Le carte che nessuna copia ammessa descrive, raccontate al manutentore.
+ *
+ * Non è un guasto della preparazione e non ferma niente: è la clausola «si
+ * riaprirebbe se» di ADR-0006 che scatta. Quell'ADR ha **misurato** che le
+ * stampe straniere delle edizioni di questo formato sono complete, ed è su
+ * quel numero che poggia la decisione di non fare della lingua un criterio. Se
+ * questo elenco stampasse qualcosa, il numero sarebbe cambiato, e la decisione
+ * andrebbe rifatta invece che aggirata.
+ */
+export function raccontaLingue(nomi: string[]): string {
+  if (nomi.length === 0) return "";
+  return (
+    (nomi.length === 1
+      ? `Nel pool c'è una carta che di una copia in una lingua ammessa non ne ha nessuna:\n`
+      : `Nel pool ci sono ${nomi.length} carte che di una copia in una lingua ammessa ` +
+        `non ne hanno nessuna:\n`) +
+    nomi.map((nome) => `    ${nome}`).join("\n") +
+    `\n  Entrano lo stesso, perché la lingua non è un criterio e non toglie nomi. Ma ` +
+    `ADR-0006 dava questo caso per impossibile: se è qui, la decisione va rifatta.`
   );
 }
 

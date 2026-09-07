@@ -35,8 +35,20 @@ const FORMATO: Formato = {
     daConfermare: null,
   },
   edizioni: [
-    { codice: "aaa", nome: "Prima edizione", perché: "È l'era.", daConfermare: null },
-    { codice: "bbb", nome: "Seconda edizione", perché: "È l'era.", daConfermare: null },
+    {
+      codice: "aaa",
+      nome: "Prima edizione",
+      perché: "È l'era.",
+      lingue: ["it", "en"],
+      daConfermare: null,
+    },
+    {
+      codice: "bbb",
+      nome: "Seconda edizione",
+      perché: "È l'era.",
+      lingue: ["it"],
+      daConfermare: null,
+    },
   ],
   limitate: { perché: "Troppo forti.", daConfermare: null, carte: [] },
   bandite: { perché: "Si giocano per la posta.", daConfermare: null, carte: [] },
@@ -77,12 +89,32 @@ describe("l'identità di un formato", () => {
     );
   });
 
+  it("non cambia se cambiano le lingue ammesse: le carte sono le stesse", () => {
+    // Un mazzo è una lista di nomi, e l'impronta risponde a una domanda sola:
+    // questo mazzo salvato è dello stesso gioco? Le lingue dicono quale copia si
+    // porta al tavolo, non quali carte esistono — se entrassero, il giorno che
+    // il gruppo risponde sulla Quarta inglese si chiuderebbero tutti i mazzi
+    // salvati per una regola che non ne tocca nessuna carta (ADR-0006).
+    const altreLingue: Formato = {
+      ...FORMATO,
+      edizioni: FORMATO.edizioni.map((edizione) => ({ ...edizione, lingue: ["fr", "de"] })),
+    };
+
+    expect(identitaDelFormato(altreLingue).impronta).toBe(identitaDelFormato(FORMATO).impronta);
+  });
+
   it("cambia se cambiano le edizioni ammesse: è un altro gioco", () => {
     const conUnEdizioneInPiu: Formato = {
       ...FORMATO,
       edizioni: [
         ...FORMATO.edizioni,
-        { codice: "ccc", nome: "Terza edizione", perché: "È l'era.", daConfermare: null },
+        {
+          codice: "ccc",
+          nome: "Terza edizione",
+          perché: "È l'era.",
+          lingue: ["it"],
+          daConfermare: null,
+        },
       ],
     };
 

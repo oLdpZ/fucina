@@ -63,6 +63,27 @@ export type Edizione = {
   codice: string;
   nome: string;
   perché: string;
+  /**
+   * Le lingue le cui stampe il gruppo ammette **per questa edizione**, coi
+   * codici di lingua che usano i dati di Scryfall.
+   *
+   * Obbligatorio e non vuoto. Un'edizione che non lo dichiara fa rifiutare il
+   * documento, e l'assenza **non** si legge come «tutte»: un valore predefinito
+   * qui sarebbe verità di formato scritta nel sorgente sotto forma di
+   * comportamento implicito, ed è precisamente quel che ADR-0004 vieta. La
+   * regola la dichiara il documento, sempre, anche quando è generosa.
+   *
+   * **L'ordine è la preferenza.** `["it", "en"]` dice due cose insieme: queste
+   * due lingue si giocano, e fra le stampe che esistono si mostra la prima
+   * disponibile in quest'ordine. Il campo fa due mestieri di proposito:
+   * l'alternativa è un secondo campo per la preferenza, che andrebbe tenuto in
+   * accordo col primo e che nessuno leggerebbe mai come diverso.
+   *
+   * Le lingue **non** entrano nell'impronta del formato (`ambito.ts`): non
+   * cambiano quali carte esistono, quindi non cambiano se un mazzo salvato è
+   * dello stesso gioco.
+   */
+  lingue: string[];
   daConfermare: string | null;
 };
 

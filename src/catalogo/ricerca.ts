@@ -10,19 +10,25 @@
  *
  * ## Perché si cerca anche in italiano, e non si mostra
  *
- * Il formato è definito dalle **stampe italiane** (`PROGETTO.md` §7, ADR-0005):
- * chi ci gioca ha in mano cartoncini italiani e alle carte pensa con quel nome
- * lì. Cercare solo in inglese vorrebbe dire chiedergli di tradurre prima di
- * poter chiedere.
+ * Le copie che il gruppo porta al tavolo sono in gran parte **italiane**
+ * (`PROGETTO.md` §7, ADR-0006): chi ci gioca ha in mano quei cartoncini e alle
+ * carte pensa con quel nome lì. Cercare solo in inglese vorrebbe dire
+ * chiedergli di tradurre prima di poter chiedere.
  *
  * Mostrare l'italiano invece no, e la ragione sta in `PROGETTO.md` §7 sotto
  * Q24, coi numeri per esteso. In breve: il nome italiano c'è per tutte le carte
  * del pool, ma l'**immagine** italiana manca per una fetta consistente e il
  * **testo di regole** italiano su Scryfall non esiste quasi per nessuna. Una
- * interfaccia in italiano darebbe nome italiano, immagine a volte inglese e
- * testo sempre inglese — cioè tre lingue in una scheda. In più il numero di
- * collezione mostrato è quello della stampa inglese: mostrando l'inglese, il
- * nome e il numero da cercare parlano della stessa copia.
+ * interfaccia in italiano darebbe nome italiano, immagine a volte assente e
+ * testo sempre inglese — cioè due lingue in una scheda, e un riquadro vuoto.
+ *
+ * Un pezzo di quella motivazione è **decaduto**, e va scritto invece che
+ * lasciato credere: fino a ieri il numero di collezione mostrato era quello
+ * della stampa inglese, e mostrare il nome inglese teneva nome e numero sulla
+ * stessa copia. Da quando le lingue ammesse le dichiara il documento, la stampa
+ * mostrata è quella che il giocatore avrà in mano, e quell'argomento non regge
+ * più. La decisione Q24 resta, sugli argomenti che le restano; disfarla è una
+ * scelta di progetto e non una conseguenza, e si prende in `PROGETTO.md`.
  *
  * Da qui la forma di questo modulo: **due chiavi, un risultato**. Si cerca su
  * entrambi i nomi, e quel che esce è sempre la carta — che si mostra in inglese
