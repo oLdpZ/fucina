@@ -305,7 +305,8 @@ export function preparaPool(
     carte.push(
       riduci({
         nome,
-        stampa: stampaDaMostrare(stampe),
+        stampa: stampaCheDescrive(stampe),
+        stampaDelPrezzo: stampaChePrezza(stampe),
         nomeItaliano: nomeItalianoDi(stampe),
         limitata: limitate.has(nome),
         aggiornatoIl: opzioni.aggiornatoIl,
@@ -385,12 +386,24 @@ function ammessaDalCriterio(stampe: CartaScryfall[], formato: Formato): boolean 
  * prezzo non si sa: è quel che succede davvero a chi compra quelle carte, e il
  * diario conta quante sono.
  */
-function stampaDaMostrare(stampe: CartaScryfall[]): CartaScryfall {
+function stampaCheDescrive(stampe: CartaScryfall[]): CartaScryfall {
   for (const lingua of [INGLESE, ITALIANO]) {
     const nella = stampe.filter((stampa) => stampa.lang === lingua);
     if (nella.length > 0) return piuEconomica(nella);
   }
   return piuEconomica(stampe);
+}
+
+/**
+ * La stampa che **prezza** la carta: per ora la stessa che la descrive.
+ *
+ * Esiste separata prima di comportarsi in modo separato, ed è voluto: le due
+ * domande — quale copia si mostra, quale copia fa il prezzo — sono diverse da
+ * sempre, e finché una funzione sola rispondeva a tutte e due non c'era posto
+ * dove scrivere la differenza.
+ */
+function stampaChePrezza(stampe: CartaScryfall[]): CartaScryfall {
+  return stampaCheDescrive(stampe);
 }
 
 /**
@@ -438,6 +451,8 @@ function prezzoInEuro(grezza: CartaScryfall): number | null {
 function riduci(quale: {
   nome: string;
   stampa: CartaScryfall;
+  /** La stampa da cui viene il prezzo, che non è detto sia quella che descrive. */
+  stampaDelPrezzo: CartaScryfall;
   nomeItaliano: string | null;
   limitata: boolean;
   aggiornatoIl: string;
@@ -504,7 +519,7 @@ function riduci(quale: {
     // c'è: dire «riservata» per prudenza terrebbe fuori dal tetto di spesa
     // carte che si ristampano ogni due anni.
     riservata: grezza.reserved === true,
-    prezzo: { euro: prezzoInEuro(grezza), aggiornatoIl: quale.aggiornatoIl },
+    prezzo: { euro: prezzoInEuro(quale.stampaDelPrezzo), aggiornatoIl: quale.aggiornatoIl },
     tag: [],
     // I tag della comunità arrivano già pronti dall'indice: qui non si deduce
     // nulla, si aggancia e basta. L'assenza è uno stato legittimo. La copia
