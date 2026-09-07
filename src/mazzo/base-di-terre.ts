@@ -161,11 +161,17 @@ export function analizzaBaseDiTerre(
     )
     .map(([colore]) => colore);
 
-  // Quel che il mazzo **fa**, contato in copie: è con questo che si scelgono le
-  // terre di utilità, e non con un elenco di nomi.
-  const tagDelMazzo = new Map<Tag, number>();
+  // Quel che il mazzo **fa**, carta per carta: è con questo che si scelgono le
+  // terre di utilità, e non con un elenco di nomi. Si tiene la carta e non la
+  // somma per tag, perché una carta che porta due tag della terra resta una
+  // carta sola e va contata una volta (ticket 16).
+  const carteConTag = new Map<Tag, CopieDiCarta[]>();
   for (const voce of nonTerre) {
-    for (const tag of voce.carta.tag) tagDelMazzo.set(tag, (tagDelMazzo.get(tag) ?? 0) + voce.copie);
+    for (const tag of voce.carta.tag) {
+      const gia = carteConTag.get(tag);
+      if (gia) gia.push(voce);
+      else carteConTag.set(tag, [voce]);
+    }
   }
 
   const terre = scegliTerre(
@@ -173,7 +179,7 @@ export function analizzaBaseDiTerre(
     coloriRichiesti,
     simboliPerColore,
     numeroTerre,
-    tagDelMazzo,
+    carteConTag,
   );
   const gruppi = raggruppa(terre, coloriRichiesti);
 
@@ -273,7 +279,7 @@ function scegliTerre(
   coloriRichiesti: readonly ColoreMana[],
   simboliPerColore: ReadonlyMap<ColoreMana, number>,
   numeroTerre: number,
-  tagDelMazzo: ReadonlyMap<Tag, number>,
+  carteConTag: ReadonlyMap<Tag, readonly CopieDiCarta[]>,
 ): CopieDiCarta[] {
   if (numeroTerre <= 0) return [];
 
@@ -364,7 +370,7 @@ function scegliTerre(
     const utili = terreDelPool
       .filter((carta) => !presi.has(carta.nome) && terraDiUtilita(carta))
       .filter((carta) => identitaDentro(carta, coloriDaServire))
-      .map((carta) => ({ carta, condivisi: copieCheFannoLaStessaCosa(carta, tagDelMazzo) }))
+      .map((carta) => ({ carta, condivisi: copieCheFannoLaStessaCosa(carta, carteConTag) }))
       .filter(({ condivisi }) => condivisi >= COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA)
       .sort(
         (a, b) =>
@@ -472,9 +478,25 @@ function identitaDentro(carta: Carta, colori: readonly ColoreMana[]): boolean {
  * questo tema» e «il mazzo ha una carta che per caso ce l'ha». Una terra di
  * utilità costa un posto alla base di mana, e una carta sola non lo paga: sotto
  * `COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA` la terra resta fuori.
+ *
+ * Le carte si contano in **unione**, non tag per tag: una carta che condivide
+ * due tag con la terra è pur sempre una carta, e sommarla due volte le farebbe
+ * pagare da sola una soglia fatta apposta perché una carta sola non la paghi.
  */
-function copieCheFannoLaStessaCosa(carta: Carta, tagDelMazzo: ReadonlyMap<Tag, number>): number {
-  return carta.tag.reduce((somma, tag) => somma + (tagDelMazzo.get(tag) ?? 0), 0);
+function copieCheFannoLaStessaCosa(
+  carta: Carta,
+  carteConTag: ReadonlyMap<Tag, readonly CopieDiCarta[]>,
+): number {
+  const viste = new Set<Carta>();
+  let copie = 0;
+  for (const tag of carta.tag) {
+    for (const voce of carteConTag.get(tag) ?? []) {
+      if (viste.has(voce.carta)) continue;
+      viste.add(voce.carta);
+      copie += voce.copie;
+    }
+  }
+  return copie;
 }
 
 /** Uno se la terra fa mana, zero se non ne fa affatto: si ordina con questo. */

@@ -310,6 +310,38 @@ describe("le terre di utilità: quelle che fanno qualcosa invece dei colori", ()
     expect(copie(tema, "Emberworks Foundry")).toBeGreaterThan(0);
   });
 
+  it("una carta che porta due tag della terra conta una volta sola", () => {
+    // La soglia si conta in **carte del mazzo**, non tag per tag: una carta a
+    // due tag condivisi resterebbe una carta sola, e sommandola due volte
+    // pagherebbe da sé una soglia che nessuno le ha fatto passare.
+    const doppia = TERRE_FINTE.map((carta) =>
+      carta.nome === "Emberworks Foundry"
+        ? { ...carta, tag: ["potenzia", "danno-diretto"] as Tag[] }
+        : carta,
+    );
+    const sotto = Math.ceil(COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA / 2);
+    const carteSotto: CopieDiCarta[] = [
+      { carta: magia("Ingrossatore", "{R}", 1, ["potenzia", "danno-diretto"]), copie: sotto },
+      { carta: magia("Corpo", "{1}{R}", 2, []), copie: 38 - sotto },
+    ];
+
+    expect(copie(analizzaBaseDiTerre(carteSotto, doppia, opzioni), "Emberworks Foundry")).toBe(0);
+
+    // Con le copie vere del tema, invece, la terra entra: è il conto per carte
+    // che è cambiato, non la regola.
+    const carteSopra: CopieDiCarta[] = [
+      {
+        carta: magia("Ingrossatore", "{R}", 1, ["potenzia", "danno-diretto"]),
+        copie: COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA,
+      },
+      { carta: magia("Corpo", "{1}{R}", 2, []), copie: 38 - COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA },
+    ];
+
+    expect(
+      copie(analizzaBaseDiTerre(carteSopra, doppia, opzioni), "Emberworks Foundry"),
+    ).toBeGreaterThan(0);
+  });
+
   it("una terra che il mazzo non sa usare resta fuori", () => {
     // «Sunken Quarry» distrugge terre, e questo mazzo non attacca le terre di
     // nessuno: la sinergia si conta, non si immagina.
