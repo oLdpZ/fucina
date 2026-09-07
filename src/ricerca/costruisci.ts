@@ -334,17 +334,35 @@ const PESO_DELLO_SFORAMENTO = 10;
  * deve lasciare da parte quel che costerà, se no spende tutto in carte e il
  * mazzo esce dal tetto per colpa di quel che l'utente non ha scelto.
  *
- * È il prezzo **misurato** di una base vera, e non la terra più economica per
- * il numero di posti: su questo pool trentadue terre su trentasette non sono
- * base, e la base che l'app sceglie costa otto o dieci euro dove la terra meno
- * cara ne costa venticinque centesimi. Con la stima al ribasso la partenza
- * spendeva cinque euro di troppo in carte e la ricerca doveva riscendere a
- * scambi singoli — quando ci arrivava.
+ * È il **pavimento**: quel che costa la base più economica che il codice sappia
+ * produrre per quel numero di posti. Non è una stima e non ha bisogno di
+ * esserlo, perché da quando la base sa quanto può spendere (ticket 20) non è
+ * più lei a dover indovinare: le si dice quanto è rimasto e lei scende fin lì.
+ * Quel che va lasciato da parte è dunque solo il minimo sotto cui una base non
+ * può costare — e quello si misura, non si stima.
  *
- * Resta una **stima**, perché la base cambia con la curva del mazzo e la curva
- * cambia a ogni scambio. Non deve essere esatta: deve far partire la ricerca
- * vicino al tetto invece che lontanissimo. Il conto vero lo fa `punteggioDi`
- * sul mazzo intero, ed è quello a decidere che cosa si consegna.
+ * «Più economica che il codice sappia produrre» e non «più economica che
+ * esista», ed è una differenza vera: la discesa è avida e si ferma quando
+ * nessuna rinuncia abbassa più il conto, quindi il numero che esce può essere
+ * sopra l'ottimo. Ed è per questo che si **limita al tetto**: un pavimento più
+ * alto del tetto lascerebbe alle carte un budget negativo, che è esattamente
+ * il guasto che questo ticket è venuto a togliere. Su un mazzo nero a 11 € le
+ * ventitré paludi ne costano 11,96, e senza il limite si tornerebbe da capo.
+ *
+ * ## Perché non è più il prezzo della base che il mazzo vorrebbe
+ *
+ * Perché quel numero non era limitato da niente e poteva superare il tetto. La
+ * base di prova si sceglieva **senza guardare il prezzo**: bastava che una
+ * terra doppia da centinaia di euro entrasse fra le comprabili perché la
+ * riserva prendesse quattro copie e diventasse più grande del tetto intero. Da
+ * lì il budget per le carte era negativo, nessuna copia di niente era
+ * concessa, e ogni scambio che alzasse il prezzo era rifiutato per sempre: più
+ * soldi l'utente dichiarava, peggio l'app costruiva — e da un certo punto in
+ * poi non costruiva più. Sul pool del 2026-09-07 il gradino stava fra 470 € e
+ * 480 €, e lo faceva una sola carta.
+ *
+ * Il conto vero lo fa `punteggioDi` sul mazzo intero, ed è quello a decidere
+ * che cosa si consegna: qui si lascia solo il posto perché una base ci stia.
  */
 type Portafoglio = {
   tetto: number;
@@ -566,17 +584,24 @@ export function costruisciMazzo(
   }
 
   const portafoglio: Portafoglio | null =
-    tetto === null ? null : { tetto, riservaPerLeTerre: riservaPerLeTerre() };
+    tetto === null
+      ? null
+      : // Mai più di quel che c'è: una riserva più grande del tetto darebbe alle
+        // carte un budget negativo, e da lì la ricerca può solo scendere di
+        // prezzo. Il tetto resta comunque garantito dal conto sul mazzo intero.
+        { tetto, riservaPerLeTerre: Math.min(tetto, riservaPerLeTerre()) };
 
   /**
-   * Quanto costerà la base di terre, misurato invece che indovinato.
+   * Il pavimento della base: quel che costa la base più economica possibile per
+   * il numero di posti che questo mazzo le lascia.
    *
-   * Si riempie una partenza **senza guardare il prezzo**, si chiede la base che
-   * quel mazzo vuole, e si guarda quanto costa. È un giro in più prima di
-   * cominciare — uno solo, non uno per partenza — e vale quel che costa: la
-   * base di questo formato non è un contorno da pochi centesimi, e sbagliarla
-   * per difetto manda la ricerca a partire da mazzi che non si possono
-   * comprare.
+   * Si riempie una partenza per sapere **quante** terre servono — è la curva a
+   * dirlo, e la curva viene dalle carte — e poi si chiede quella base con un
+   * budget di zero: la base scende fino alle sole terre base e dice quanto
+   * costa. Il numero che ne esce non può superare il tetto per costruzione,
+   * perché è il minimo che una base di quella misura possa costare.
+   *
+   * È un giro in più prima di cominciare — uno solo, non uno per partenza.
    */
   function riservaPerLeTerre(): number {
     const ordine = [...giocabili].sort(
@@ -589,6 +614,7 @@ export function costruisciMazzo(
       seme: richiesta.seme,
       terreVolute: DIMENSIONE_MAZZO - posti,
       partite: 1,
+      budgetPerLeTerre: 0,
     }).base;
     return prezzoDelMazzo(base.terre);
   }
@@ -621,12 +647,19 @@ export function costruisciMazzo(
     partite: number | undefined,
   ) => {
     const carte = voci(selezione);
+    // Quel che resta alla base dopo queste carte, **esatto**: non una quota
+    // decisa a priori ma la sottrazione vera. È il numero che rende la riserva
+    // qui sopra un pavimento e non una stima — la base non deve indovinare
+    // quanto le tocca, glielo si dice.
+    const perLeTerre =
+      portafoglio === null ? null : Math.max(0, portafoglio.tetto - prezzoDelMazzo(carte));
     const valutato = valutaMazzo(carte, terreDelPool, {
       seme: richiesta.seme,
       // Le terre non si contrattano qui: il numero viene dalla curva, e i posti
       // non-terra sono quel che resta. Passarlo esplicitamente è ciò che tiene
       // il mazzo esattamente a sessanta carte a ogni scambio provato.
       terreVolute: DIMENSIONE_MAZZO - posti,
+      budgetPerLeTerre: perLeTerre,
       ...(partite === undefined ? {} : { partite }),
     });
     const pura = purezza(carte, risolto);

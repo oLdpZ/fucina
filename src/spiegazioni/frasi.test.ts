@@ -40,6 +40,7 @@ import {
   type GrezziDelleTerre,
   type GrezziDelPasso,
   type GrezziDiPresenza,
+  frasePerLeRinunceDelBudget,
 } from "./frasi.js";
 
 describe("come si scrivono i numeri", () => {
@@ -552,5 +553,31 @@ describe("le terre di un mazzo che arriva da fuori", () => {
     const frase = frasePerLeTerreScartate({ terre: [{ nome: "Labirinto", copie: 1 }] });
     expect(frase).toContain("La terra");
     expect(frase).toContain("non è quella che rimetto");
+  });
+});
+
+describe("quel che il tetto di spesa è costato alla base", () => {
+  it("resta muta quando il tetto non ha tolto niente", () => {
+    // Una frase che dicesse «non ti ho tolto niente» a ogni mazzo insegnerebbe
+    // a saltarla proprio le volte che conta.
+    expect(frasePerLeRinunceDelBudget({ tetto: 100, rinunce: [] })).toBe("");
+  });
+
+  it("nomina le terre lasciate fuori, con le copie e gli euro", () => {
+    const frase = frasePerLeRinunceDelBudget({
+      tetto: 300,
+      rinunce: [
+        { nome: "Terra Cara", copie: 4, euro: 480 },
+        { nome: "Terra Meno Cara", copie: 1, euro: 12.5 },
+      ],
+    });
+
+    expect(frase).toContain("300,00 €");
+    expect(frase).toContain("4 copie di Terra Cara");
+    expect(frase).toContain("1 copia di Terra Meno Cara");
+    expect(frase).toContain("480,00 €");
+    expect(frase).toContain("12,50 €");
+    // Il totale c'è: è il numero che dice se valga la pena alzare il tetto.
+    expect(frase).toContain("492,50 €");
   });
 });

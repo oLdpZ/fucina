@@ -397,6 +397,15 @@ l'app dice quante sono di ciascuna: quelle che da sole costano più del tetto, e
 quelle che un **listino non ce l'hanno** — col tetto acceso l'app promette un
 conto, e non può promettere quel che non sa contare.
 
+Anche la **base di terre** lo rispetta, e non lo subisce: le si dice quanto è
+rimasto dopo le carte, e lei sceglie la base più forte che ci sta. Quando i
+soldi finiscono se ne va la copia che costa di più — non prima le terre di
+utilità né prima quelle a due colori: le due famiglie hanno punteggi su scale
+diverse, e convertirle sarebbe inventare un cambio che nessuno ha misurato,
+mentre il prezzo è la stessa cosa per entrambe. Quel che il tetto le è costato
+l'app **lo dice**, con le copie e gli euro: una base peggiore senza una ragione
+scritta sarebbe l'app che decide di nascosto.
+
 Il budget come **secondo asse** della frontiera, accanto alla purezza, è la
 versione ambiziosa e sta fuori: vedi `spec.md`, «Out of Scope».
 

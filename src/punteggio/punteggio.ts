@@ -188,6 +188,16 @@ export type RichiestaDiPunteggio = {
   partite?: number;
   /** Quante terre volute; `null` o assente per lasciar decidere alla curva. */
   terreVolute?: number | null;
+  /**
+   * Quanti euro restano alla base di terre; `null` o assente quando il tetto di
+   * spesa è spento.
+   *
+   * Non entra in nessuna delle cinque componenti, e non deve: il punteggio non
+   * guarda mai il prezzo, né la rarità, né la popolarità. Il tetto è un
+   * **vincolo**, e i vincoli filtrano quel che c'è da scegliere — qui dicono
+   * alla base quali terre può permettersi, non quanto valgono.
+   */
+  budgetPerLeTerre?: number | null;
 };
 
 export type MazzoValutato = {
@@ -221,6 +231,7 @@ export function valutaMazzo(
 ): MazzoValutato {
   const base = analizzaBaseDiTerre(carte, terreDelPool, {
     terreVolute: richiesta.terreVolute ?? null,
+    budget: richiesta.budgetPerLeTerre ?? null,
   });
   const nonTerre = carte.filter((voce) => voce.carta.terra === null && voce.copie > 0);
   const mazzo: CopieDiCarta[] = [...nonTerre, ...base.terre];

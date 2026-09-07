@@ -41,6 +41,7 @@ import type { Carta, ColoreMana, Tag } from "../dati/pool.js";
 import { copieAlMassimo } from "./copie.js";
 import { simboliDiColore } from "./costo.js";
 import { probabilitaDiLanciare, type GruppoDiTerre, type Pip } from "./probabilita.js";
+import { prezzoDelMazzo, prezzoDiUnaCopia } from "./spesa.js";
 import {
   COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA,
   DIMENSIONE_MAZZO,
@@ -62,6 +63,35 @@ export type CopieDiCarta = { carta: Carta; copie: number };
 export type Opzioni = {
   /** Quante terre vuole l'utente; `null` per lasciar decidere alla curva. */
   terreVolute: number | null;
+  /**
+   * Quanti euro la base può spendere; `null` quando il tetto di spesa è spento.
+   *
+   * Obbligatorio e non facoltativo, di proposito: la base è una voce di spesa
+   * grossa — su questo pool trentadue terre su trentasette non sono base — e
+   * ogni schermata che la chiede deve **dire** se un tetto c'è. Un campo che si
+   * può omettere si omette, e il tetto di ieri resta appiccicato al mazzo di
+   * oggi senza che nessuno lo veda.
+   *
+   * `null` non è «zero»: è «nessuno ha chiesto un tetto», e allora la base
+   * sceglie come ha sempre scelto, senza guardare il prezzo.
+   */
+  budget: number | null;
+};
+
+/**
+ * Una copia che il budget ha tolto alla base, e quanto ha liberato togliendola.
+ *
+ * Esiste perché l'app lo deve **dire**: quando il tetto costa al mazzo una
+ * terra che avrebbe voluto, il giocatore ha diritto di sapere quale e quanto,
+ * o legge una base peggiore senza sapere perché (ticket 20). Sono numeri, e le
+ * frasi le compone chi mostra.
+ */
+export type RinunciaDelBudget = {
+  carta: Carta;
+  /** Quante copie di questa terra il budget ha tolto. */
+  copie: number;
+  /** Quanto costavano quelle copie: è il numero che rende la frase verificabile. */
+  euro: number;
 };
 
 /** Quanto un colore è chiesto dal mazzo, in simboli contati sulle copie vere. */
@@ -106,6 +136,11 @@ export type BaseDiTerre = {
   terreCheEntranoGirate: number;
   /** Di quelle girate, quante entrano girate **solo a certe condizioni**. */
   terreGirateSoloAVolte: number;
+  /**
+   * Le copie che il budget ha tolto. Vuota quando il budget non ha morso, e
+   * vuota sempre quando è `null`: senza tetto non c'è niente a cui rinunciare.
+   */
+  rinunceDelBudget: RinunciaDelBudget[];
   righe: RigaDelMazzo[];
   /** Le righe difficili, dalla più difficile in giù: l'avviso all'utente. */
   difficili: RigaDelMazzo[];
@@ -174,12 +209,13 @@ export function analizzaBaseDiTerre(
     }
   }
 
-  const terre = scegliTerre(
+  const { terre, rinunceDelBudget } = scegliTerre(
     terreDelPool,
     coloriRichiesti,
     simboliPerColore,
     numeroTerre,
     carteConTag,
+    opzioni.budget,
   );
   const gruppi = raggruppa(terre, coloriRichiesti);
 
@@ -253,6 +289,7 @@ export function analizzaBaseDiTerre(
     terreGirateSoloAVolte: terre
       .filter((voce) => voce.carta.terra?.condizione != null)
       .reduce((somma, voce) => somma + voce.copie, 0),
+    rinunceDelBudget,
     righe,
     difficili: righe
       .filter((riga) => riga.difficile)
@@ -280,8 +317,10 @@ function scegliTerre(
   simboliPerColore: ReadonlyMap<ColoreMana, number>,
   numeroTerre: number,
   carteConTag: ReadonlyMap<Tag, readonly CopieDiCarta[]>,
-): CopieDiCarta[] {
-  if (numeroTerre <= 0) return [];
+  budget: number | null,
+): { terre: CopieDiCarta[]; rinunceDelBudget: RinunciaDelBudget[] } {
+  const niente = { terre: [] as CopieDiCarta[], rinunceDelBudget: [] as RinunciaDelBudget[] };
+  if (numeroTerre <= 0) return niente;
 
   const base = new Map<ColoreMana, Carta>();
   for (const carta of terreDelPool) {
@@ -300,7 +339,7 @@ function scegliTerre(
       : base.has("C")
         ? (["C"] as ColoreMana[])
         : [...base.keys()].slice(0, 1);
-  if (coloriDaServire.length === 0) return [];
+  if (coloriDaServire.length === 0) return niente;
 
   // Le terre base esistono per tutti e sei i colori, ma il pool arriva dai dati
   // e i dati possono sempre sorprendere. I colori che una terra base non ce
@@ -309,7 +348,7 @@ function scegliTerre(
   const coloriConBase = coloriDaServire.filter((colore) => base.has(colore));
   const perRiempire =
     coloriConBase.length > 0 ? coloriConBase : [...base.keys()].slice(0, 1);
-  if (perRiempire.length === 0) return [];
+  if (perRiempire.length === 0) return niente;
 
   const scelte: CopieDiCarta[] = [];
   let restanti = numeroTerre;
@@ -402,9 +441,37 @@ function scegliTerre(
     }
   }
 
-  // 3. Il resto in terre base, divise secondo quanto ogni colore è chiesto. Il
-  //    metodo del resto più grande: deterministico, e non perde né inventa
-  //    terre per colpa degli arrotondamenti.
+  // 3. Il budget, quando c'è: si scende finché la base ci sta. Sta **qui** e
+  //    non dentro i due passi di sopra perché la scelta va fatta fra tutte le
+  //    terre insieme — è la decisione del ticket 20: non «prima l'utilità» né
+  //    «prima i colori», ma la base più forte che sta nei soldi.
+  const basi = (quante: number): CopieDiCarta[] =>
+    riempiConLeBasi(quante, perRiempire, simboliPerColore, base);
+
+  const sceso = scendiNelBudget(scelte, restanti, budget, basi);
+
+  // 4. Il resto in terre base.
+  return {
+    terre: [...sceso.scelte, ...basi(sceso.restanti)],
+    rinunceDelBudget: sceso.rinunceDelBudget,
+  };
+}
+
+/**
+ * Le terre base che riempiono i posti rimasti, divise secondo quanto ogni
+ * colore è chiesto.
+ *
+ * Il metodo del resto più grande: deterministico, e non perde né inventa terre
+ * per colpa degli arrotondamenti.
+ */
+function riempiConLeBasi(
+  restanti: number,
+  perRiempire: readonly ColoreMana[],
+  simboliPerColore: ReadonlyMap<ColoreMana, number>,
+  base: ReadonlyMap<ColoreMana, Carta>,
+): CopieDiCarta[] {
+  if (restanti <= 0 || perRiempire.length === 0) return [];
+
   const pesi = perRiempire.map((colore) => Math.max(0, simboliPerColore.get(colore) ?? 1));
   const totalePesi = pesi.reduce((somma, peso) => somma + peso, 0);
   const quote = perRiempire.map((colore, i) => {
@@ -422,6 +489,7 @@ function scegliTerre(
     assegnate += 1;
   }
 
+  const scelte: CopieDiCarta[] = [];
   for (const quota of quote) {
     if (quota.intera <= 0) continue;
     // `perRiempire` contiene solo colori che una terra base ce l'hanno: se
@@ -430,8 +498,116 @@ function scegliTerre(
     // calcolata su un mazzo che non esiste.
     scelte.push({ carta: base.get(quota.colore)!, copie: quota.intera });
   }
-
   return scelte;
+}
+
+/**
+ * La base scende finché sta nel budget: ogni giro se ne va **una copia**, e al
+ * suo posto entra una terra base.
+ *
+ * ## Quale copia se ne va: quella che fa scendere di più il conto
+ *
+ * La decisione del ticket 20 è «la base più forte che sta nel budget», senza un
+ * ordine fisso fra terre doppie e terre di utilità. Metterle in fila per forza
+ * vorrebbe dire confrontare i loro punteggi, e quei punteggi **non sono sulla
+ * stessa scala**: una terra doppia vale i colori utili che produce — due, tre —
+ * e una di utilità vale le copie del mazzo che fanno quel che fa lei — quattro,
+ * quaranta. Convertire l'una nell'altra sarebbe inventare un cambio che nessuno
+ * ha misurato, ed è esattamente quel che questo progetto non fa.
+ *
+ * Il denaro invece è la stessa cosa per tutte e due, ed è il vincolo vero. Ma
+ * **non basta togliere la copia più cara**: al suo posto entra una terra base,
+ * che un prezzo ce l'ha anche lei, e su questo pool ci sono terre non base che
+ * costano **meno** di ogni terra base — `Oasis` sta a 0,28 € dove l'Isola sta a
+ * 0,45 €. Toglierla per far posto a un'Isola alzerebbe il conto invece di
+ * abbassarlo, e la base scenderebbe di qualità pagandola di più.
+ *
+ * Perciò si guarda il conto **dopo**: si prova a togliere una copia per ogni
+ * terra rimasta, si tiene la prova che dà il totale più basso, e se nessuna lo
+ * abbassa si smette. È la stessa regola cieca alla famiglia che il committente
+ * ha chiesto — decide quanto costa la copia, non a che famiglia appartiene — ma
+ * misurata sul risultato invece che sul cartellino.
+ *
+ * Su questo pool la differenza si vede: se ne va Taiga a 470,95 € prima di una
+ * terra di utilità da un euro che il mazzo usa davvero, e se ne andrebbe
+ * un'utilità cara prima di una doppia da pochi centesimi.
+ *
+ * ## È avida, e va detto
+ *
+ * Cercare la base migliore che sta in una cifra è uno zaino, e uno zaino esatto
+ * dentro il ciclo degli scambi non lo si paga. Questa scende un gradino per
+ * volta e non promette l'ottimo: promette che la base **ci sta** se ci può
+ * stare, che scendendo il conto non sale mai, e che si è perso il meno
+ * possibile un passo alla volta.
+ *
+ * Quando nessuna rinuncia abbassa più il conto, si smette e si restituisce una
+ * base intera lo stesso, anche se sopra il budget: dire di no non è compito
+ * suo. La promessa dura — un mazzo sopra il tetto non si consegna — la fa la
+ * ricerca, sul mazzo finito.
+ */
+function scendiNelBudget(
+  scelte: readonly CopieDiCarta[],
+  restanti: number,
+  budget: number | null,
+  basi: (quante: number) => CopieDiCarta[],
+): { scelte: CopieDiCarta[]; restanti: number; rinunceDelBudget: RinunciaDelBudget[] } {
+  const vuoto = { scelte: [...scelte], restanti, rinunceDelBudget: [] };
+  if (budget === null) return vuoto;
+
+  const rimaste = scelte.map((voce) => ({ ...voce }));
+  const rinunce = new Map<string, RinunciaDelBudget>();
+
+  for (;;) {
+    const costo = prezzoDelMazzo([...rimaste, ...basi(restanti)]);
+    if (costo <= budget) break;
+
+    // Si prova a togliere una copia per ogni terra rimasta e si guarda quanto
+    // verrebbe a costare la base **intera**, terra base di rimpiazzo compresa.
+    // Vince la prova che costa meno; a parità se ne va quella scelta **dopo**,
+    // che dentro la sua famiglia era la meno buona, e a parità di tutto il
+    // nome — due giri sugli stessi dati devono dare la stessa base.
+    let peggiore = -1;
+    let costoDopo = costo;
+    for (let i = 0; i < rimaste.length; i++) {
+      const voce = rimaste[i]!;
+      if (voce.copie <= 0) continue;
+      voce.copie -= 1;
+      const prova = prezzoDelMazzo([...rimaste, ...basi(restanti + 1)]);
+      voce.copie += 1;
+      if (prova < costoDopo || (prova === costoDopo && peggiore >= 0)) {
+        costoDopo = prova;
+        peggiore = i;
+      }
+    }
+
+    // Nessuna rinuncia abbassa il conto: o non è rimasto niente da togliere, o
+    // quel che resta costa meno delle terre base che lo sostituirebbero.
+    // Scendere ancora vorrebbe dire pagare di più per una base peggiore.
+    if (peggiore < 0) break;
+
+    const voce = rimaste[peggiore]!;
+    const euro = prezzoDiUnaCopia(voce.carta) ?? 0;
+    voce.copie -= 1;
+    restanti += 1;
+
+    const gia = rinunce.get(voce.carta.nome);
+    if (gia) {
+      gia.copie += 1;
+      gia.euro += euro;
+    } else {
+      rinunce.set(voce.carta.nome, { carta: voce.carta, copie: 1, euro });
+    }
+  }
+
+  return {
+    scelte: rimaste.filter((voce) => voce.copie > 0),
+    restanti,
+    // In ordine di spesa liberata, che è l'ordine in cui una frase le nomina:
+    // la rinuncia che è costata di più si legge per prima.
+    rinunceDelBudget: [...rinunce.values()].sort(
+      (a, b) => b.euro - a.euro || a.carta.nome.localeCompare(b.carta.nome, "en"),
+    ),
+  };
 }
 
 /**

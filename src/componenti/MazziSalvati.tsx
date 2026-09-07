@@ -15,6 +15,8 @@ import type { IdentitaDiFormato } from "../dati/ambito.js";
 import { dataInItaliano } from "../dati/carica-pool.js";
 import { dimenticaMazzo, elencaMazziSalvati, salvaMazzo } from "../dati/mazzi-salvati.js";
 import type { Pool } from "../dati/pool.js";
+import { comprabile, prezzoDelMazzo } from "../mazzo/spesa.js";
+import { escluso, type Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { leggiScambio, listaDaTorneo, scriviScambio } from "../mazzo/scambio.js";
 import { frasePerLeTerreScartate } from "../spiegazioni/frasi.js";
@@ -36,6 +38,8 @@ export type TerreScartate = readonly { nome: string; copie: number }[];
 
 export function MazziSalvati({
   pool,
+  tema,
+  tettoDiSpesa,
   formato,
   mazzo,
   terreVolute,
@@ -44,6 +48,18 @@ export function MazziSalvati({
   chiudiMazzo,
 }: {
   pool: Pool;
+  /**
+   * Il tema e il tetto con cui il mazzo in mano è stato costruito.
+   *
+   * Servono a una cosa sola, ed è la ragione per cui questa schermata li chiede
+   * invece di arrangiarsi: la lista da consegnare all'arbitro deve elencare
+   * **le stesse terre** che la schermata del mazzo mostra. Senza, le due
+   * scelgono da due pool diversi e scrivono due basi diverse per lo stesso
+   * mazzo — e quella sul foglio è quella sbagliata, perché il giocatore in mano
+   * ha l'altra.
+   */
+  tema: Tema;
+  tettoDiSpesa: number | null;
   /**
    * Il gioco che si sta giocando. Entra da fuori e non si legge qui: il mazzo
    * che si salva e quello che si esporta devono dichiarare lo **stesso**
@@ -135,16 +151,36 @@ export function MazziSalvati({
   const apertaAlle = useMemo(() => new Date().toISOString(), []);
   const contenuto = componi(aperto?.salvatoIl ?? apertaAlle);
 
-  const terreDelPool = useMemo(() => pool.carte.filter((carta) => carta.terra !== null), [pool]);
+  // Gli stessi tre setacci della schermata del mazzo, e nello stesso ordine:
+  // due liste di terre che divergono sono due mazzi diversi con lo stesso nome.
+  const terreDelPool = useMemo(
+    () =>
+      pool.carte.filter(
+        (carta) =>
+          carta.terra !== null && !escluso(carta, tema) && comprabile(carta, tettoDiSpesa),
+      ),
+    [pool, tema, tettoDiSpesa],
+  );
+  const budgetPerLeTerre = useMemo(
+    () => (tettoDiSpesa === null ? null : Math.max(0, tettoDiSpesa - prezzoDelMazzo(mazzo))),
+    [tettoDiSpesa, mazzo],
+  );
   const daTorneo = useMemo(() => {
     if (mazzo.length === 0) return "";
-    const base = analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute });
+    // Lo stesso budget della schermata del mazzo: è quella che mostra al
+    // giocatore le terre che avrà in mano, e il foglio per l'arbitro deve
+    // dirne le stesse. Con `null` qui, un mazzo costruito sotto un tetto usciva
+    // sul foglio con le terre che il tetto gli aveva **negato**.
+    const base = analizzaBaseDiTerre(mazzo, terreDelPool, {
+      terreVolute,
+      budget: budgetPerLeTerre,
+    });
     return listaDaTorneo(
       base.righe.map((riga) => ({ nome: riga.carta.nome, copie: riga.copie })),
       base.terre.map((voce) => ({ nome: voce.carta.nome, copie: voce.copie })),
       formato,
     );
-  }, [mazzo, terreDelPool, terreVolute, formato]);
+  }, [mazzo, terreDelPool, terreVolute, budgetPerLeTerre, formato]);
 
   const salva = async () => {
     // L'orologio si legge qui: è adesso che l'utente sta salvando.

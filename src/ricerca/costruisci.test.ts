@@ -796,6 +796,7 @@ describe("il tetto di spesa", () => {
     );
     const rifatta = analizzaBaseDiTerre(mazzo.carte, terreInMano, {
       terreVolute: mazzo.base.numeroTerre,
+      budget: Math.max(0, 30 - prezzoDelMazzo(mazzo.carte)),
     });
 
     expect(prezzoDelMazzo([...mazzo.carte, ...rifatta.terre])).toBeCloseTo(mazzo.spesa, 6);

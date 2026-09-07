@@ -344,6 +344,41 @@ export type GrezziDelleTerre = {
   difficili: readonly string[];
 };
 
+/* --- Quel che il tetto di spesa è costato alla base ------------------------ */
+
+export type GrezziDelleRinunce = {
+  /** Il tetto chiesto, in euro. */
+  tetto: number;
+  /** Le copie che il budget ha tolto, dalla più cara: nome, copie, euro. */
+  rinunce: readonly { nome: string; copie: number; euro: number }[];
+};
+
+/**
+ * Che cosa il tetto di spesa ha tolto alla base di terre.
+ *
+ * Si chiama solo quando qualcosa è stato tolto davvero: una frase che dicesse
+ * «non ti ho tolto niente» a ogni mazzo insegnerebbe a saltarla proprio le
+ * volte che conta. Vuota quando non c'è nulla da dire (ticket 20).
+ *
+ * Il numero c'è, come in ogni frase di questo file, ed è quello che rende la
+ * cosa verificabile: quante copie e quanti euro. Senza, il giocatore leggerebbe
+ * che il tetto gli è costato qualcosa senza poter decidere se valga la pena
+ * alzarlo.
+ */
+export function frasePerLeRinunceDelBudget(grezzi: GrezziDelleRinunce): string {
+  if (grezzi.rinunce.length === 0) return "";
+
+  const totale = grezzi.rinunce.reduce((somma, voce) => somma + voce.euro, 0);
+  const dette = grezzi.rinunce.map(
+    (voce) => `${copie(voce.copie)} di ${voce.nome} (${decimale(voce.euro)} €)`,
+  );
+
+  return (
+    `Per stare dentro ${decimale(grezzi.tetto)} € la base ha lasciato fuori ${elenco(dette)}: ` +
+    `${decimale(totale)} € di terre che il mazzo avrebbe voluto. Al loro posto ci sono terre base.`
+  );
+}
+
 export function frasePerLeTerre(grezzi: GrezziDelleTerre): string {
   const parti = [
     grezzi.numeroTerre === grezzi.numeroTerreDallaCurva

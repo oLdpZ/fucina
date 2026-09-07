@@ -412,6 +412,8 @@ export function App() {
         ) : pagina === "salvati" ? (
           <MazziSalvati
             pool={pool}
+            tema={tema}
+            tettoDiSpesa={tettoDelMazzoInMano}
             formato={ambito}
             mazzo={mazzo}
             terreVolute={terreVolute}

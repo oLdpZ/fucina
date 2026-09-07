@@ -94,12 +94,12 @@ describe("quante terre", () => {
     const leggero = analizzaBaseDiTerre(
       mazzo(["Uno", "{R}", 1, 20], ["Due", "{1}{R}", 2, 18]),
       TERRE_FINTE,
-      { terreVolute: null },
+      { terreVolute: null, budget: null },
     );
     const pesante = analizzaBaseDiTerre(
       mazzo(["Cinque", "{4}{R}", 5, 20], ["Sei", "{5}{R}", 6, 18]),
       TERRE_FINTE,
-      { terreVolute: null },
+      { terreVolute: null, budget: null },
     );
 
     expect(leggero.numeroTerre).toBeLessThan(pesante.numeroTerre);
@@ -107,8 +107,8 @@ describe("quante terre", () => {
 
   it("il numero deciso dall'app si può scavalcare a mano", () => {
     const carte = mazzo(["Due", "{1}{R}", 2, 24]);
-    const dallApp = analizzaBaseDiTerre(carte, TERRE_FINTE, { terreVolute: null });
-    const aMano = analizzaBaseDiTerre(carte, TERRE_FINTE, { terreVolute: 26 });
+    const dallApp = analizzaBaseDiTerre(carte, TERRE_FINTE, { terreVolute: null, budget: null });
+    const aMano = analizzaBaseDiTerre(carte, TERRE_FINTE, { terreVolute: 26, budget: null });
 
     expect(aMano.numeroTerre).toBe(26);
     expect(aMano.numeroTerreDallaCurva).toBe(dallApp.numeroTerre);
@@ -120,6 +120,7 @@ describe("quante terre", () => {
   it("mette in tavola sempre sessanta carte, anche se il mazzo non è finito", () => {
     const base = analizzaBaseDiTerre(mazzo(["Due", "{1}{R}", 2, 4]), TERRE_FINTE, {
       terreVolute: null,
+      budget: null,
     });
 
     expect(base.dimensioneMazzo).toBe(60);
@@ -131,6 +132,7 @@ describe("quali terre", () => {
   it("un mazzo di un colore solo gioca solo la sua terra base", () => {
     const base = analizzaBaseDiTerre(mazzo(["Uno", "{R}", 1, 30]), TERRE_FINTE, {
       terreVolute: 24,
+      budget: null,
     });
 
     expect(copie(base, "Mountain")).toBe(24);
@@ -142,7 +144,7 @@ describe("quali terre", () => {
     const base = analizzaBaseDiTerre(
       mazzo(["Nera", "{1}{B}", 2, 16], ["Rossa", "{1}{R}", 2, 16]),
       TERRE_FINTE,
-      { terreVolute: 24 },
+      { terreVolute: 24, budget: null },
     );
 
     // La terra doppia che entra dritta viene prima di quelle che entrano
@@ -159,7 +161,7 @@ describe("quali terre", () => {
     const base = analizzaBaseDiTerre(
       mazzo(["Nera", "{1}{B}", 2, 16], ["Rossa", "{1}{R}", 2, 16]),
       TERRE_FINTE,
-      { terreVolute: 24 },
+      { terreVolute: 24, budget: null },
     );
 
     const girate = base.terre
@@ -188,7 +190,7 @@ describe("quali terre", () => {
     for (const carte of mazzi) {
       for (const pool of [TERRE_FINTE, senzaIncolore]) {
         for (let volute = 20; volute <= 27; volute++) {
-          const base = analizzaBaseDiTerre(carte, pool, { terreVolute: volute });
+          const base = analizzaBaseDiTerre(carte, pool, { terreVolute: volute, budget: null });
           const totale = base.terre.reduce((somma, voce) => somma + voce.copie, 0);
           expect(totale).toBe(volute);
         }
@@ -200,7 +202,7 @@ describe("quali terre", () => {
     const base = analizzaBaseDiTerre(
       mazzo(["Nera", "{1}{B}", 2, 16], ["Rossa", "{1}{R}", 2, 16]),
       TERRE_FINTE,
-      { terreVolute: 26 },
+      { terreVolute: 26, budget: null },
     );
 
     for (const voce of base.terre) {
@@ -218,6 +220,7 @@ describe("le probabilità", () => {
 
     const base = analizzaBaseDiTerre(mazzo(["Uno", "{R}", 1, 4]), TERRE_FINTE, {
       terreVolute: 24,
+      budget: null,
     });
 
     expect(base.righe[0]!.probabilita).toBeCloseTo(attesa, 12);
@@ -228,7 +231,7 @@ describe("le probabilità", () => {
     const base = analizzaBaseDiTerre(
       mazzo(["Uno", "{R}", 1, 4], ["Doppia", "{R}{R}", 2, 4], ["Tripla", "{R}{R}{R}", 3, 4]),
       TERRE_FINTE,
-      { terreVolute: 24 },
+      { terreVolute: 24, budget: null },
     );
 
     const [uno, doppia, tripla] = base.righe;
@@ -244,7 +247,7 @@ describe("le probabilità", () => {
     const base = analizzaBaseDiTerre(
       mazzo(["Facile", "{3}{B}", 4, 20], ["Dura", "{B}{B}{R}{R}", 4, 4]),
       TERRE_FINTE,
-      { terreVolute: 24 },
+      { terreVolute: 24, budget: null },
     );
 
     const dura = base.righe.find((riga) => riga.carta.nome === "Dura")!;
@@ -261,6 +264,7 @@ describe("le probabilità", () => {
     // l'avviso non scatta, perché cambiare le terre non risolverebbe niente.
     const base = analizzaBaseDiTerre(mazzo(["Grossa", "{4}{R}", 5, 30]), TERRE_FINTE, {
       terreVolute: 24,
+      budget: null,
     });
 
     const grossa = base.righe[0]!;
@@ -270,14 +274,14 @@ describe("le probabilità", () => {
 
   it("stesso mazzo, stessi numeri: il conto non ha nulla di casuale", () => {
     const carte = mazzo(["Nera", "{1}{B}", 2, 16], ["Rossa", "{1}{R}", 2, 16]);
-    const prima = analizzaBaseDiTerre(carte, TERRE_FINTE, { terreVolute: null });
-    const dopo = analizzaBaseDiTerre(carte, TERRE_FINTE, { terreVolute: null });
+    const prima = analizzaBaseDiTerre(carte, TERRE_FINTE, { terreVolute: null, budget: null });
+    const dopo = analizzaBaseDiTerre(carte, TERRE_FINTE, { terreVolute: null, budget: null });
 
     expect(JSON.stringify(dopo)).toBe(JSON.stringify(prima));
   });
 
   it("un mazzo vuoto non fa cadere niente", () => {
-    const base = analizzaBaseDiTerre([], TERRE_FINTE, { terreVolute: null });
+    const base = analizzaBaseDiTerre([], TERRE_FINTE, { terreVolute: null, budget: null });
 
     expect(base.righe).toHaveLength(0);
     expect(base.difficili).toHaveLength(0);
@@ -286,7 +290,7 @@ describe("le probabilità", () => {
 });
 
 describe("le terre di utilità: quelle che fanno qualcosa invece dei colori", () => {
-  const opzioni = { terreVolute: null };
+  const opzioni = { terreVolute: null, budget: null };
 
   it("una terra che fa quel che il mazzo fa entra nella base, anche in un monocolore", () => {
     // È il caso che fino al ticket 08 non poteva succedere per nessuna strada:
@@ -403,5 +407,112 @@ describe("le terre di utilità: quelle che fanno qualcosa invece dei colori", ()
 
     expect(base.terreSenzaMana).toBeLessThanOrEqual(TERRE_SENZA_MANA_MASSIME);
     expect(base.terreDiUtilita).toBeLessThanOrEqual(TERRE_DI_UTILITA_MASSIME);
+  });
+});
+
+/**
+ * Il budget della base: quel che succede quando il tetto di spesa arriva fin
+ * qui.
+ *
+ * La regola decisa (ticket 20) è **una sola**: la base più forte che sta nel
+ * budget, senza un ordine fisso fra terre doppie e terre di utilità. Quel che
+ * si prova qui è quella regola, e mai come è fatta dentro.
+ */
+describe("la base dentro un budget", () => {
+  /** Un mazzo a due colori: è quello che si compra le terre doppie. */
+  const DUE_COLORI: CopieDiCarta[] = [
+    { carta: magia("Nera", "{1}{B}", 2), copie: 19 },
+    { carta: magia("Rossa", "{1}{R}", 2), copie: 19 },
+  ];
+
+  const conBudget = (budget: number | null) =>
+    analizzaBaseDiTerre(DUE_COLORI, TERRE_FINTE, { terreVolute: 22, budget });
+
+  const costo = (base: { terre: readonly CopieDiCarta[] }): number =>
+    base.terre.reduce((somma, voce) => somma + (voce.carta.prezzo.euro ?? 0) * voce.copie, 0);
+
+  it("senza budget sceglie esattamente la base di sempre", () => {
+    // La seconda casella del ticket: chi non ha chiesto un tetto non deve
+    // vedersi cambiare il mazzo sotto i piedi.
+    const senza = conBudget(null);
+    const larghissimo = conBudget(10_000);
+
+    expect(larghissimo.terre).toEqual(senza.terre);
+    expect(larghissimo.rinunceDelBudget).toEqual([]);
+    expect(senza.rinunceDelBudget).toEqual([]);
+  });
+
+  it("con un budget stretto non lo sfonda", () => {
+    // `Cinder Crossing` costa sei euro la copia ed è la doppia migliore del
+    // pool finto: dentro un budget da poco non ci sta, e la base deve restare
+    // una base intera lo stesso.
+    const stretta = conBudget(2);
+
+    expect(costo(stretta)).toBeLessThanOrEqual(2);
+    expect(stretta.terre.reduce((somma, voce) => somma + voce.copie, 0)).toBe(22);
+  });
+
+  it("rinuncia prima alla copia che costa di più, e non alla famiglia sbagliata", () => {
+    // È la decisione del ticket messa alla prova: non «prima l'utilità» né
+    // «prima i colori», ma la copia che libera più soldi. Nel pool finto la
+    // cara è la doppia da sei euro, e se ne va prima delle doppie da tre
+    // centesimi — che restano, e tengono in piedi i due colori.
+    const senza = conBudget(null);
+    const stretta = conBudget(2);
+
+    expect(copie(senza, "Cinder Crossing")).toBeGreaterThan(0);
+    expect(copie(stretta, "Cinder Crossing")).toBe(0);
+  });
+
+  it("dice quali copie il tetto gli è costato, col numero", () => {
+    // La terza casella: quando il tetto costa al mazzo una terra che avrebbe
+    // voluto, l'app lo dice — e per dirlo a parole servono i numeri veri.
+    const stretta = conBudget(2);
+    const rinuncia = stretta.rinunceDelBudget.find(
+      (voce) => voce.carta.nome === "Cinder Crossing",
+    );
+
+    expect(rinuncia).toBeDefined();
+    expect(rinuncia!.copie).toBeGreaterThan(0);
+    expect(rinuncia!.euro).toBeCloseTo(6 * rinuncia!.copie, 5);
+  });
+
+  it("un budget che non basta nemmeno alle terre base dà comunque una base intera", () => {
+    // Non è compito della base dire di no: la promessa dura la fa la ricerca,
+    // che un mazzo fuori dal tetto non lo consegna. Qui si deve solo non
+    // cadere e non restituire meno terre di quante se ne sono promesse.
+    const impossibile = conBudget(0);
+
+    expect(impossibile.terre.reduce((somma, voce) => somma + voce.copie, 0)).toBe(22);
+  });
+
+  it("un budget non fa mai costare la base **più** che senza budget", () => {
+    // Il caso che la prima stesura sbagliava. Togliere la copia più cara e
+    // metterci una terra base sembra sempre un risparmio, e non lo è: nel pool
+    // finto `Sootfall Gate` costa tre centesimi dove una terra base ne costa
+    // cinque, e nel pool vero `Oasis` sta a 0,28 € dove l'Isola sta a 0,45 €.
+    // Scambiarla alzava il conto **e** peggiorava la base, e la frase all'utente
+    // gli annunciava un risparmio che non c'era.
+    const senza = costo(conBudget(null));
+    for (const budget of [0, 0.5, 1, 1.2, 1.5, 2, 3, 6, 12]) {
+      expect(costo(conBudget(budget)), `budget ${budget}`).toBeLessThanOrEqual(senza);
+    }
+  });
+
+  it("alzare il budget non peggiora mai la base", () => {
+    // La proprietà che il ticket 20 chiede di inchiodare, e che oggi è rotta:
+    // più soldi non danno mai una base che costa meno, cioè peggiore.
+    //
+    // Il tetto si rispetta **quando si può**: sotto il prezzo delle sole terre
+    // base non si scende, e a quel punto la base si consegna lo stesso — dire
+    // di no non è compito suo, e la ricerca il mazzo fuori tetto non lo dà.
+    const pavimento = costo(conBudget(0));
+    let precedente = -1;
+    for (const budget of [0, 1, 2, 5, 10, 30, 100, 1000]) {
+      const quanto = costo(conBudget(budget));
+      expect(quanto).toBeLessThanOrEqual(Math.max(budget, pavimento));
+      expect(quanto).toBeGreaterThanOrEqual(precedente);
+      precedente = quanto;
+    }
   });
 });

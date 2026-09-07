@@ -31,7 +31,8 @@ import type { Carta, ColoreMana, Pool } from "../dati/pool.js";
 import { escluso, type Tema } from "../tema/tema.js";
 import { CostoDiMana } from "./CostoDiMana.js";
 import { ListaDellaSpesa } from "./ListaDellaSpesa.js";
-import { comprabile } from "../mazzo/spesa.js";
+import { comprabile, prezzoDelMazzo } from "../mazzo/spesa.js";
+import { frasePerLeRinunceDelBudget } from "../spiegazioni/frasi.js";
 
 const PERCENTUALE = new Intl.NumberFormat("it-IT", {
   style: "percent",
@@ -88,9 +89,20 @@ export function Mazzo({
       ),
     [pool, tema, tettoDiSpesa],
   );
+  /**
+   * Quel che resta alla base dopo le carte, quando un tetto c'è.
+   *
+   * Si ricava qui e non si eredita: la base che si mostra dev'essere la base
+   * che il mazzo può permettersi **con queste carte**, o la schermata
+   * elencherebbe terre che il conto in fondo non copre.
+   */
+  const budgetPerLeTerre = useMemo(
+    () => (tettoDiSpesa === null ? null : Math.max(0, tettoDiSpesa - prezzoDelMazzo(mazzo))),
+    [tettoDiSpesa, mazzo],
+  );
   const base = useMemo(
-    () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute }),
-    [mazzo, terreDelPool, terreVolute],
+    () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute, budget: budgetPerLeTerre }),
+    [mazzo, terreDelPool, terreVolute, budgetPerLeTerre],
   );
 
   // Carte e terre in un elenco solo, ricavato una volta: la lista della spesa
@@ -159,6 +171,19 @@ export function Mazzo({
             " Nessuna di queste terre entra girata."
           )}
         </p>
+
+        {base.rinunceDelBudget.length > 0 && tettoDiSpesa !== null ? (
+          <p class="spiegazione avviso-budget-terre">
+            {frasePerLeRinunceDelBudget({
+              tetto: tettoDiSpesa,
+              rinunce: base.rinunceDelBudget.map((voce) => ({
+                nome: voce.carta.nome,
+                copie: voce.copie,
+                euro: voce.euro,
+              })),
+            })}
+          </p>
+        ) : null}
 
         <ManopolaTerre
           numeroTerre={base.numeroTerre}
