@@ -12,6 +12,7 @@ const NOTE_RICHIESTE: readonly IdNotaLegale[] = [
   "copyright-wizards",
   "non-approvata-wizards",
   "non-approvata-scryfall",
+  "prezzi",
 ];
 
 describe("note legali", () => {
@@ -46,6 +47,19 @@ describe("note legali", () => {
     const nota = NOTE_LEGALI.find((n) => n.id === "copyright-wizards");
     expect(nota?.testo).toMatch(/©/);
     expect(nota?.testo).toMatch(/Wizards of the Coast/);
+  });
+
+  it("dice da dove vengono i prezzi, e di quali stampe sono", () => {
+    // `PROGETTO.md` §5 chiede i prezzi «a titolo informativo, con data di
+    // aggiornamento», e il ticket 09 aggiunge le due cose che il giocatore non
+    // può indovinare: la catena Cardmarket-Scryfall, e che il listino è quello
+    // delle stampe inglesi.
+    const nota = NOTE_LEGALI.find((n) => n.id === "prezzi");
+
+    expect(nota?.testo).toMatch(/Cardmarket/);
+    expect(nota?.testo).toMatch(/Scryfall/);
+    expect(nota?.testo).toMatch(/data/i);
+    expect(nota?.testo).toMatch(/inglesi/i);
   });
 
   it("rimanda alla politica sui contenuti dei fan", () => {

@@ -93,6 +93,13 @@ export type CartaScryfall = {
   games?: string[];
   digital?: boolean;
   rarity?: string;
+  /**
+   * La Reserved List: Wizards si è impegnata a non ristampare più queste carte.
+   *
+   * È un fatto della **carta** e non della stampa, e Scryfall lo ripete su ogni
+   * stampa: qui si legge da quella scelta, come la rarità.
+   */
+  reserved?: boolean;
   prices?: Record<string, string | null>;
   /**
    * Che cosa Scryfall ha davvero della figura: `missing` e `placeholder` sono i
@@ -492,6 +499,11 @@ function riduci(quale: {
     costituzione: grezza.toughness ?? davanti?.costituzione ?? null,
     immagine,
     rarita: grezza.rarity ?? "",
+    // Assente vuol dire «non riservata», che è la risposta giusta per la
+    // stragrande maggioranza delle carte e l'unica onesta per un dato che non
+    // c'è: dire «riservata» per prudenza terrebbe fuori dal tetto di spesa
+    // carte che si ristampano ogni due anni.
+    riservata: grezza.reserved === true,
     prezzo: { euro: prezzoInEuro(grezza), aggiornatoIl: quale.aggiornatoIl },
     tag: [],
     // I tag della comunità arrivano già pronti dall'indice: qui non si deduce

@@ -39,6 +39,7 @@ function magia(
     costituzione: null,
     immagine: null,
     rarita: "common",
+    riservata: false,
     nomeItaliano: null,
     edizione: "prova",
     numeroDiCollezione: "1",

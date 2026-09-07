@@ -58,6 +58,7 @@ function magia(abbozzo: {
         : String(abbozzo.costituzione),
     immagine: null,
     rarita: abbozzo.rarita ?? "common",
+    riservata: false,
     nomeItaliano: null,
     edizione: "prova",
     numeroDiCollezione: "1",

@@ -11,6 +11,7 @@ export type IdNotaLegale =
   | "copyright-wizards"
   | "non-approvata-wizards"
   | "non-approvata-scryfall"
+  | "prezzi"
   | "gratuita";
 
 export type NotaLegale = {
@@ -43,6 +44,16 @@ export const NOTE_LEGALI: readonly NotaLegale[] = [
     id: "non-approvata-scryfall",
     testo:
       "I dati delle carte vengono da Scryfall. Scryfall non produce né approva questa applicazione.",
+  },
+  {
+    // `PROGETTO.md` §5 la chiede fra le note: «prezzi a titolo informativo, con
+    // data di aggiornamento». La data non si scrive qui — è quella del pool, e
+    // cambia — ma qui si dice **da dove vengono** e **di quali stampe sono**,
+    // che è la parte che il giocatore non potrebbe indovinare: le stampe
+    // italiane che comprerà su Cardmarket un listino non ce l'hanno.
+    id: "prezzi",
+    testo:
+      "I prezzi sono a titolo informativo: vengono da Cardmarket attraverso Scryfall, portano sempre la data del giorno in cui sono stati presi, e sono quelli delle stampe inglesi più economiche fra quelle ammesse. Le stampe italiane costano di più.",
   },
   {
     id: "gratuita",

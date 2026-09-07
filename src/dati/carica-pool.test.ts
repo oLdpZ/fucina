@@ -105,6 +105,20 @@ describe("lettura del pool", () => {
     expect(pool.carte[0]?.nomeItaliano).toBeNull();
   });
 
+  it("non dichiara riservata una carta di un pool che la Reserved List non la sapeva", () => {
+    // La Reserved List è nata col tetto di spesa, cioè dopo. Un pool che non la
+    // porta deve far tacere l'app su quel punto, non farle dire che ogni carta
+    // sarà ristampata o che nessuna lo sarà: `false` è il silenzio, perché è la
+    // condizione in cui l'app non aggiunge la frase.
+    const pool = interpretaPool({
+      generatoIl: "2026-09-03T09:05:32.000+00:00",
+      registroTagScryfall: [],
+      carte: [{ nome: "Negate", tagScryfall: [], tettoDiCopie: 4 }],
+    });
+
+    expect(pool.carte[0]?.riservata).toBe(false);
+  });
+
   it("rattoppa anche il pool che ha una metà dei campi nuovi e non l'altra", () => {
     // I campi nuovi non sono arrivati tutti insieme, e non arriveranno tutti
     // insieme la prossima volta: la scorciatoia che salta il rattoppo va chiesta
@@ -138,6 +152,7 @@ describe("lettura del pool", () => {
         edizione: "xa",
         numeroDiCollezione: "7",
         linguaDellaStampa: "en",
+        riservata: false,
         tagScryfall: ["counterspell"],
         tettoDiCopie: 1,
       },

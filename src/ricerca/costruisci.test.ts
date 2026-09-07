@@ -22,7 +22,9 @@ import type { Carta } from "../dati/pool.js";
 import { COPIE_DI_UNA_LIMITATA, copieMassime } from "../mazzo/copie.js";
 import { probabilitaDiAssemblarne } from "../mazzo/probabilita.js";
 import { COPIE_MASSIME, DIMENSIONE_MAZZO } from "../mazzo/taratura.js";
-import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
+import { escluso, FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
+import { analizzaBaseDiTerre } from "../mazzo/base-di-terre.js";
+import { comprabile, prezzoDelMazzo } from "../mazzo/spesa.js";
 import { costruisciMazzo, type Frontiera, type Opzioni, type Richiesta } from "./costruisci.js";
 import { PESI_DELLA_PUREZZA } from "./taratura.js";
 
@@ -71,6 +73,9 @@ function richiesta(parti: Partial<Richiesta> = {}): Richiesta {
     combo: COMBO_VUOTA,
     seme: 7,
     tempoMassimoMs: 10_000,
+    // Spento, come nell'app: il fulcro è il tasso di cambio fra tema e
+    // potenza, e un budget acceso di default ne metterebbe un secondo accanto.
+    tettoDiSpesa: null,
     ...parti,
   };
 }
@@ -674,5 +679,166 @@ describe("la combo dichiarata", () => {
 
   it("resta ripetibile: stessa richiesta, stessa lista", () => {
     expect(lista(costruisci({ combo: PEZZI }))).toBe(lista(costruisci({ combo: PEZZI })));
+  });
+});
+
+describe("il tetto di spesa", () => {
+  /** Quanto costa un mazzo della frontiera, terre comprese: è quel che si paga. */
+  const costo = (frontiera: Frontiera, quale = 0): number => {
+    const mazzo = frontiera.mazzi[quale];
+    expect(mazzo).toBeDefined();
+    return prezzoDelMazzo([...mazzo!.carte, ...mazzo!.terre]);
+  };
+
+  const nomi = (frontiera: Frontiera): string[] =>
+    tutteLeVoci(frontiera).map((voce) => voce.carta.nome);
+
+  it("spento, non dice niente della spesa e non cambia niente", () => {
+    const frontiera = costruisci();
+
+    expect(frontiera.spesa).toBeNull();
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
+  });
+
+  it("spento, lascia entrare anche le carte care: è il tema a decidere, non il prezzo", () => {
+    // Senza questa, il test qui sotto non proverebbe niente: bisogna sapere che
+    // la carta da novecento euro nel mazzo ci finisce davvero.
+    expect(nomi(costruisci({ tema: NERO }))).toContain("Onyx Chalice");
+  });
+
+  it("acceso, tiene fuori le carte che da sole lo sfondano", () => {
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 30 });
+
+    expect(nomi(frontiera)).not.toContain("Onyx Chalice");
+    expect(nomi(frontiera)).not.toContain("Duskwing Harrier");
+  });
+
+  it("acceso, nessun mazzo della frontiera costa più del tetto", () => {
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 30 });
+
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
+    for (let i = 0; i < frontiera.mazzi.length; i++) {
+      expect(costo(frontiera, i)).toBeLessThanOrEqual(30);
+    }
+  });
+
+  it("acceso, ogni mazzo porta scritto quanto costa", () => {
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 30 });
+
+    expect(frontiera.mazzi[0]!.spesa).toBeCloseTo(costo(frontiera), 6);
+  });
+
+  it("dice quante carte sta lasciando fuori per prezzo, e non si limita a farlo", () => {
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 30 });
+
+    expect(frontiera.spesa?.tetto).toBe(30);
+    expect(frontiera.spesa?.troppoCare).toBeGreaterThan(0);
+  });
+
+  it("dice quante di quelle non saranno mai ristampate", () => {
+    // È la ragione per cui aspettare non serve: una carta in Reserved List non
+    // diventerà più economica, e il giocatore ha diritto di saperlo prima di
+    // alzare il tetto.
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 30 });
+
+    expect(frontiera.spesa?.troppoCareRiservate).toBeGreaterThan(0);
+    expect(frontiera.spesa!.troppoCareRiservate).toBeLessThanOrEqual(
+      frontiera.spesa!.troppoCare,
+    );
+  });
+
+  it("tiene fuori anche le carte che un prezzo non ce l'hanno, e lo dice", () => {
+    // Col tetto acceso l'app promette un conto: una carta che non si sa quanto
+    // costi non si può promettere, e contarla zero sarebbe peggio — sono
+    // proprio le carte care, quelle che in inglese non esistono, a non avere
+    // listino, e entrerebbero gratis in ogni mazzo.
+    const senzaListino = POOL.map((carta) =>
+      carta.nome === "Vile Extraction"
+        ? { ...carta, prezzo: { euro: null, aggiornatoIl: carta.prezzo.aggiornatoIl } }
+        : carta,
+    );
+    const frontiera = costruisciMazzo(
+      richiesta({ tema: NERO, tettoDiSpesa: 30 }),
+      senzaListino,
+      SVELTA,
+    );
+
+    expect(frontiera.spesa?.senzaPrezzo).toBe(1);
+    expect(nomi(frontiera)).not.toContain("Vile Extraction");
+  });
+
+  it("acceso, il mazzo resta di sessanta carte: il tetto non lo lascia monco", () => {
+    expect(carteTotali(costruisci({ tema: NERO, tettoDiSpesa: 30 }))).toBe(DIMENSIONE_MAZZO);
+  });
+
+  it("con un tetto che non basta non consegna un mazzo monco: dice che non si fa", () => {
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 0.5 });
+
+    expect(frontiera.esito).toBe("niente-da-costruire");
+    expect(frontiera.mazzi).toEqual([]);
+    // E dice **quanto** ci vorrebbe: un no senza numero non si può agire.
+    expect(frontiera.motivo).toMatch(/\d/);
+    expect(frontiera.spesa?.minimo).toBeGreaterThan(0.5);
+  });
+
+  it("il mazzo messo in mano costa quanto il motore ha detto che costa", () => {
+    // La schermata del mazzo **rifà** la base di terre dalle stesse carte,
+    // invece di trasportarsi dietro l’elenco che il motore ha scelto: due
+    // liste di terre finirebbero prima o poi per divergere. Perché ritrovi la
+    // stessa base deve però filtrare le terre con la stessa regola, tetto di
+    // spesa compreso — se no rimette dentro proprio quelle che il motore aveva
+    // lasciato fuori, e il mazzo esce dal tetto appena lo si prende in mano.
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 30 });
+    const mazzo = frontiera.mazzi[0]!;
+
+    const terreInMano = POOL.filter(
+      (carta) => carta.terra !== null && !escluso(carta, NERO) && comprabile(carta, 30),
+    );
+    const rifatta = analizzaBaseDiTerre(mazzo.carte, terreInMano, {
+      terreVolute: mazzo.base.numeroTerre,
+    });
+
+    expect(prezzoDelMazzo([...mazzo.carte, ...rifatta.terre])).toBeCloseTo(mazzo.spesa, 6);
+  });
+
+  it("con un tetto stretto consegna un mazzo intero oppure niente, mai un mazzo corto", () => {
+    // Il caso scomodo: il tetto basta a comprare **qualche** carta ma non
+    // sessanta. Riempire finche i soldi bastano e poi fermarsi darebbe un mazzo
+    // da quaranta carte, illegale e annunciato come se fosse a posto. Le due
+    // risposte oneste sono due: un mazzo intero dentro il tetto, o un no.
+    for (const tetto of [3, 3.5, 4, 5, 6, 8, 10]) {
+      const frontiera = costruisci({ tema: NERO, tettoDiSpesa: tetto });
+      if (frontiera.mazzi.length === 0) {
+        expect(frontiera.esito).toBe("niente-da-costruire");
+        continue;
+      }
+      for (let i = 0; i < frontiera.mazzi.length; i++) {
+        const mazzo = frontiera.mazzi[i]!;
+        const copie = [...mazzo.carte, ...mazzo.terre].reduce((s, v) => s + v.copie, 0);
+        expect({ tetto, copie }).toEqual({ tetto, copie: DIMENSIONE_MAZZO });
+        expect(mazzo.spesa).toBeLessThanOrEqual(tetto);
+      }
+    }
+  });
+
+  it("la riserva per le terre è il prezzo di una base vera, non della terra meno cara", () => {
+    // La base non sta nella selezione: la sceglie `analizzaBaseDiTerre` dalla
+    // curva, e su questo formato costa. Stimandola con la terra meno cara la
+    // partenza spendeva tutto in carte e la ricerca doveva riscendere a scambi
+    // singoli — quando ci arrivava. Il segno che la riserva è onesta è che i
+    // tetti bassi ma sufficienti costruiscono invece di rifiutare.
+    const stretti = [12, 14, 16, 18, 20].map((tetto) => ({
+      tetto,
+      fatto: costruisci({ tema: NERO, tettoDiSpesa: tetto }).mazzi.length > 0,
+    }));
+
+    expect(stretti.filter((prova) => prova.fatto).length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("resta ripetibile: stesso tetto e stesso seme, stessa frontiera", () => {
+    const uno = costruisci({ tema: NERO, tettoDiSpesa: 30 });
+    const due = costruisci({ tema: NERO, tettoDiSpesa: 30 });
+
+    expect(lista(uno)).toBe(lista(due));
   });
 });

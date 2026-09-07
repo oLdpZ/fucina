@@ -408,3 +408,92 @@
     grid-column: auto;
   }
 }
+
+/*
+ * La lista della spesa (ticket 09): che cosa comprare, in quale stampa, quanto
+ * costa.
+ *
+ * Il totale è grande perché è il numero che si va a cercare; l'avviso che è una
+ * stima al ribasso gli sta subito sotto e non in fondo alla pagina, perché
+ * senza di lui il totale direbbe una cosa che non è.
+ */
+.lista-della-spesa {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  padding: calc(var(--passo) * 4);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  background: var(--superficie);
+}
+
+.totale-spesa {
+  margin: 0;
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+}
+
+.totale-spesa strong {
+  font-size: var(--titolo-pagina);
+  font-family: var(--carattere-titolo);
+  color: var(--inchiostro);
+}
+
+.avviso-prezzi {
+  margin: 0;
+  font-size: var(--testo-piccolo);
+  line-height: 1.45;
+  color: var(--inchiostro-tenue);
+  text-wrap: pretty;
+}
+
+.righe-spesa {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.righe-spesa li {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr auto;
+  align-items: baseline;
+  gap: 0 calc(var(--passo) * 2);
+  padding: calc(var(--passo)) 0;
+  border-bottom: 1px solid var(--bordo);
+}
+
+.righe-spesa .copie {
+  font-family: var(--carattere-dati);
+  color: var(--inchiostro-tenue);
+}
+
+/* La stampa sta sotto il nome: è la seconda riga del foglietto da portare. */
+.righe-spesa .stampa {
+  grid-column: 2;
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  letter-spacing: 0.06em;
+  color: var(--inchiostro-debole);
+}
+
+.righe-spesa .prezzo-voce {
+  grid-row: 1 / span 2;
+  grid-column: 3;
+  align-self: center;
+  text-align: right;
+  font-family: var(--carattere-dati);
+  font-size: var(--testo-piccolo);
+}
+
+.righe-spesa .al-pezzo {
+  color: var(--inchiostro-debole);
+}
+
+/* Le carte che non saranno mai ristampate portano il segno dell'accento. */
+.righe-spesa li[data-riservata] .nome-carta {
+  border-bottom: 1px dotted var(--accento-secondario);
+}

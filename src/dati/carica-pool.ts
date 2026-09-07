@@ -39,6 +39,7 @@ const CAMPI_DEL_RATTOPPO = [
   "edizione",
   "numeroDiCollezione",
   "linguaDellaStampa",
+  "riservata",
   "tettoDiCopie",
 ] as const satisfies readonly (keyof Carta)[];
 
@@ -87,6 +88,10 @@ export function interpretaPool(dati: unknown): Pool {
   // esattamente il guasto che questo rattoppo esiste per impedire, e in più
   // silenzioso: il tipo dice `number | null`, quindi nessuno lo vedrebbe.
   //
+  // La **Reserved List** manca per la stessa ragione della stampa: è nata col
+  // tetto di spesa, che è nato dopo. Un pool che non la porta non fa dire
+  // niente di sbagliato all'app — fa dire di meno.
+  //
   // La **stampa** e il **nome italiano** mancano nei pool scritti prima che il
   // formato smettesse di essere lo Standard. Qui non c'è niente da ricostruire
   // — quale stampa descrivesse una carta di allora non lo sa più nessuno — e
@@ -115,6 +120,11 @@ export function interpretaPool(dati: unknown): Pool {
         edizione: carta.edizione ?? "",
         numeroDiCollezione: carta.numeroDiCollezione ?? "",
         linguaDellaStampa: carta.linguaDellaStampa ?? "",
+        // La Reserved List manca nei pool scritti prima che il tetto di spesa
+        // esistesse. «Non riservata» è la risposta giusta per la quasi
+        // totalità delle carte, e l'unica che non inventa niente: al massimo
+        // l'app tace su una carta di cui avrebbe potuto dire qualcosa.
+        riservata: carta.riservata ?? false,
         // Testo e tipi si prendono col beneficio del dubbio: rattoppare un pool
         // di ieri vuol dire anche non cadere su un campo che quel pool non
         // aveva. Una carta senza testo e senza tipi prende il tetto di tutti,

@@ -39,6 +39,8 @@ type Abbozzo = {
    * scrive il test, che è l'unico posto in cui il formato lo si inventa apposta.
    */
   limitata?: boolean;
+  /** La carta è nella Reserved List: serve ai test del tetto di spesa. */
+  riservata?: boolean;
 };
 
 const GENERATO_IL = "2026-09-02T09:05:48.145+00:00";
@@ -67,6 +69,7 @@ function carta(abbozzo: Abbozzo): Carta {
     costituzione: abbozzo.costituzione ?? null,
     immagine: null,
     rarita: "common",
+    riservata: abbozzo.riservata ?? false,
     prezzo: { euro: abbozzo.euro ?? 0.1, aggiornatoIl: GENERATO_IL },
     tag: abbozzo.tag ?? [],
     tagScryfall: [],
@@ -602,6 +605,10 @@ export const POOL_DEL_MOTORE: readonly Carta[] = [
     tag: ["accelerazione-di-mana"],
     euro: 900,
     limitata: true,
+    // In Reserved List come le sue sorelle vere: non sarà mai ristampata, e il
+    // suo prezzo non scenderà aspettando. È il caso che il tetto di spesa deve
+    // saper raccontare quando la lascia fuori.
+    riservata: true,
   }),
   carta({
     nome: "Rustvein Talisman",

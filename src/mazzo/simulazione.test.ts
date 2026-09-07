@@ -40,6 +40,7 @@ function magia(abbozzo: {
     costituzione: "1",
     immagine: null,
     rarita: "common",
+    riservata: false,
     nomeItaliano: null,
     edizione: "prova",
     numeroDiCollezione: "1",

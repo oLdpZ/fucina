@@ -70,6 +70,7 @@ import {
 import type { Carta } from "../dati/pool.js";
 import { terreDallaCurva, type BaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
+import { comprabile, prezzoDelMazzo, prezzoDiUnaCopia } from "../mazzo/spesa.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
@@ -105,6 +106,59 @@ export type Richiesta = {
   seme: number;
   /** Il tetto di tempo, perché la ricerca gira sul telefono. */
   tempoMassimoMs: number;
+  /**
+   * Il tetto di spesa in euro, oppure `null` quando è **spento** — ed è così
+   * che parte (ticket 09).
+   *
+   * Spento di suo, e non per pigrizia: il fulcro dell'app è il tasso di cambio
+   * fra tema e potenza, e un budget acceso di default ne metterebbe un secondo
+   * accanto dentro la stessa frontiera. I due prezzi si confonderebbero, e la
+   * domanda per cui l'app esiste smetterebbe di avere una risposta leggibile.
+   * Lo accende chi sta per comprare.
+   *
+   * Acceso, è un vincolo **duro**: nessun mazzo consegnato lo supera. Vedi
+   * `SpesaDellaRicerca` per quel che la ricerca racconta di sé quando lo fa.
+   */
+  tettoDiSpesa: number | null;
+};
+
+/**
+ * Quel che la ricerca dichiara di aver fatto col tetto di spesa acceso.
+ * `null` sulla frontiera quando il tetto è spento: non c'è niente da dire.
+ *
+ * Sono numeri e non frasi, come tutto quel che esce di qui: le frasi le compone
+ * chi mostra, su questi numeri e mai inventate.
+ */
+export type SpesaDellaRicerca = {
+  /** Il tetto chiesto, in euro. */
+  tetto: number;
+  /**
+   * Quante carte sono rimaste fuori perché **una copia sola** già lo sfonda.
+   * Sul pool vero sono le carte migliori che ci siano, e va detto.
+   */
+  troppoCare: number;
+  /**
+   * Quante di quelle sono in **Reserved List**: non saranno mai ristampate, e
+   * il loro prezzo non scenderà. Aspettare non le porterà dentro il tetto.
+   */
+  troppoCareRiservate: number;
+  /**
+   * Quante sono rimaste fuori perché la stampa scelta **non ha listino**. Col
+   * tetto acceso l'app promette un conto, e non può promettere quel che non sa
+   * contare — contarle zero direbbe che sono gratis.
+   */
+  senzaPrezzo: number;
+  /**
+   * Il **pavimento**: quanto costano le sessanta copie meno care che restano,
+   * terre comprese. Sotto questa cifra nessun mazzo può scendere.
+   *
+   * Non è il prezzo di un mazzo che esiste, ed è importante non raccontarlo
+   * come tale: mette insieme le sessanta carte più economiche senza guardare
+   * curva, colori né quante terre servano, e un mazzo vero costa parecchio di
+   * più. Serve a una cosa sola — dire di no con dentro un numero, invece di un
+   * no che non si può agire — e chi lo mostra deve dirlo per quello che è.
+   */
+  minimo: number;
 };
 
 /** Quel che la ricerca racconta di sé mentre lavora, per chi mostra una barra. */
@@ -200,6 +254,12 @@ export type MazzoCostruito = {
    * mostri — quel che si mostra sono le componenti.
    */
   totale: number;
+  /**
+   * Quanto costa comprare **questo** mazzo, terre comprese, ai prezzi delle
+   * stampe che il pool ha scelto: una stima al ribasso, e va detto ovunque si
+   * mostri (`mazzo/spesa.ts`). Le carte senza listino non lo alzano.
+   */
+  spesa: number;
 };
 
 /** Il baratto fra un mazzo della frontiera e quello prima di lui. */
@@ -229,6 +289,8 @@ export type Frontiera = {
    * hanno trovato lo stesso mazzo o quando il tempo è scaduto per strada.
    */
   mazzi: MazzoCostruito[];
+  /** Il tetto di spesa e quel che ha lasciato fuori; `null` quando è spento. */
+  spesa: SpesaDellaRicerca | null;
   allargamentiApplicati: readonly Allargamento[];
   troncataPerTempo: boolean;
   /**
@@ -252,6 +314,95 @@ export function orologioDiSistema(): number {
 
 /** Sotto questa differenza due mazzi si dicono pari, e lo scambio non si tiene. */
 const PARI = 1e-9;
+
+/**
+ * Quanto conta uno sforamento del tetto di spesa nel voto della ricerca.
+ *
+ * Dieci volte lo sforamento in quota, moltiplicato per il peso della purezza:
+ * al peso più stretto — duecento — un uno per cento di sforamento vale venti
+ * punti, e una copia di tema ne vale sei. È scelto per **vincere sempre** sul
+ * tema, non per pareggiarlo: un mazzo fuori dal tetto non si può consegnare, e
+ * la ricerca non deve passarci il suo tempo.
+ */
+const PESO_DELLO_SFORAMENTO = 10;
+
+/**
+ * Il portafoglio con cui si riempie una partenza e si prova uno scambio.
+ *
+ * `riservaPerLeTerre` non è un dettaglio: la base di terre **non sta nella
+ * selezione** — la sceglie `analizzaBaseDiTerre` dalla curva — e chi riempie
+ * deve lasciare da parte quel che costerà, se no spende tutto in carte e il
+ * mazzo esce dal tetto per colpa di quel che l'utente non ha scelto.
+ *
+ * È il prezzo **misurato** di una base vera, e non la terra più economica per
+ * il numero di posti: su questo pool trentadue terre su trentasette non sono
+ * base, e la base che l'app sceglie costa otto o dieci euro dove la terra meno
+ * cara ne costa venticinque centesimi. Con la stima al ribasso la partenza
+ * spendeva cinque euro di troppo in carte e la ricerca doveva riscendere a
+ * scambi singoli — quando ci arrivava.
+ *
+ * Resta una **stima**, perché la base cambia con la curva del mazzo e la curva
+ * cambia a ogni scambio. Non deve essere esatta: deve far partire la ricerca
+ * vicino al tetto invece che lontanissimo. Il conto vero lo fa `punteggioDi`
+ * sul mazzo intero, ed è quello a decidere che cosa si consegna.
+ */
+type Portafoglio = {
+  tetto: number;
+  riservaPerLeTerre: number;
+};
+
+/** Quanto si può spendere in carte non-terra, lasciata da parte la base. */
+function tettoPerLeCarte(portafoglio: Portafoglio): number {
+  return portafoglio.tetto - portafoglio.riservaPerLeTerre;
+}
+
+/**
+ * Quanto costano le copie di una selezione, terre escluse perché non ci sono.
+ *
+ * Somma la mappa invece di passare da `voci()`: gira dentro il ciclo degli
+ * scambi, che è il ciclo su cui il tetto di tempo del telefono si spende, e
+ * un elenco nuovo a ogni scambio provato sarebbe spazzatura per niente.
+ */
+function prezzoDellaSelezione(selezione: Selezione): number {
+  let totale = 0;
+  for (const voce of selezione.values()) {
+    const euro = prezzoDiUnaCopia(voce.carta);
+    if (euro !== null) totale += euro * voce.copie;
+  }
+  return totale;
+}
+
+/**
+ * Il mazzo più economico che queste carte permettano: le sessanta copie meno
+ * care, prese dalle carte e dalle terre insieme.
+ *
+ * È un minimo **vero** e non una stima — nessun mazzo legale di sessanta carte
+ * costruito con queste carte può costare meno — e per esserlo prende da ogni
+ * carta tutte le copie che il suo tetto le concede, terre base comprese, che di
+ * tetto non ne hanno. Serve a dire di no con dentro il numero che ci vorrebbe.
+ */
+function mazzoPiuEconomico(carte: readonly Carta[]): number {
+  const prezzi = carte
+    .map((carta) => ({ euro: prezzoDiUnaCopia(carta) ?? 0, copie: copieMassime(carta) }))
+    .sort((a, b) => a.euro - b.euro);
+
+  let restano = DIMENSIONE_MAZZO;
+  let totale = 0;
+  for (const voce of prezzi) {
+    if (restano <= 0) break;
+    const quante = Math.min(voce.copie, restano);
+    totale += quante * voce.euro;
+    restano -= quante;
+  }
+  return totale;
+}
+
+/** Gli euro come si scrivono in una frase: due decimali e il simbolo. */
+const EURO = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+
+function euro(quanti: number): string {
+  return EURO.format(quanti);
+}
 
 /**
  * Quanto rumore si aggiunge al merito delle carte per far partire la ricerca da
@@ -283,10 +434,17 @@ export function costruisciMazzo(
   const scaduto = (): boolean => orologio() - inizio >= richiesta.tempoMassimoMs;
 
   const tema = richiesta.tema;
+  /** Il tetto di spesa: `null` quando è spento, ed è così che l'app parte. */
+  const tetto = richiesta.tettoDiSpesa;
   const ampiezza = valutaTema(pool, tema);
   // La combo si risolve **prima** di qualunque conto, e sul pool intero: un
   // nome sparito va detto anche quando poi non si costruisce niente.
   const comboRisolta = risolviCombo(richiesta.combo, pool, tema);
+
+  // Quel che si potrà dire del tetto di spesa. Nasce vuoto perché le prime due
+  // uscite — nessun tema, nessuna carta — arrivano prima che il pool sia stato
+  // filtrato, e a quel punto del tetto non c'è ancora niente da raccontare.
+  let spesaDichiarata: SpesaDellaRicerca | null = null;
 
   const niente = (esito: Esito, motivo: string): Frontiera => ({
     esito,
@@ -294,6 +452,9 @@ export function costruisciMazzo(
     ampiezza,
     combo: comboRisolta,
     mazzi: [],
+    // La spesa si dichiara **anche** quando non si costruisce niente, e a
+    // maggior ragione: è spesso il tetto la ragione per cui non si costruisce.
+    spesa: spesaDichiarata,
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: false,
     partenze: 0,
@@ -310,15 +471,41 @@ export function costruisciMazzo(
 
   // Le esclusioni vincono su tutto e valgono anche per le terre: la base la
   // sceglie l'app, ma dentro i limiti che l'utente ha dichiarato.
-  const terreDelPool = pool.filter((carta) => carta.terra !== null && !escluso(carta, tema));
-  const giocabili = pool.filter(
+  const terrePermesse = pool.filter((carta) => carta.terra !== null && !escluso(carta, tema));
+  const giocabiliPermesse = pool.filter(
     (carta) => carta.terra === null && !eTerra(carta) && !escluso(carta, tema),
   );
+
+  // Il tetto di spesa, quando è acceso, è il **secondo** filtro e non il primo:
+  // il tema decide che mazzo si vuole, il prezzo decide che cosa si può
+  // comprare. Nell'ordine inverso l'app risponderebbe prima sul portafoglio, che
+  // è esattamente quel che il ticket 09 le vieta.
+  const terreDelPool = terrePermesse.filter((carta) => comprabile(carta, tetto));
+  const giocabili = giocabiliPermesse.filter((carta) => comprabile(carta, tetto));
+
+  spesaDichiarata =
+    tetto === null
+      ? null
+      : (() => {
+          const fuori = [...giocabiliPermesse, ...terrePermesse].filter(
+            (carta) => !comprabile(carta, tetto),
+          );
+          const troppoCare = fuori.filter((carta) => prezzoDiUnaCopia(carta) !== null);
+          return {
+            tetto,
+            troppoCare: troppoCare.length,
+            troppoCareRiservate: troppoCare.filter((carta) => carta.riservata).length,
+            senzaPrezzo: fuori.length - troppoCare.length,
+            minimo: mazzoPiuEconomico([...giocabili, ...terreDelPool]),
+          };
+        })();
 
   if (terreDelPool.length === 0) {
     return niente(
       "niente-da-costruire",
-      "Non è rimasta nessuna terra fra quelle che il tema permette, e un mazzo senza terre non si gioca.",
+      tetto === null
+        ? "Non è rimasta nessuna terra fra quelle che il tema permette, e un mazzo senza terre non si gioca."
+        : `Dentro ${euro(tetto)} non resta nessuna terra fra quelle che il tema permette, e un mazzo senza terre non si gioca.`,
     );
   }
 
@@ -330,12 +517,35 @@ export function costruisciMazzo(
   if (capienza < POSTI_NON_TERRA) {
     return niente(
       "niente-da-costruire",
-      `Restano ${giocabili.length} carte giocabili, buone per ${capienza} posti: un mazzo ne chiede almeno ${POSTI_NON_TERRA}.`,
+      tetto === null
+        ? `Restano ${giocabili.length} carte giocabili, buone per ${capienza} posti: un mazzo ne chiede almeno ${POSTI_NON_TERRA}.`
+        : `Dentro ${euro(tetto)} restano ${giocabili.length} carte giocabili, buone per ${capienza} posti: un mazzo ne chiede almeno ${POSTI_NON_TERRA}.`,
+    );
+  }
+
+  // Il conto si fa **prima** di cercare, e non dopo aver cercato invano: le
+  // sessanta copie meno care che queste carte permettano sono un minimo vero, e
+  // se non ci stanno nel tetto nessun mazzo ci starà. Un no dato subito, con
+  // dentro il numero che ci vorrebbe, si può agire; otto secondi di ricerca e
+  // poi un no senza numero, no.
+  if (spesaDichiarata !== null && spesaDichiarata.minimo > spesaDichiarata.tetto) {
+    return niente(
+      "niente-da-costruire",
+      `Dentro ${euro(spesaDichiarata.tetto)} un mazzo non si fa: le sessanta carte meno care che restano ne costano ${euro(spesaDichiarata.minimo)}.`,
     );
   }
 
   const risolto = risolviTema(tema, pool);
 
+  /**
+   * Il portafoglio con cui si riempie e si scambia: il tetto, e il prezzo della
+   * terra più economica rimasta.
+   *
+   * La seconda serve perché le terre non stanno nella selezione — le sceglie
+   * `analizzaBaseDiTerre` dalla curva — e chi riempie deve **lasciare da parte**
+   * quel che la base costerà almeno, se no spenderebbe tutto in carte e
+   * consegnerebbe un mazzo fuori dal tetto per colpa delle terre.
+   */
   /**
    * I pezzi della combo, che nel mazzo entrano **al massimo delle copie** e non
    * si scambiano via: è tutto quel che «crederci» vuol dire, e da lì esce la
@@ -355,12 +565,48 @@ export function costruisciMazzo(
     );
   }
 
+  const portafoglio: Portafoglio | null =
+    tetto === null ? null : { tetto, riservaPerLeTerre: riservaPerLeTerre() };
+
+  /**
+   * Quanto costerà la base di terre, misurato invece che indovinato.
+   *
+   * Si riempie una partenza **senza guardare il prezzo**, si chiede la base che
+   * quel mazzo vuole, e si guarda quanto costa. È un giro in più prima di
+   * cominciare — uno solo, non uno per partenza — e vale quel che costa: la
+   * base di questo formato non è un contorno da pochi centesimi, e sbagliarla
+   * per difetto manda la ricerca a partire da mazzi che non si possono
+   * comprare.
+   */
+  function riservaPerLeTerre(): number {
+    const ordine = [...giocabili].sort(
+      (a, b) =>
+        qualitaDiCarta(b) - qualitaDiCarta(a) || a.nome.localeCompare(b.nome, "en"),
+    );
+    const posti = assestaIPosti(ordine, capienza, obbligate);
+    const provvisorio = voci(riempi(ordine, posti, obbligate));
+    const base = valutaMazzo(provvisorio, terreDelPool, {
+      seme: richiesta.seme,
+      terreVolute: DIMENSIONE_MAZZO - posti,
+      partite: 1,
+    }).base;
+    return prezzoDelMazzo(base.terre);
+  }
+
   /* --- La ricerca ------------------------------------------------------- */
 
   let scambiProvati = 0;
   let scambiTenuti = 0;
   let valutazioni = 0;
   let troncata = false;
+  /**
+   * Il mazzo meno caro che la ricerca abbia visto, dentro o fuori dal tetto.
+   *
+   * Serve a una frase sola, ma è la frase che rende agibile un no: quando col
+   * tetto acceso non esce niente, dire «il meno caro che ho trovato ne costa
+   * tanto» dice di quanto alzare. Un no senza numero lascia a indovinare.
+   */
+  let spesaPiuBassa = Number.POSITIVE_INFINITY;
 
   /**
    * Il punteggio di una selezione **col peso che questo passo dà al tema**.
@@ -385,8 +631,38 @@ export function costruisciMazzo(
     });
     const pura = purezza(carte, risolto);
     const potenza = combina(valutato.punteggio);
-    return { carte, valutato, purezza: pura, potenza, totale: potenza + peso * pura };
+    // Quel che si paga davvero: le carte **e** le terre che la base ha scelto.
+    // Le terre di questo formato non sono un contorno da pochi centesimi — su
+    // trentasette terre trentadue non sono base — e un tetto che le ignorasse
+    // sarebbe un tetto che non tiene.
+    const spesa = prezzoDelMazzo(carte) + prezzoDelMazzo(valutato.base.terre);
+    return {
+      carte,
+      valutato,
+      purezza: pura,
+      potenza,
+      spesa,
+      totale: potenza + peso * pura,
+    };
   };
+
+  /**
+   * Quanto pesa sfondare il tetto, nel numero solo con cui la ricerca ordina.
+   *
+   * Non è il vincolo — il vincolo è che un mazzo fuori dal tetto **non si tiene
+   * mai**, più sotto — è la **pendenza** che riporta dentro una ricerca finita
+   * fuori: senza, tutti i mazzi sforati varrebbero uguale e la ricerca non
+   * saprebbe da che parte scendere.
+   *
+   * Si misura sullo sforamento in quota del tetto, e cresce col peso della
+   * purezza: al peso 200 una copia di tema vale sei punti, e uno sforamento
+   * dell'uno per cento deve valere di più, se no il mazzo puro e caro
+   * resterebbe in testa a una ricerca che non può consegnarlo.
+   */
+  const penalitaDiSpesa = (spesa: number, peso: number): number =>
+    tetto === null || spesa <= tetto
+      ? 0
+      : PESO_DELLO_SFORAMENTO * (1 + peso) * ((spesa - tetto) / Math.max(tetto, PARI));
 
   /**
    * Una ricerca intera con **un** peso: le partenze, gli scambi, e il mazzo
@@ -402,9 +678,22 @@ export function costruisciMazzo(
     const candidati = scegliCandidati(giocabili, risolto, taratura, peso);
     let migliore: { selezione: Selezione; posti: number; totale: number } | null = null;
 
-    const valuta = (selezione: Selezione, posti: number): number => {
+    /**
+     * Il voto di una selezione, e se il mazzo che ne esce si può comprare.
+     *
+     * Sono due cose separate apposta: il **voto** guida la salita e la penalità
+     * di spesa lo tira giù quando si sfora, ma quel che si **tiene** lo decide
+     * `dentroIlTetto`. Così un mazzo fuori dal tetto può stare sul cammino della
+     * ricerca senza mai poter finire in mano a chi ha chiesto un tetto.
+     */
+    const valuta = (selezione: Selezione, posti: number): { voto: number; dentro: boolean } => {
       valutazioni += 1;
-      return punteggioDi(selezione, posti, peso, taratura.partiteInRicerca).totale;
+      const misurato = punteggioDi(selezione, posti, peso, taratura.partiteInRicerca);
+      spesaPiuBassa = Math.min(spesaPiuBassa, misurato.spesa);
+      return {
+        voto: misurato.totale - penalitaDiSpesa(misurato.spesa, peso),
+        dentro: tetto === null || misurato.spesa <= tetto,
+      };
     };
 
     const racconta = (partenza: number): void => {
@@ -425,14 +714,15 @@ export function costruisciMazzo(
       const ordine = ordinaPerPartenza(candidati, risolto, peso, partenza, generatore);
       // I posti non-terra non sono liberi: sono sessanta meno le terre che la
       // curva chiede, e non possono superare le copie che il pool sa dare.
-      let posti = assestaIPosti(ordine, capienza, obbligate);
-      let selezione = riempi(ordine, posti, obbligate);
+      let posti = assestaIPosti(ordine, capienza, obbligate, portafoglio);
+      let selezione = riempi(ordine, posti, obbligate, portafoglio);
 
       // La prima valutazione si fa **sempre**, anche col tempo già scaduto:
       // senza di lei non ci sarebbe nessun mazzo da restituire, e restituire un
       // mazzo c'è scritto nel ticket.
-      let corrente = valuta(selezione, posti);
-      if (migliore === null || corrente > migliore.totale + PARI) {
+      let misura = valuta(selezione, posti);
+      let corrente = misura.voto;
+      if (misura.dentro && (migliore === null || corrente > migliore.totale + PARI)) {
         migliore = { selezione, posti, totale: corrente };
       }
       racconta(partenza);
@@ -454,18 +744,18 @@ export function costruisciMazzo(
             break;
           }
 
-          const prova = conLoScambio(selezione, scambio);
+          const prova = conLoScambio(selezione, scambio, portafoglio);
           if (prova === null) continue;
 
           scambiProvati += 1;
           valutazioniQui += 1;
-          const totale = valuta(prova, posti);
-          if (totale > corrente + PARI) {
+          const provata = valuta(prova, posti);
+          if (provata.voto > corrente + PARI) {
             selezione = prova;
-            corrente = totale;
+            corrente = provata.voto;
             scambiTenuti += 1;
             migliorato = true;
-            if (corrente > migliore.totale + PARI) {
+            if (provata.dentro && (migliore === null || corrente > migliore.totale + PARI)) {
               migliore = { selezione, posti, totale: corrente };
             }
             racconta(partenza);
@@ -490,11 +780,12 @@ export function costruisciMazzo(
         const nuoviPosti = postiPerLaCurva(voci(selezione), capienza);
         if (nuoviPosti === posti) break;
         assestamenti += 1;
-        selezione = adatta(selezione, ordine, nuoviPosti, nomiObbligati);
+        selezione = adatta(selezione, ordine, nuoviPosti, nomiObbligati, portafoglio);
         posti = nuoviPosti;
-        corrente = valuta(selezione, posti);
+        misura = valuta(selezione, posti);
+        corrente = misura.voto;
         migliorato = true;
-        if (corrente > migliore.totale + PARI) {
+        if (misura.dentro && (migliore === null || corrente > migliore.totale + PARI)) {
           migliore = { selezione, posti, totale: corrente };
         }
       }
@@ -502,9 +793,12 @@ export function costruisciMazzo(
       if (troncata) break;
     }
 
-    // `migliore` non è mai nullo qui: il ciclo delle partenze gira almeno una
-    // volta e la sua prima valutazione non è sotto nessuna condizione. Se un
-    // giorno lo diventasse, questo sarebbe il posto in cui accorgersene.
+    // Col tetto spento `migliore` non è mai nullo: il ciclo delle partenze gira
+    // almeno una volta e la sua prima valutazione non è sotto nessuna
+    // condizione. Col tetto acceso lo diventa quando **nessuna** delle
+    // selezioni provate stava dentro il tetto, e allora questo peso non
+    // consegna niente: meglio un passo di frontiera in meno che un mazzo che
+    // costa più di quanto è stato chiesto.
     if (migliore === null) return null;
 
     // Il mazzo che vince si rivaluta **per intero**, con le partite piene: i
@@ -514,6 +808,12 @@ export function costruisciMazzo(
     // con una sbrigativa direbbe che un passo ha guadagnato quando invece ha
     // solo misurato meglio.
     const finale = punteggioDi(migliore.selezione, migliore.posti, peso, undefined);
+    // La rivalutazione piena cambia le partite simulate, non le carte: la spesa
+    // che ne esce è la stessa di prima. Il controllo c'è lo stesso, perché è la
+    // promessa dell'utente e non una conseguenza da dedurre — il giorno che la
+    // base di terre dipendesse anche da altro, questo sarebbe il posto in cui
+    // accorgersene invece di consegnare un mazzo fuori dal tetto.
+    if (tetto !== null && finale.spesa > tetto) return null;
     return {
       carte: [...finale.carte].sort(
         (a, b) =>
@@ -532,6 +832,7 @@ export function costruisciMazzo(
       peso,
       passo: null,
       totale: finale.totale,
+      spesa: finale.spesa,
     };
   };
 
@@ -552,7 +853,12 @@ export function costruisciMazzo(
   const mazzi = allineaLaFrontiera(trovati);
   const primo = mazzi[0];
   if (primo === undefined) {
-    return niente("niente-da-costruire", "La ricerca non ha potuto provare nemmeno un mazzo.");
+    return niente(
+      "niente-da-costruire",
+      tetto === null
+        ? "La ricerca non ha potuto provare nemmeno un mazzo."
+        : `Nessun mazzo sta dentro ${euro(tetto)}, e sopra il tetto chiesto non se ne consegna nessuno: il meno caro che la ricerca ha guardato ne costava ${euro(spesaPiuBassa)}. È quel che ha visto lei, non il minimo che esista: alzando il tetto fin lì può bastare, ma non è una promessa.`,
+    );
   }
 
   /* --- L'esito, che si legge dal mazzo più puro -------------------------- */
@@ -585,6 +891,7 @@ export function costruisciMazzo(
     ampiezza,
     combo: comboRisolta,
     mazzi,
+    spesa: spesaDichiarata,
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: troncata,
     partenze: taratura.partenze,
@@ -747,22 +1054,56 @@ function riempi(
   ordine: readonly Carta[],
   posti: number,
   obbligate: readonly Carta[] = [],
+  portafoglio: Portafoglio | null = null,
 ): Selezione {
   const selezione: Selezione = new Map();
+  const resta = portafoglio === null ? null : tettoPerLeCarte(portafoglio);
   let messe = 0;
+  let speso = 0;
+
+  /** Quante copie di questa carta il portafoglio lascia prendere. */
+  const quantePermette = (carta: Carta, volute: number): number => {
+    if (resta === null) return volute;
+    const prezzo = prezzoDiUnaCopia(carta) ?? 0;
+    if (prezzo <= 0) return volute;
+    return Math.min(volute, Math.max(0, Math.floor((resta - speso) / prezzo)));
+  };
+
+  // I pezzi della combo entrano **senza chiedere il prezzo**: sono la ragione
+  // per cui questo mazzo esiste, e un mazzo che li perdesse risponderebbe a
+  // un'altra domanda. Se sfondano il tetto lo sfondano, e il mazzo non si
+  // consegna: il no arriva dopo, con dentro il perché, invece di una combo
+  // smontata di nascosto.
   for (const carta of obbligate) {
     const copie = Math.min(copieAlMassimo(carta), posti - messe);
     if (copie <= 0) continue;
     selezione.set(carta.nome, { carta, copie });
     messe += copie;
+    speso += copie * (prezzoDiUnaCopia(carta) ?? 0);
   }
   for (const carta of ordine) {
     if (messe >= posti) break;
     if (selezione.has(carta.nome)) continue;
-    const copie = Math.min(copieAlMassimo(carta), posti - messe);
+    const copie = quantePermette(carta, Math.min(copieAlMassimo(carta), posti - messe));
     if (copie <= 0) continue;
     selezione.set(carta.nome, { carta, copie });
     messe += copie;
+    speso += copie * (prezzoDiUnaCopia(carta) ?? 0);
+  }
+
+  // Il portafoglio governa **quali** carte entrano, mai **quante** ne entrano.
+  // Se i soldi sono finiti prima dei posti si riempie lo stesso, e il mazzo
+  // esce fuori dal tetto: a quel punto non si tiene — `valuta` lo scarta — e
+  // l'utente sente un no. L'alternativa sarebbe fermarsi qui e consegnare un
+  // mazzo da quarantacinque carte, illegale e annunciato come se fosse a posto:
+  // fra un no e una bugia si sceglie il no.
+  for (const carta of ordine) {
+    if (messe >= posti) break;
+    const gia = selezione.get(carta.nome)?.copie ?? 0;
+    const ancora = Math.min(copieAlMassimo(carta) - gia, posti - messe);
+    if (ancora <= 0) continue;
+    selezione.set(carta.nome, { carta, copie: gia + ancora });
+    messe += ancora;
   }
   return selezione;
 }
@@ -800,10 +1141,14 @@ function assestaIPosti(
   ordine: readonly Carta[],
   capienza: number,
   obbligate: readonly Carta[] = [],
+  portafoglio: Portafoglio | null = null,
 ): number {
   let posti = Math.min(capienza, DIMENSIONE_MAZZO - TERRE_MINIME);
   for (let giro = 0; giro < 5; giro++) {
-    const nuovi = postiPerLaCurva(voci(riempi(ordine, posti, obbligate)), capienza);
+    const nuovi = postiPerLaCurva(
+      voci(riempi(ordine, posti, obbligate, portafoglio)),
+      capienza,
+    );
     if (nuovi === posti) break;
     posti = nuovi;
   }
@@ -823,6 +1168,7 @@ function adatta(
   ordine: readonly Carta[],
   posti: number,
   obbligate: ReadonlySet<string> = new Set(),
+  portafoglio: Portafoglio | null = null,
 ): Selezione {
   const dopo: Selezione = new Map(selezione);
   let copie = [...dopo.values()].reduce((somma, voce) => somma + voce.copie, 0);
@@ -840,6 +1186,28 @@ function adatta(
     copie -= via;
   }
 
+  // Le copie che si aggiungono passano dal portafoglio come quelle della
+  // partenza: `adatta` gira quando le terre cambiano numero, e senza questo un
+  // mazzo che era dentro il tetto ne uscirebbe proprio mentre lo si sistema.
+  const resta = portafoglio === null ? null : tettoPerLeCarte(portafoglio);
+  let speso = resta === null ? 0 : prezzoDellaSelezione(dopo);
+
+  for (const carta of ordine) {
+    if (copie >= posti) break;
+    const gia = dopo.get(carta.nome)?.copie ?? 0;
+    let ancora = Math.min(copieAlMassimo(carta) - gia, posti - copie);
+    if (resta !== null) {
+      const prezzo = prezzoDiUnaCopia(carta) ?? 0;
+      if (prezzo > 0) ancora = Math.min(ancora, Math.max(0, Math.floor((resta - speso) / prezzo)));
+    }
+    if (ancora <= 0) continue;
+    dopo.set(carta.nome, { carta, copie: gia + ancora });
+    copie += ancora;
+    speso += ancora * (prezzoDiUnaCopia(carta) ?? 0);
+  }
+
+  // Come in `riempi`: i posti si riempiono comunque. Un mazzo corto non e un
+  // mazzo, e il tetto e gia un vincolo che sa dire di no per conto suo.
   for (const carta of ordine) {
     if (copie >= posti) break;
     const gia = dopo.get(carta.nome)?.copie ?? 0;
@@ -900,13 +1268,30 @@ function scambi(
  * Il mazzo con una copia in meno di una carta e una in più di un'altra, oppure
  * `null` se lo scambio non si può fare — la carta che entra è già al suo tetto
  * di copie, e quel tetto lo dice la carta, non il codice (`mazzo/copie.ts`).
+ *
+ * Col tetto di spesa acceso c'è una seconda ragione per dire di no: lo scambio
+ * porterebbe il mazzo **sopra il tetto**. La regola non è «resta sotto» ma
+ * «resta sotto, oppure costa meno di prima»: un mazzo già sforato — capita coi
+ * pezzi di una combo, che il prezzo non lo pagano — deve poter scendere, e una
+ * regola secca gli vieterebbe anche gli scambi che lo riportano dentro.
  */
-function conLoScambio(selezione: Selezione, scambio: Scambio): Selezione | null {
+function conLoScambio(
+  selezione: Selezione,
+  scambio: Scambio,
+  portafoglio: Portafoglio | null = null,
+): Selezione | null {
   const esce = selezione.get(scambio.fuori);
   if (esce === undefined) return null;
 
   const gia = selezione.get(scambio.dentro.nome)?.copie ?? 0;
   if (gia + 1 > copieMassime(scambio.dentro)) return null;
+
+  if (portafoglio !== null) {
+    const attuale = prezzoDellaSelezione(selezione);
+    const nuovo =
+      attuale - (prezzoDiUnaCopia(esce.carta) ?? 0) + (prezzoDiUnaCopia(scambio.dentro) ?? 0);
+    if (nuovo > tettoPerLeCarte(portafoglio) && nuovo > attuale) return null;
+  }
 
   const dopo: Selezione = new Map(selezione);
   if (esce.copie === 1) dopo.delete(scambio.fuori);

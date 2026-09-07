@@ -6,6 +6,11 @@
  * «questa base regge?». Ogni numero mostrato qui viene da `analizzaBaseDiTerre`
  * e da nessun altro posto: le frasi sono modelli riempiti con quei numeri, mai
  * giudizi inventati — è il vincolo non negoziabile di `CLAUDE.md`.
+ *
+ * In fondo c'è la **lista della spesa** (ticket 09), e sta qui e non nella
+ * schermata che costruisce: è questo il mazzo che il giocatore ha in mano e che
+ * porterà al negozio, terre comprese — e le terre le sceglie l'app proprio qui,
+ * quindi è qui che se ne conosce il prezzo.
  */
 
 import { useMemo } from "preact/hooks";
@@ -25,6 +30,8 @@ import {
 import type { Carta, ColoreMana, Pool } from "../dati/pool.js";
 import { escluso, type Tema } from "../tema/tema.js";
 import { CostoDiMana } from "./CostoDiMana.js";
+import { ListaDellaSpesa } from "./ListaDellaSpesa.js";
+import { comprabile } from "../mazzo/spesa.js";
 
 const PERCENTUALE = new Intl.NumberFormat("it-IT", {
   style: "percent",
@@ -48,6 +55,7 @@ export function Mazzo({
   cambiaCopie,
   terreVolute,
   cambiaTerre,
+  tettoDiSpesa,
   apri,
 }: {
   pool: Pool;
@@ -57,6 +65,8 @@ export function Mazzo({
   cambiaCopie: (carta: Carta, delta: number) => void;
   terreVolute: number | null;
   cambiaTerre: (quante: number | null) => void;
+  /** Il tetto di spesa, `null` quando è spento: vale anche sulle terre. */
+  tettoDiSpesa: number | null;
   apri: (carta: Carta) => void;
 }) {
   // Le esclusioni del tema valgono anche per le terre, e valgono **qui** come
@@ -64,14 +74,33 @@ export function Mazzo({
   // arriva nemmeno una foresta. Se questa schermata pescasse dal pool intero,
   // un mazzo costruito senza certe terre se le ritroverebbe dentro appena
   // messo in mano, e la promessa sarebbe rotta nel punto in cui si guarda.
+  // Il tetto di spesa vale qui come vale nel motore, e per la stessa ragione
+  // per cui ci valgono le esclusioni: la base che questa schermata rifà deve
+  // essere **la stessa** che la ricerca ha scelto e prezzato. Senza, un mazzo
+  // costruito dentro il tetto se ne ritroverebbe fuori appena messo in mano —
+  // con dentro proprio le terre che il motore aveva lasciato fuori perché
+  // costavano troppo o perché un listino non ce l'hanno.
   const terreDelPool = useMemo(
-    () => pool.carte.filter((carta) => carta.terra !== null && !escluso(carta, tema)),
-    [pool, tema],
+    () =>
+      pool.carte.filter(
+        (carta) =>
+          carta.terra !== null && !escluso(carta, tema) && comprabile(carta, tettoDiSpesa),
+      ),
+    [pool, tema, tettoDiSpesa],
   );
   const base = useMemo(
     () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute }),
     [mazzo, terreDelPool, terreVolute],
   );
+
+  // Carte e terre in un elenco solo, ricavato una volta: la lista della spesa
+  // ci ragiona sopra, e un elenco nuovo a ogni respiro dell'app le farebbe
+  // rifare il conto per niente.
+  //
+  // Sta **sopra** l'uscita anticipata qui sotto, e non accanto a chi lo usa: i
+  // ganci di preact vanno chiamati tutti e sempre nello stesso ordine, e uno
+  // messo dopo un `return` scomparirebbe proprio quando il mazzo si svuota.
+  const daComprare = useMemo(() => [...mazzo, ...base.terre], [mazzo, base]);
 
   if (mazzo.length === 0) {
     return (
@@ -212,6 +241,10 @@ export function Mazzo({
           ))}
         </ul>
       </section>
+
+      {/* Carte e terre insieme, che è quel che si compra: le terre di questo
+          formato non sono un contorno da pochi centesimi. */}
+      <ListaDellaSpesa mazzo={daComprare} />
     </div>
   );
 }

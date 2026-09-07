@@ -40,6 +40,19 @@
  * lista la legge come una lista, e chi vuole capire tocca la carta. È l'unico
  * modo di dare una spiegazione lunga a ogni carta senza che la lista smetta di
  * essere leggibile.
+ *
+ * ## Il tetto di spesa (ticket 09)
+ *
+ * **Parte spento**, e sta qui sotto spento finché non lo si accende. Non è
+ * pigrizia: il fulcro dell'app è il tasso di cambio fra tema e potenza, e la
+ * frontiera esiste per mostrarne uno solo. Un budget acceso di default ne
+ * metterebbe un secondo accanto — quanto costa in euro quel che costa in tema —
+ * e i due prezzi si confonderebbero. La prima risposta che il giocatore riceve
+ * dev'essere sul tema, non sul portafoglio.
+ *
+ * Acceso, vincola la costruzione come il tema: nessun mazzo della frontiera
+ * costa più del tetto. E l'app dice **a chiare lettere** che cosa sta lasciando
+ * fuori — quante carte, e quante di quelle non saranno mai ristampate.
  */
 
 import { useEffect, useMemo, useState } from "preact/hooks";
@@ -47,13 +60,25 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import type { Combo as CarteDellaCombo } from "../combo/combo.js";
 import type { Pool } from "../dati/pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
-import type { Richiesta } from "../ricerca/costruisci.js";
+import { AVVISO_STIMA_AL_RIBASSO, listaDellaSpesa } from "../mazzo/spesa.js";
+import type { Richiesta, SpesaDellaRicerca } from "../ricerca/costruisci.js";
 import { TEMPO_MASSIMO_PREDEFINITO_MS } from "../ricerca/taratura.js";
 import type { Motore } from "../ricerca/usa-motore.js";
 import { spiegaFrontiera } from "../spiegazioni/spiegazioni.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
 
 const NUMERI = new Intl.NumberFormat("it-IT");
+const EURO = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+
+/**
+ * Il tetto che si propone quando lo si accende, in euro.
+ *
+ * Non è una verità sul formato e non decide niente: è il numero da cui si parte
+ * a spostare la manopola, e si cambia con due tocchi. Serve solo perché
+ * accendere un tetto vuoto vorrebbe dire chiedere subito «zero euro», che non è
+ * una domanda.
+ */
+const TETTO_DA_CUI_PARTIRE = 200;
 const PERCENTO = new Intl.NumberFormat("it-IT", { style: "percent", maximumFractionDigits: 0 });
 /**
  * La differenza fra un mazzo e il precedente: le stesse due percentuali di
@@ -78,6 +103,8 @@ export function Costruzione({
   combo,
   seme,
   cambiaSeme,
+  tettoDiSpesa,
+  cambiaTetto,
   motore,
   mettiInMano,
 }: {
@@ -87,9 +114,17 @@ export function Costruzione({
   combo: CarteDellaCombo;
   seme: number;
   cambiaSeme: (seme: number) => void;
+  /** Il tetto di spesa in euro, `null` quando è spento — ed è così che parte. */
+  tettoDiSpesa: number | null;
+  cambiaTetto: (tetto: number | null) => void;
   motore: Motore;
   /** Il mazzo costruito torna in mano all'utente, nella schermata «Mazzo». */
-  mettiInMano: (carte: readonly CopieDiCarta[], terre: number) => void;
+  mettiInMano: (
+    carte: readonly CopieDiCarta[],
+    terre: number,
+    /** Il tetto con cui è stato costruito: viaggia col mazzo. */
+    tetto: number | null,
+  ) => void;
 }) {
   const dichiarato = temaDichiarato(tema);
   const mazzi = motore.frontiera?.mazzi ?? [];
@@ -113,12 +148,20 @@ export function Costruzione({
   );
   const spiegato = spiegazioni[Math.min(scelto, spiegazioni.length - 1)] ?? null;
 
+  // Quante carte del mazzo scelto un listino non ce l'hanno: sono quelle che il
+  // conto non racconta, e il conto va detto «almeno» quando ce ne sono.
+  const senzaListino =
+    mazzo === null
+      ? 0
+      : listaDellaSpesa([...mazzo.carte, ...mazzo.terre]).senzaPrezzo.length;
+
   const costruisci = () => {
     const richiesta: Richiesta = {
       tema,
       combo,
       seme,
       tempoMassimoMs: TEMPO_MASSIMO_PREDEFINITO_MS,
+      tettoDiSpesa,
     };
     // L'impronta del pool è la data dei suoi dati: cambia quando e solo quando
     // cambiano le carte (ticket 05).
@@ -168,6 +211,8 @@ export function Costruzione({
         </label>
       </div>
 
+      <TettoDiSpesa tetto={tettoDiSpesa} cambia={cambiaTetto} bloccato={motore.allOpera} />
+
       {!dichiarato ? (
         <p class="nota-filtro">
           Prima dichiara un tema qui sopra: è quello il vincolo dentro cui l&rsquo;app costruisce.
@@ -193,6 +238,9 @@ export function Costruzione({
       {motore.frontiera !== null ? (
         <div class="esito-costruzione" data-esito={motore.frontiera.esito}>
           <p class="motivo">{motore.frontiera.motivo}</p>
+          {motore.frontiera.spesa === null ? null : (
+            <CosaHaLasciatoFuori spesa={motore.frontiera.spesa} />
+          )}
           {motore.frontiera.troncataPerTempo ? (
             <p class="nota-filtro">
               Il tempo concesso è finito prima che la ricerca si fermasse da sé: questo è il meglio
@@ -269,6 +317,20 @@ export function Costruzione({
                 ))}
               </ul>
 
+              <p class="spiegazione spiegazione-spesa">
+                {/* «Almeno» quando qualche carta un listino non ce l&rsquo;ha: il conto le
+                    salta, e chiamarlo «il prezzo» sarebbe la bugia che
+                    `mazzo/spesa.ts` esiste per non far dire. Col tetto acceso non
+                    succede — quelle carte restano fuori — ma col tetto spento sì. */}
+                Comprarlo costa {senzaListino > 0 ? "almeno " : ""}
+                {EURO.format(mazzo.spesa)}, terre comprese.{" "}
+                {senzaListino > 0
+                  ? `${senzaListino === 1 ? "Una carta non ha listino e nel conto non c’è" : `${NUMERI.format(senzaListino)} carte non hanno listino e nel conto non ci sono`}. `
+                  : ""}
+                {AVVISO_STIMA_AL_RIBASSO} La lista con le stampe da cercare sta nella schermata
+                «Mazzo», appena lo metti in mano.
+              </p>
+
               {spiegato !== null && spiegato.passo !== null ? (
                 <p class="spiegazione spiegazione-passo">{spiegato.passo.frase}</p>
               ) : null}
@@ -332,7 +394,9 @@ export function Costruzione({
               <button
                 type="button"
                 class="genera"
-                onClick={() => mettiInMano(mazzo.carte, mazzo.base.numeroTerre)}
+                onClick={() =>
+                  mettiInMano(mazzo.carte, mazzo.base.numeroTerre, motore.frontiera?.spesa?.tetto ?? null)
+                }
               >
                 Mettilo in mano
               </button>
@@ -341,5 +405,138 @@ export function Costruzione({
         </div>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * Il tetto di spesa: spento, e il perché scritto accanto.
+ *
+ * Lo spento non è uno stato da riempire in fretta: è la risposta giusta finché
+ * il giocatore sta scegliendo un mazzo invece di comprarlo. Perciò l'interruttore
+ * porta con sé la ragione — se no sembrerebbe una cosa che l'app si è dimenticata
+ * di accendere.
+ */
+function TettoDiSpesa({
+  tetto,
+  cambia,
+  bloccato,
+}: {
+  tetto: number | null;
+  cambia: (tetto: number | null) => void;
+  /** Mentre il motore lavora la richiesta è partita: cambiarla mentirebbe. */
+  bloccato: boolean;
+}) {
+  const acceso = tetto !== null;
+  return (
+    <div class="tetto-di-spesa" data-acceso={acceso ? "" : undefined}>
+      <label class="interruttore">
+        <input
+          type="checkbox"
+          checked={acceso}
+          disabled={bloccato}
+          onChange={(evento) =>
+            cambia(evento.currentTarget.checked ? TETTO_DA_CUI_PARTIRE : null)
+          }
+        />
+        <span>Tetto di spesa</span>
+      </label>
+
+      {acceso ? (
+        <>
+          <label class="campo euro">
+            <span class="etichetta-campo">Euro</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={10}
+              value={tetto}
+              disabled={bloccato}
+              onInput={(evento) => {
+                // Il campo vuoto si lascia vuoto **mentre si scrive** — chi
+                // cancella per riscrivere non vuole vedersi rimettere uno zero
+                // sotto le dita — ma non si costruisce con un tetto che nessuno
+                // vede: ci pensa `onBlur` qui sotto a rimettere in pari campo e
+                // stato appena il dito se ne va.
+                const scritto = evento.currentTarget.value.trim();
+                if (scritto === "") return;
+                const letto = Number(scritto);
+                if (!Number.isFinite(letto)) return;
+                cambia(Math.max(0, letto));
+              }}
+              onBlur={(evento) => {
+                // Quel che si vede e quel che parte devono essere lo stesso
+                // numero: un campo lasciato vuoto tornerebbe altrimenti a
+                // costruire col tetto di prima, che sullo schermo non c'è più.
+                const campo = evento.currentTarget;
+                if (campo.value.trim() === "") campo.value = String(tetto);
+              }}
+            />
+          </label>
+          <p class="nota-filtro">
+            Da adesso l&rsquo;app costruisce solo mazzi che stanno dentro questa cifra.{" "}
+            {AVVISO_STIMA_AL_RIBASSO}
+          </p>
+        </>
+      ) : (
+        <p class="nota-filtro">
+          Spento apposta: la prima risposta che ricevi è sul tema, non sul portafoglio. Accendilo
+          quando stai per comprare.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Che cosa il tetto sta lasciando fuori, detto a chiare lettere.
+ *
+ * «A chiare lettere» vuol dire con dentro il numero, e vuol dire dicendo la
+ * cosa scomoda: su questo pool le carte care sono le migliori, e più di cento
+ * sono in Reserved List — non saranno mai ristampate, e il loro prezzo non
+ * scenderà. Alzare il tetto è l&rsquo;unica strada, e chi legge deve poterlo
+ * sapere invece di scoprirlo fra un anno.
+ */
+function CosaHaLasciatoFuori({ spesa }: { spesa: SpesaDellaRicerca }) {
+  if (spesa.troppoCare === 0 && spesa.senzaPrezzo === 0) {
+    return (
+      <p class="nota-filtro avviso-spesa">
+        Con {EURO.format(spesa.tetto)} il tetto non ha lasciato fuori niente: ci sta tutto quello
+        che il tema permette.
+      </p>
+    );
+  }
+
+  return (
+    <p class="nota-filtro avviso-spesa">
+      Con {EURO.format(spesa.tetto)} restano fuori{" "}
+      {spesa.troppoCare > 0 ? (
+        <>
+          <strong>
+            {spesa.troppoCare === 1 ? "una carta" : `${NUMERI.format(spesa.troppoCare)} carte`}
+          </strong>{" "}
+          che da sole costano più del tetto
+          {spesa.troppoCareRiservate > 0 ? (
+            <>
+              , e {NUMERI.format(spesa.troppoCareRiservate)} di quelle sono in Reserved List: non
+              saranno mai ristampate, e aspettare non le farà scendere di prezzo
+            </>
+          ) : null}
+        </>
+      ) : null}
+      {spesa.troppoCare > 0 && spesa.senzaPrezzo > 0 ? "; restano fuori anche " : ""}
+      {spesa.senzaPrezzo > 0 ? (
+        <>
+          <strong>
+            {spesa.senzaPrezzo === 1 ? "una carta" : `${NUMERI.format(spesa.senzaPrezzo)} carte`}
+          </strong>{" "}
+          che un listino non ce l&rsquo;hanno: le descrive la loro stampa italiana, e con un tetto
+          acceso l&rsquo;app non mette nel mazzo quel che non sa contare
+        </>
+      ) : null}
+      . Sotto {EURO.format(spesa.minimo)} non si scende comunque: tanto costano le sessanta
+      carte meno care rimaste, messe insieme senza guardare se facciano un mazzo — quello vero
+      costa di più.
+    </p>
   );
 }

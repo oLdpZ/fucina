@@ -104,6 +104,35 @@ export function App() {
    */
   const [seme, setSeme] = useState(1);
   /**
+   * Il tetto di spesa in euro, e `null` vuol dire **spento** — che è come
+   * l'app si apre (ticket 09).
+   *
+   * Spento di suo e non per dimenticanza: il fulcro è il tasso di cambio fra
+   * tema e potenza, e la frontiera ne mostra uno. Un budget acceso all'apertura
+   * ne metterebbe accanto un secondo, e la prima risposta che il giocatore
+   * riceve sarebbe sul portafoglio invece che sul tema. Lo accende lui, quando
+   * sta per comprare.
+   *
+   * Vive qui accanto al tema e al seme, e per le stesse ragioni: è un ingresso
+   * della richiesta, e passando alle altre schermate non si perde.
+   */
+  const [tettoDiSpesa, setTettoDiSpesa] = useState<number | null>(null);
+  /**
+   * Il tetto con cui il mazzo **che si ha in mano** è stato costruito.
+   *
+   * Non è `tettoDiSpesa`, ed è tutta la differenza: la schermata del mazzo si
+   * rifà la base di terre da sola, e per ritrovare quella che il motore aveva
+   * scelto deve filtrare le terre col tetto di **allora**. Col tetto di adesso,
+   * chi costruisce a 30 euro e poi spegne l'interruttore si vedrebbe cambiare
+   * la base e il conto sotto le mani, senza aver toccato il mazzo — e chi
+   * accende un tetto su un mazzo messo insieme a mano se ne vedrebbe sparire le
+   * terre senza listino, che nessuno gli aveva detto di togliere.
+   *
+   * `null` per i mazzi messi insieme a mano e per quelli riaperti dai salvati:
+   * nessun tetto li ha prodotti, e nessuno se ne applica.
+   */
+  const [tettoDelMazzoInMano, setTettoDelMazzoInMano] = useState<number | null>(null);
+  /**
    * Il motore vive qui e non nella schermata da cui lo si accende: le pagine
    * si smontano passando da una all'altra, e una ricerca che vivesse dentro la
    * pagina morirebbe andando a controllare una carta nel catalogo — cioè
@@ -134,9 +163,11 @@ export function App() {
     // `dimentica` cambia a ogni render — è ricostruita dal gancio — e metterla
     // fra le dipendenze vorrebbe dire buttare via il mazzo a ogni respiro
     // dell'app. Quel che deve far scattare l'oblio sono gli ingressi della
-    // richiesta — il tema e la combo — e nient'altro.
+    // richiesta — il tema, la combo e il tetto di spesa — e nient'altro. Un
+    // mazzo costruito con un tetto diverso da quello scritto adesso
+    // risponderebbe a una domanda che non gli è più stata fatta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tema, combo]);
+  }, [tema, combo, tettoDiSpesa]);
 
   /** Il controllo di freschezza si fa una volta per apertura, non a ogni pool. */
   const giaControllato = useRef(false);
@@ -258,6 +289,10 @@ export function App() {
     }
     setCopiePerNome(copie);
     cambiaTerre(salvato.richiesta.terreVolute);
+    // Un mazzo riaperto non porta con sé nessun tetto: la richiesta salvata non
+    // lo scrive ancora (`mazzo/salvato.ts`), e inventarne uno vorrebbe dire
+    // togliergli delle terre per una cifra che nessuno ha chiesto.
+    setTettoDelMazzoInMano(null);
     setAperto({ id: salvato.id, nome: salvato.nome, salvatoIl: salvato.salvatoIl });
     // Se c'è qualcosa da dire, si resta dove la frase si legge: portare
     // l'utente al mazzo con un messaggio alle spalle vorrebbe dire non dirglielo
@@ -274,7 +309,7 @@ export function App() {
    * ha deciso. Da quel momento è un mazzo come gli altri: si tocca, si salva,
    * si esporta.
    */
-  const mettiInMano = (carte: readonly CopieDiCarta[], terre: number) => {
+  const mettiInMano = (carte: readonly CopieDiCarta[], terre: number, tetto: number | null) => {
     // Le terre non si trasportano una per una: la schermata del mazzo le
     // ricalcola dalle stesse carte, dallo stesso pool e dalle stesse
     // esclusioni del tema, e con lo stesso numero ritrova la stessa base.
@@ -282,6 +317,10 @@ export function App() {
     // possono divergere, e prima o poi divergerebbero.
     setCopiePerNome(new Map(carte.map((voce) => [voce.carta.nome, voce.copie])));
     cambiaTerre(terre);
+    // Il tetto viaggia col mazzo, non con l'interruttore: da qui in poi questo
+    // mazzo è «quello costruito a tanti euro», e resta tale anche se
+    // l'interruttore cambia idea.
+    setTettoDelMazzoInMano(tetto);
     setAperto(null);
     setPagina("mazzo");
   };
@@ -364,6 +403,8 @@ export function App() {
               combo={combo}
               seme={seme}
               cambiaSeme={setSeme}
+              tettoDiSpesa={tettoDiSpesa}
+              cambiaTetto={setTettoDiSpesa}
               motore={motore}
               mettiInMano={mettiInMano}
             />
@@ -387,6 +428,7 @@ export function App() {
             cambiaCopie={cambiaCopie}
             terreVolute={terreVolute}
             cambiaTerre={cambiaTerre}
+            tettoDiSpesa={tettoDelMazzoInMano}
           />
         )}
       </main>
@@ -424,6 +466,7 @@ function SchermataMazzo({
   cambiaCopie,
   terreVolute,
   cambiaTerre,
+  tettoDiSpesa,
 }: {
   pool: Pool;
   tema: Tema;
@@ -432,6 +475,8 @@ function SchermataMazzo({
   cambiaCopie: (carta: Carta, delta: number) => void;
   terreVolute: number | null;
   cambiaTerre: (quante: number | null) => void;
+  /** Il tetto di spesa, che vale anche sulle terre che la schermata sceglie. */
+  tettoDiSpesa: number | null;
 }) {
   const [aperta, setAperta] = useState<Carta | null>(null);
 
@@ -453,6 +498,7 @@ function SchermataMazzo({
         cambiaCopie={cambiaCopie}
         terreVolute={terreVolute}
         cambiaTerre={cambiaTerre}
+        tettoDiSpesa={tettoDiSpesa}
         apri={setAperta}
       />
       {aperta ? (

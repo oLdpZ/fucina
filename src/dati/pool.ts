@@ -186,6 +186,20 @@ export type Carta = {
   costituzione: string | null;
   immagine: Immagine | null;
   rarita: string;
+  /**
+   * La carta è nella **Reserved List** di Wizards: non sarà mai ristampata.
+   *
+   * È un fatto della carta e non del formato — lo dichiara Scryfall, e da lì
+   * arriva — ma è l'unico fatto che spiega i prezzi di questo pool a chi li
+   * guarda per la prima volta. Una carta riservata non diventerà più economica
+   * aspettando: quando il tetto di spesa la lascia fuori, la lascia fuori per
+   * sempre, e l'app deve poterlo dire invece di lasciar sperare in una
+   * ristampa.
+   *
+   * Sta nel pool e non in un elenco nel sorgente per la ragione di sempre: un
+   * elenco scritto qui direbbe la lista di oggi e la direbbe per sempre.
+   */
+  riservata: boolean;
   prezzo: Prezzo;
   /**
    * I tag di sinergia, in ordine dichiarato e senza ripetizioni: regole

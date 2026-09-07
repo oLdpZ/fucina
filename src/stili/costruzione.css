@@ -341,3 +341,67 @@
   font-size: var(--titolo-scheda);
   color: var(--inchiostro);
 }
+
+/*
+ * Il tetto di spesa (ticket 09): spento, e con accanto il perché.
+ *
+ * Spento è lo stato normale e si vede che lo è — bordo tratteggiato, colori
+ * tenui — perché non è una cosa che l'app si sia dimenticata di accendere: è la
+ * risposta giusta finché si sta scegliendo un mazzo invece di comprarlo. Acceso
+ * prende il bordo pieno e l'accento, come un vincolo qualunque.
+ */
+.tetto-di-spesa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--passo) * 2) calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 3);
+  border: 1px dashed var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.tetto-di-spesa[data-acceso] {
+  border-style: solid;
+  border-color: var(--accento);
+  background: var(--superficie-alta);
+}
+
+.tetto-di-spesa .interruttore {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 2);
+  font-size: var(--testo-normale);
+}
+
+.tetto-di-spesa .interruttore input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accento);
+}
+
+/* Come il seme: è una cifra, non una frase. */
+.tetto-di-spesa .campo.euro {
+  flex: 0 0 8rem;
+}
+
+/* La nota va a capo da sola e prende tutta la riga sotto la manopola. */
+.tetto-di-spesa .nota-filtro {
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+/*
+ * Quel che il tetto lascia fuori. Ha il segno dell'avviso perché è la cosa
+ * scomoda della schermata — su questo pool le carte care sono le migliori — e
+ * dirla in grigio chiaro vorrebbe dire non dirla.
+ */
+.avviso-spesa {
+  padding: calc(var(--passo) * 2) calc(var(--passo) * 3);
+  border-left: 3px solid var(--accento-secondario);
+  background: var(--superficie-alta);
+  color: var(--inchiostro);
+}
+
+.spiegazione-spesa {
+  font-size: var(--testo-piccolo);
+}

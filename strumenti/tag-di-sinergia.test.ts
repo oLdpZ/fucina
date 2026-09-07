@@ -30,6 +30,7 @@ function carta(nome: string, testo: string, tipi: string[] = ["Creature"]): Cart
     costituzione: null,
     immagine: null,
     rarita: "common",
+    riservata: false,
     nomeItaliano: null,
     edizione: "prova",
     numeroDiCollezione: "1",

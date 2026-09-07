@@ -270,6 +270,7 @@ describe("passo 2 — cosa si mostra", () => {
         "numeroDiCollezione",
         "prezzo",
         "rarita",
+        "riservata",
         "sottotipi",
         "tag",
         "tagScryfall",
@@ -280,6 +281,21 @@ describe("passo 2 — cosa si mostra", () => {
         "valoreDiMana",
       ].sort(),
     );
+  });
+});
+
+describe("la Reserved List", () => {
+  it("segna la carta che Scryfall dichiara riservata", () => {
+    // È il fatto che spiega i prezzi di questo pool: una carta riservata non
+    // sarà mai ristampata, quindi il tetto di spesa che la lascia fuori la
+    // lascia fuori per sempre. L'app lo dice, e per dirlo deve saperlo.
+    expect(carta(preparazione().pool, "Fixture Duale").riservata).toBe(true);
+  });
+
+  it("non la segna quando Scryfall non ne dice niente", () => {
+    // Il campo assente vuol dire «non riservata»: è la risposta giusta per la
+    // stragrande maggioranza delle carte, e non inventa niente.
+    expect(carta(preparazione().pool, "Fixture Goblin").riservata).toBe(false);
   });
 });
 

@@ -1,0 +1,173 @@
+import { describe, expect, it } from "vitest";
+
+import { POOL_FINTO, TERRE_FINTE } from "../catalogo/pool-finto.js";
+import type { Carta } from "../dati/pool.js";
+import type { CopieDiCarta } from "./base-di-terre.js";
+import {
+  AVVISO_STIMA_AL_RIBASSO,
+  descriviLaStampa,
+  listaDellaSpesa,
+  prezzoDelMazzo,
+  prezzoDiUnaCopia,
+} from "./spesa.js";
+
+const carta = (nome: string): Carta => {
+  const trovata = [...POOL_FINTO, ...TERRE_FINTE].find((c) => c.nome === nome);
+  if (trovata === undefined) throw new Error(`Il pool finto non ha ${nome}.`);
+  return trovata;
+};
+
+/** Una carta del pool finto con un prezzo scelto dal test. */
+const a = (nome: string, euro: number | null, copie: number): CopieDiCarta => ({
+  carta: { ...carta(nome), prezzo: { euro, aggiornatoIl: "2026-09-06T09:17:09.373+00:00" } },
+  copie,
+});
+
+describe("il prezzo di una carta", () => {
+  it("è quello della stampa che il pool ha scelto", () => {
+    expect(prezzoDiUnaCopia(a("Goblin Chieftain", 3.5, 1).carta)).toBe(3.5);
+  });
+
+  it("è «non lo so» e non zero quando la stampa scelta non ha listino", () => {
+    // Sono le carte che in inglese, dentro le edizioni ammesse, non esistono:
+    // le descrive la loro stampa italiana, che su Cardmarket non ha prezzo.
+    // Contarle zero direbbe che sono gratis, che è la bugia più cara di tutte.
+    expect(prezzoDiUnaCopia(a("Goblin Chieftain", null, 1).carta)).toBeNull();
+  });
+});
+
+describe("il conto di un mazzo", () => {
+  it("somma le copie, non le carte", () => {
+    const mazzo = [a("Goblin Chieftain", 2, 4), a("Skirk Prospector", 0.5, 2)];
+
+    expect(prezzoDelMazzo(mazzo)).toBeCloseTo(9, 6);
+  });
+
+  it("conta solo quel che ha un prezzo, invece di far finta che il resto sia gratis", () => {
+    const mazzo = [a("Goblin Chieftain", 2, 4), a("Skirk Prospector", null, 4)];
+
+    expect(prezzoDelMazzo(mazzo)).toBeCloseTo(8, 6);
+  });
+
+  it("di un mazzo vuoto è zero", () => {
+    expect(prezzoDelMazzo([])).toBe(0);
+  });
+});
+
+describe("la lista della spesa", () => {
+  const mazzo = [
+    a("Goblin Chieftain", 2, 4),
+    a("Skirk Prospector", 0.5, 3),
+    a("Mountain", 0.32, 20),
+  ];
+
+  it("mette in cima quel che costa di più: è lì che si decide", () => {
+    expect(listaDellaSpesa(mazzo).voci.map((v) => v.carta.nome)).toEqual([
+      "Goblin Chieftain",
+      "Mountain",
+      "Skirk Prospector",
+    ]);
+  });
+
+  it("dice quanto costa una copia e quanto costano le copie chieste", () => {
+    const voce = listaDellaSpesa(mazzo).voci[0];
+
+    expect(voce?.euroPerCopia).toBe(2);
+    expect(voce?.euro).toBe(8);
+  });
+
+  it("dà il totale di quel che si può contare", () => {
+    expect(listaDellaSpesa(mazzo).totale).toBeCloseTo(8 + 1.5 + 6.4, 6);
+  });
+
+  it("tiene da parte le carte senza prezzo, perché il totale non le racconta", () => {
+    const lista = listaDellaSpesa([...mazzo, a("Krenko's Command", null, 2)]);
+
+    expect(lista.senzaPrezzo.map((v) => v.carta.nome)).toEqual(["Krenko's Command"]);
+    // Il totale resta quello di prima: la carta senza prezzo non lo alza né lo
+    // abbassa, ed è la ragione per cui va nominata a parte.
+    expect(lista.totale).toBeCloseTo(8 + 1.5 + 6.4, 6);
+  });
+
+  it("nomina le carte della Reserved List, che non diventeranno più economiche", () => {
+    const riservata: CopieDiCarta = {
+      carta: { ...a("Goblin Chieftain", 90, 1).carta, riservata: true },
+      copie: 1,
+    };
+    const lista = listaDellaSpesa([riservata, a("Skirk Prospector", 0.5, 3)]);
+
+    expect(lista.riservate.map((v) => v.carta.nome)).toEqual(["Goblin Chieftain"]);
+  });
+
+  it("porta la data dei prezzi, che senza sarebbero una mezza bugia", () => {
+    expect(listaDellaSpesa(mazzo).aggiornatoIl).toBe("2026-09-06T09:17:09.373+00:00");
+  });
+
+  it("di un mazzo vuoto non inventa una data", () => {
+    const lista = listaDellaSpesa([]);
+
+    expect(lista.aggiornatoIl).toBeNull();
+    expect(lista.totale).toBe(0);
+    expect(lista.voci).toEqual([]);
+  });
+
+  it("mette una carta sola per nome, con tutte le sue copie", () => {
+    expect(listaDellaSpesa(mazzo).voci).toHaveLength(3);
+  });
+});
+
+describe("quale stampa ha fatto il conto", () => {
+  it("dice edizione, numero e lingua: è quel che si cerca su Cardmarket", () => {
+    const goblin: Carta = {
+      ...carta("Goblin Chieftain"),
+      edizione: "4ed",
+      numeroDiCollezione: "212",
+      linguaDellaStampa: "en",
+    };
+
+    expect(descriviLaStampa(goblin)).toBe("4ED 212, inglese");
+  });
+
+  it("chiama l'italiano col suo nome: sono le carte senza prezzo, e si vede da qui", () => {
+    const duale: Carta = {
+      ...carta("Goblin Chieftain"),
+      edizione: "leg",
+      numeroDiCollezione: "288",
+      linguaDellaStampa: "it",
+    };
+
+    expect(descriviLaStampa(duale)).toBe("LEG 288, italiano");
+  });
+
+  it("non inventa il nome di una lingua che non conosce: ne scrive il codice", () => {
+    const francese: Carta = {
+      ...carta("Goblin Chieftain"),
+      edizione: "leg",
+      numeroDiCollezione: "288",
+      linguaDellaStampa: "fr",
+    };
+
+    expect(descriviLaStampa(francese)).toBe("LEG 288, fr");
+  });
+
+  it("dice «non lo so» per una carta che la stampa non ce l'ha", () => {
+    // Succede coi mazzi salvati da un pool vecchio, che la stampa non la
+    // scriveva: meglio una frase che dice di non sapere di una che finge.
+    const senza: Carta = {
+      ...carta("Goblin Chieftain"),
+      edizione: "",
+      numeroDiCollezione: "",
+      linguaDellaStampa: "",
+    };
+
+    expect(descriviLaStampa(senza)).toBe("stampa sconosciuta");
+  });
+});
+
+describe("l'avviso che accompagna ogni prezzo", () => {
+  it("dice che è una stima al ribasso, e perché", () => {
+    expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/stima al ribasso/i);
+    expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/inglesi/i);
+    expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/italiane/i);
+  });
+});

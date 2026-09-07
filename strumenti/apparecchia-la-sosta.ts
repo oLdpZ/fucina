@@ -343,6 +343,10 @@ function main(): void {
         combo: COMBO_VUOTA,
         seme: SEME,
         tempoMassimoMs: TEMPO_MASSIMO_MS,
+        // La sosta misura il tasso di cambio fra tema e potenza, che è quel che
+        // l'app promette a tetto spento: accenderlo qui misurerebbe un'altra
+        // cosa.
+        tettoDiSpesa: null,
       },
       carte,
     );

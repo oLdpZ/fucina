@@ -661,3 +661,9 @@
     margin-inline: 0;
   }
 }
+
+/* La stampa che ha fatto il conto, accanto al prezzo nella scheda della carta. */
+.prezzo .stampa {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

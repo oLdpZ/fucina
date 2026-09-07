@@ -322,6 +322,47 @@ Chi legge «ricerca» in questo progetto guardi il contesto: qui è la ricerca d
 
 ---
 
+## Tetto di spesa
+
+**Quanto il giocatore è disposto a spendere, in euro, per comprare il mazzo — e
+**parte spento**.**
+
+Spento non è una dimenticanza, è la decisione. Il fulcro dell'app è il **tasso
+di cambio** fra tema e potenza, e la **frontiera** esiste per mostrarne uno.
+Un budget acceso di suo ne metterebbe accanto un secondo — quanto costa in euro
+quel che costa in tema — e i due prezzi si confonderebbero: la prima risposta
+che il giocatore riceve dev'essere sul tema, non sul portafoglio. Lo accende lui,
+quando sta per comprare (`PROGETTO.md` §7, sotto Q9).
+
+Acceso, è un vincolo **duro** e non morbido come il tema: nessun mazzo
+consegnato lo supera. Vale sulle carte e **sulle terre**, che in questo formato
+non sono un contorno da pochi centesimi. Tiene fuori due specie di carte, e
+l'app dice quante sono di ciascuna: quelle che da sole costano più del tetto, e
+quelle che un **listino non ce l'hanno** — col tetto acceso l'app promette un
+conto, e non può promettere quel che non sa contare.
+
+Il budget come **secondo asse** della frontiera, accanto alla purezza, è la
+versione ambiziosa e sta fuori: vedi `spec.md`, «Out of Scope».
+
+---
+
+## Stima al ribasso
+
+**Ogni prezzo che l'app mostra è un pavimento, mai un prezzo.**
+
+I prezzi vengono da Cardmarket attraverso Scryfall e sono quelli della **stampa
+inglese** più economica fra le ammesse. Le stampe che il giocatore comprerà
+davvero sono le **italiane**, che su Cardmarket listino non ne hanno e che al
+banchetto costano di più. La distanza fra i due numeri nessuno la conosce, e per
+questo non si stima: si dichiara che c'è, ovunque un prezzo compaia.
+
+La **Reserved List** è l'altra metà della stessa onestà: 118 carte del pool non
+saranno mai ristampate, e il loro prezzo non scenderà aspettando. Quando il
+tetto di spesa le lascia fuori, le lascia fuori per sempre — alzare il tetto è
+l'unica strada, e va detto invece di lasciarlo scoprire fra un anno.
+
+---
+
 ## Parole che questo progetto non usa
 
 - **«tier», «competitivo», «buono»** per dire potenza. La potenza qui ha

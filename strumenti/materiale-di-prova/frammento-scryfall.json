@@ -83,7 +83,7 @@
     "oracle_text": "({T}: Add {B} or {U}.)",
     "colors": [], "color_identity": ["B", "U"],
     "produced_mana": ["B", "U"],
-    "games": ["paper"], "digital": false, "rarity": "rare",
+    "games": ["paper"], "digital": false, "rarity": "rare", "reserved": true,
     "prices": { "usd": null, "eur": null },
     "image_status": "lowres",
     "image_uris": { "small": "https://immagini/duale-italiana-piccola.jpg", "normal": "https://immagini/duale-italiana-normale.jpg" }
@@ -100,7 +100,7 @@
     "oracle_text": "({T}: Add {B} or {U}.)",
     "colors": [], "color_identity": ["B", "U"],
     "produced_mana": ["B", "U"],
-    "games": ["paper"], "digital": false, "rarity": "rare",
+    "games": ["paper"], "digital": false, "rarity": "rare", "reserved": true,
     "prices": { "usd": "300.00", "eur": "280.00" },
     "image_status": "highres_scan",
     "image_uris": { "small": "https://immagini/duale-francese-piccola.jpg", "normal": "https://immagini/duale-francese-normale.jpg" }

@@ -8,14 +8,18 @@
  * vuoto.
  *
  * Il prezzo si mostra con la sua data, perché i prezzi Cardmarket sono di ieri
- * (`PROGETTO.md` §3) e mostrarli nudi sarebbe una mezza bugia. Ancora non
- * vincolano niente: il tetto di spesa è tappa 3.
+ * (`PROGETTO.md` §3) e mostrarli nudi sarebbe una mezza bugia. Con la data
+ * viene **quale stampa** ha fatto il conto — il prezzo è di quella e di
+ * nessun'altra — e l'avviso che è una **stima al ribasso**: le stampe italiane,
+ * che sono quelle che si giocheranno, listino non ne hanno e costano di più
+ * (ticket 09).
  */
 
 import { useEffect, useRef, useState } from "preact/hooks";
 
 import { dataInItaliano } from "../dati/carica-pool.js";
 import type { Carta, Faccia } from "../dati/pool.js";
+import { AVVISO_STIMA_AL_RIBASSO, descriviLaStampa } from "../mazzo/spesa.js";
 import { tipoPrincipale } from "../catalogo/vocabolario.js";
 import { CostoDiMana } from "./CostoDiMana.js";
 import { PassiDelleCopie } from "./PassiDelleCopie.js";
@@ -163,7 +167,20 @@ export function SchedaCarta({
                 : `${EURO.format(carta.prezzo.euro)} · prezzo Cardmarket del ${dataInItaliano(
                     carta.prezzo.aggiornatoIl,
                   )}`}
+              {/* La stampa si dice **sempre**, anche quando il prezzo non c'è:
+                  quando non c'è è proprio perché la stampa è italiana, e dirlo
+                  spiega l'assenza invece di lasciarla lì come un guasto. */}
+              <span class="stampa"> · {descriviLaStampa(carta)}</span>
             </p>
+            {carta.prezzo.euro === null ? null : (
+              <p class="avviso-prezzi">{AVVISO_STIMA_AL_RIBASSO}</p>
+            )}
+            {carta.riservata ? (
+              <p class="avviso-prezzi">
+                In Reserved List: non sarà mai ristampata, e aspettare non la farà costare di
+                meno.
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
