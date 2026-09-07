@@ -28,10 +28,10 @@ import {
   TERRE_A_MANO_MINIME,
 } from "../mazzo/taratura.js";
 import type { Carta, ColoreMana, Pool } from "../dati/pool.js";
-import { escluso, type Tema } from "../tema/tema.js";
+import type { Tema } from "../tema/tema.js";
 import { CostoDiMana } from "./CostoDiMana.js";
 import { ListaDellaSpesa } from "./ListaDellaSpesa.js";
-import { comprabile, prezzoDelMazzo } from "../mazzo/spesa.js";
+import { budgetPerLeTerre, terreCandidate } from "../mazzo/terre-candidate.js";
 import { frasePerLeRinunceDelBudget } from "../spiegazioni/frasi.js";
 
 const PERCENTUALE = new Intl.NumberFormat("it-IT", {
@@ -82,11 +82,7 @@ export function Mazzo({
   // con dentro proprio le terre che il motore aveva lasciato fuori perché
   // costavano troppo o perché un listino non ce l'hanno.
   const terreDelPool = useMemo(
-    () =>
-      pool.carte.filter(
-        (carta) =>
-          carta.terra !== null && !escluso(carta, tema) && comprabile(carta, tettoDiSpesa),
-      ),
+    () => terreCandidate(pool.carte, tema, tettoDiSpesa),
     [pool, tema, tettoDiSpesa],
   );
   /**
@@ -96,13 +92,10 @@ export function Mazzo({
    * che il mazzo può permettersi **con queste carte**, o la schermata
    * elencherebbe terre che il conto in fondo non copre.
    */
-  const budgetPerLeTerre = useMemo(
-    () => (tettoDiSpesa === null ? null : Math.max(0, tettoDiSpesa - prezzoDelMazzo(mazzo))),
-    [tettoDiSpesa, mazzo],
-  );
+  const budget = useMemo(() => budgetPerLeTerre(mazzo, tettoDiSpesa), [mazzo, tettoDiSpesa]);
   const base = useMemo(
-    () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute, budget: budgetPerLeTerre }),
-    [mazzo, terreDelPool, terreVolute, budgetPerLeTerre],
+    () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute, budget }),
+    [mazzo, terreDelPool, terreVolute, budget],
   );
 
   // Carte e terre in un elenco solo, ricavato una volta: la lista della spesa

@@ -15,8 +15,8 @@ import type { IdentitaDiFormato } from "../dati/ambito.js";
 import { dataInItaliano } from "../dati/carica-pool.js";
 import { dimenticaMazzo, elencaMazziSalvati, salvaMazzo } from "../dati/mazzi-salvati.js";
 import type { Pool } from "../dati/pool.js";
-import { comprabile, prezzoDelMazzo } from "../mazzo/spesa.js";
-import { escluso, type Tema } from "../tema/tema.js";
+import { budgetPerLeTerre, terreCandidate } from "../mazzo/terre-candidate.js";
+import type { Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { leggiScambio, listaDaTorneo, scriviScambio } from "../mazzo/scambio.js";
 import { frasePerLeTerreScartate } from "../spiegazioni/frasi.js";
@@ -151,36 +151,27 @@ export function MazziSalvati({
   const apertaAlle = useMemo(() => new Date().toISOString(), []);
   const contenuto = componi(aperto?.salvatoIl ?? apertaAlle);
 
-  // Gli stessi tre setacci della schermata del mazzo, e nello stesso ordine:
-  // due liste di terre che divergono sono due mazzi diversi con lo stesso nome.
+  // La stessa funzione della schermata del mazzo, e non gli stessi filtri
+  // riscritti: due liste di terre che divergono sono due mazzi diversi con lo
+  // stesso nome, ed è già successo (ticket 19).
   const terreDelPool = useMemo(
-    () =>
-      pool.carte.filter(
-        (carta) =>
-          carta.terra !== null && !escluso(carta, tema) && comprabile(carta, tettoDiSpesa),
-      ),
+    () => terreCandidate(pool.carte, tema, tettoDiSpesa),
     [pool, tema, tettoDiSpesa],
   );
-  const budgetPerLeTerre = useMemo(
-    () => (tettoDiSpesa === null ? null : Math.max(0, tettoDiSpesa - prezzoDelMazzo(mazzo))),
-    [tettoDiSpesa, mazzo],
-  );
+  const budget = useMemo(() => budgetPerLeTerre(mazzo, tettoDiSpesa), [mazzo, tettoDiSpesa]);
   const daTorneo = useMemo(() => {
     if (mazzo.length === 0) return "";
     // Lo stesso budget della schermata del mazzo: è quella che mostra al
     // giocatore le terre che avrà in mano, e il foglio per l'arbitro deve
     // dirne le stesse. Con `null` qui, un mazzo costruito sotto un tetto usciva
     // sul foglio con le terre che il tetto gli aveva **negato**.
-    const base = analizzaBaseDiTerre(mazzo, terreDelPool, {
-      terreVolute,
-      budget: budgetPerLeTerre,
-    });
+    const base = analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute, budget });
     return listaDaTorneo(
       base.righe.map((riga) => ({ nome: riga.carta.nome, copie: riga.copie })),
       base.terre.map((voce) => ({ nome: voce.carta.nome, copie: voce.copie })),
       formato,
     );
-  }, [mazzo, terreDelPool, terreVolute, budgetPerLeTerre, formato]);
+  }, [mazzo, terreDelPool, terreVolute, budget, formato]);
 
   const salva = async () => {
     // L'orologio si legge qui: è adesso che l'utente sta salvando.

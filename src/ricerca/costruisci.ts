@@ -71,6 +71,7 @@ import type { Carta } from "../dati/pool.js";
 import { terreDallaCurva, type BaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
 import { comprabile, prezzoDelMazzo, prezzoDiUnaCopia } from "../mazzo/spesa.js";
+import { terreCandidate, terrePermesseDalTema } from "../mazzo/terre-candidate.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
@@ -489,7 +490,7 @@ export function costruisciMazzo(
 
   // Le esclusioni vincono su tutto e valgono anche per le terre: la base la
   // sceglie l'app, ma dentro i limiti che l'utente ha dichiarato.
-  const terrePermesse = pool.filter((carta) => carta.terra !== null && !escluso(carta, tema));
+  const terrePermesse = terrePermesseDalTema(pool, tema);
   const giocabiliPermesse = pool.filter(
     (carta) => carta.terra === null && !eTerra(carta) && !escluso(carta, tema),
   );
@@ -498,7 +499,7 @@ export function costruisciMazzo(
   // il tema decide che mazzo si vuole, il prezzo decide che cosa si può
   // comprare. Nell'ordine inverso l'app risponderebbe prima sul portafoglio, che
   // è esattamente quel che il ticket 09 le vieta.
-  const terreDelPool = terrePermesse.filter((carta) => comprabile(carta, tetto));
+  const terreDelPool = terreCandidate(pool, tema, tetto);
   const giocabili = giocabiliPermesse.filter((carta) => comprabile(carta, tetto));
 
   spesaDichiarata =
