@@ -271,10 +271,21 @@ Un mazzo che **non** dichiara il formato — salvato prima che l'app lo scrivess
 
 **La regola che decide quali carte esistono**, contrapposta all'elenco.
 
-Il formato non dice «queste ottocento carte»: dice «le carte che esistono
-stampate in italiano dentro queste edizioni». È una regola, e vale anche per le
-carte che nessuno ha ancora guardato. Il codice sa eseguire i criteri, il
-documento sceglie quale vale.
+Il formato non dice «queste ottocento carte»: dice «le carte che stanno in queste
+edizioni». È una regola, e vale anche per le carte che nessuno ha ancora
+guardato. Il codice sa eseguire i criteri, il documento sceglie quale vale.
+
+I criteri che il codice sa eseguire sono due, e il documento ne indica uno:
+`solo-edizioni`, che guarda l'edizione e basta, e `stampa-italiana`, che chiede
+in più che di quella carta esista una stampa italiana. Il formato ha eseguito il
+secondo fino al 2026-09-07, quando il gruppo ha detto che vale l'edizione — il
+perché sta in [ADR-0006](docs/adr/0006-il-criterio-diventa-l-edizione-e-la-lingua-e-una-regola-sulle-copie.md).
+
+**La lingua non è un criterio.** Quali lingue di un'edizione si possano portare
+al tavolo è una regola sulle **copie**, non sulle carte: non toglie nessun nome
+dal formato, e infatti è stato misurato invece che supposto — le stampe straniere
+delle edizioni ammesse sono complete. Vive sull'edizione, e governa un
+meccanismo solo: quale **stampa** descrive e prezza una carta.
 
 ---
 
