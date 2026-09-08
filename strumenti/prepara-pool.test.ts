@@ -15,6 +15,7 @@ import {
   preparaPool,
   raccontaBuchi,
   raccontaDiario,
+  raccontaFigure,
   raccontaLingue,
   raccontaPosta,
   type CartaScryfall,
@@ -217,10 +218,10 @@ describe("passo 2 — cosa si mostra", () => {
     expect(carta(pool, "Fixture Goblin").prezzo.aggiornatoIl).toBe(QUANDO);
   });
 
-  it("prende l'immagine dalla stampa che descrive, e mai da un'altra che ce l'ha", () => {
+  it("prende l'immagine dalla stampa che descrive finché ce n'è una", () => {
     // Il Segnaposto ha la figura buona sull'inglese e un segnaposto
-    // sull'italiana: quale delle due si veda dipende **solo** da quale stampa
-    // descrive la carta.
+    // sull'italiana: finché a descrivere è l'inglese, la figura è la sua e non
+    // c'è nessun prestito di mezzo.
     expect(carta(preparazione().pool, "Fixture Segnaposto").immagine?.normale).toBe(
       "https://immagini/segnaposto-normale.jpg",
     );
@@ -230,14 +231,15 @@ describe("passo 2 — cosa si mostra", () => {
       aggiornatoIl: QUANDO,
     });
 
-    // Mostrata l'italiana, l'immagine sparisce — benché l'inglese ce l'abbia e
-    // continui a prezzare la carta. È il costo dichiarato dalla specifica: il
-    // ripiego è **dentro** la stampa, mai verso un'altra, e nel pool vero sono
-    // 129 carte su 753 a restare senza figura. Un ripiego verso un'altra
-    // stampa mostrerebbe l'immagine di un cartoncino diverso da quello che il
-    // numero di collezione manda a comprare.
-    expect(carta(pool, "Fixture Segnaposto").immagine).toBeNull();
-    expect(carta(pool, "Fixture Segnaposto").prezzo.euro).toBe(0.25);
+    // Mostrata l'italiana, che di figura ha un dorso, la carta non resta al
+    // buio: la figura arriva dall'inglese della stessa edizione e dello stesso
+    // numero di collezione (ADR-0007). L'identità della stampa non si sposta di
+    // un millimetro — edizione, numero e lingua restano quelli dell'italiana:
+    // è la sola figura a essere presa in prestito.
+    const segnaposto = carta(pool, "Fixture Segnaposto");
+    expect(segnaposto.linguaDellaStampa).toBe("it");
+    expect(segnaposto.immagine?.normale).toBe("https://immagini/segnaposto-normale.jpg");
+    expect(segnaposto.prezzo.euro).toBe(0.25);
   });
 
   it("non spaccia per immagine il dorso di una carta quando altro non c'è", () => {
@@ -437,6 +439,99 @@ describe("le lingue ammesse, che il documento dichiara per edizione", () => {
   });
 });
 
+describe("a pari lingua, l'edizione mostrata la sceglie il prezzo", () => {
+  it("mostra l'italiana dell'edizione da cui il prezzo viene, non la più vecchia", () => {
+    // Il caso che il ticket 30 ha misurato: l'Abominio esiste in italiano in
+    // due edizioni, e nessuna delle due italiane ha un listino. A pari rango di
+    // lingua il prezzo non decide niente, e a decidere restava la data — cioè
+    // l'edizione più vecchia, che è anche la più rara. Il giocatore leggeva il
+    // numero di collezione di una carta e il prezzo di un'altra.
+    const abominio = carta(preparazione().pool, "Fixture Abominio");
+
+    expect(abominio.linguaDellaStampa).toBe("it");
+    expect(abominio.edizione).toBe("xd");
+    expect(abominio.numeroDiCollezione).toBe("117");
+    expect(abominio.prezzo.euro).toBe(0.22);
+    expect(abominio.prezzo.stampa).toEqual({
+      edizione: "xd",
+      numeroDiCollezione: "117",
+      lingua: "en",
+    });
+  });
+
+  it("non lascia che l'edizione del prezzo scavalchi l'ordine delle lingue", () => {
+    // La Ristampa è prezzata da xb, ma la sua stampa di primo rango sta in xa:
+    // l'edizione del prezzo è uno spareggio, non una preferenza, e non entra
+    // mai prima della lingua che il documento dichiara. Le due stampe restano
+    // di edizioni diverse, ed è l'interfaccia a doverlo dire.
+    const ristampa = carta(preparazione().pool, "Fixture Ristampa");
+
+    expect(ristampa.edizione).toBe("xa");
+    expect(ristampa.linguaDellaStampa).toBe("en");
+    expect(ristampa.prezzo.stampa?.edizione).toBe("xb");
+  });
+
+  it("prende la figura dalla copia di fianco quando la stampa mostrata ha un segnaposto", () => {
+    // Il costo che seguire il prezzo si porta dietro: l'italiana dell'edizione
+    // che prezza spesso Scryfall non l'ha scansionata, e mostrarla vorrebbe
+    // dire togliere la figura a metà del pool. La si prende dalla copia ammessa
+    // della **stessa edizione e dello stesso numero di collezione**: stessa
+    // illustrazione, stesso bordo, un'altra scritta. Non da un'altra edizione,
+    // che sarebbe un'altra figura.
+    const abominio = carta(preparazione().pool, "Fixture Abominio");
+
+    expect(abominio.edizione).toBe("xd");
+    expect(abominio.linguaDellaStampa).toBe("it");
+    expect(abominio.immagine?.normale).toBe("https://immagini/abominio-xd-en-normale.jpg");
+  });
+
+  it("conta le figure prese in prestito, invece di lasciarle passare in silenzio", () => {
+    // Nel pool la carta non porta scritto che la figura è di un'altra copia:
+    // il conto è l'unico posto in cui la cosa si vede, e serve a chi tiene
+    // l'app per accorgersi se un giorno diventa la regola invece che il caso.
+    // Sono due: l'Abominio, che l'italiana di xd ce l'ha col dorso, e il
+    // Bifronte, che il dorso ce l'ha sulle facce.
+    expect(preparazione().figureDaUnAltraCopia).toBe(2);
+  });
+
+  it("non fa rientrare il dorso dalla porta di servizio delle facce", () => {
+    // La faccia che nella copia in prestito non esiste non deve riprendersi i
+    // **propri** indirizzi — che puntano a un dorso, ed è il motivo per cui la
+    // figura si stava prendendo altrove — col permesso dello stato della copia
+    // buona. Stato e indirizzi dicono insieme se una figura esiste, e
+    // scambiarne uno solo rimette in circolo quel che lo stato tiene fuori.
+    const bifronte = carta(preparazione().pool, "Fixture Bifronte // Fixture Retro");
+
+    expect(bifronte.linguaDellaStampa).toBe("it");
+    expect(bifronte.facce?.[0]?.immagine?.normale).toBe(
+      "https://immagini/bifronte-davanti-normale.jpg",
+    );
+    expect(bifronte.facce?.[1]?.immagine).toBeNull();
+  });
+
+  it("non va a cercare la figura in un'altra edizione", () => {
+    // Il Velo ha per unica stampa un segnaposto, e resta senza figura: prenderla
+    // altrove vorrebbe dire mostrare l'illustrazione di un'altra edizione sotto
+    // il numero di collezione di questa.
+    expect(carta(preparazione().pool, "Fixture Velo").immagine).toBeNull();
+  });
+
+  it("torna a decidere per data quando nessuna copia ammessa ha un listino", () => {
+    // Senza prezzo non c'è nessuna edizione da seguire, e lo spareggio resta
+    // l'unica cosa che rende la scelta ripetibile. Ci arriva però solo quando
+    // non c'è altro: il pool finisce in git, e due preparazioni sugli stessi
+    // dati devono scrivere lo stesso file.
+    const { pool } = preparaPool(FRAMMENTO, {
+      formato: conLingue("xd", ["it"]),
+      aggiornatoIl: QUANDO,
+    });
+    const abominio = carta(pool, "Fixture Abominio");
+
+    expect(abominio.prezzo.euro).toBeNull();
+    expect(abominio.edizione).toBe("xc");
+  });
+});
+
 describe("passo 3 - quale stampa fa il prezzo", () => {
   it("prende il prezzo dalla stampa ammessa piu economica che un listino ce l'abbia", () => {
     // È il caso normale del pool vero: le stampe italiane, che sono quelle
@@ -614,13 +709,33 @@ describe("i buchi del pool", () => {
     expect(buchi.senzaTagNostri).toBeGreaterThanOrEqual(buchi.senzaTag);
   });
 
-  it("si racconta a schermo con tutti e quattro i numeri", () => {
+  it("conta le carte che il prezzo se lo fanno fare da un altro cartoncino", () => {
+    // È il numero che il ticket 30 chiede di misurare **dopo** il cambio, e non
+    // di dare per zero: la stampa mostrata segue l'edizione del prezzo solo a
+    // pari lingua, quindi qualcuna resta — la Ristampa, che di primo rango ce
+    // l'ha in un'edizione e il listino nell'altra. Contarle è il modo in cui
+    // chi tiene l'app si accorge se un giorno tornano a essere centinaia.
+    const buchi = contaBuchi(preparazione().pool);
+
+    expect(buchi.prezzoDaUnAltroCartoncino).toBe(1);
+  });
+
+  it("si racconta a schermo con tutti i numeri", () => {
     const racconto = raccontaBuchi(contaBuchi(preparazione().pool));
 
     expect(racconto).toContain("senza immagine");
     expect(racconto).toContain("senza prezzo");
     expect(racconto).toContain("senza nessuno dei nostri tag");
     expect(racconto).toContain("senza nemmeno un tag");
+    expect(racconto).toContain("si comprano al prezzo di un altro");
+  });
+
+  it("dice a schermo quante figure sono prese in prestito, anche quando sono zero", () => {
+    // A zero si dice lo stesso: è il prezzo di una decisione, non un guasto, e
+    // chi legge il comando deve poterlo confrontare con la volta prima.
+    expect(raccontaFigure(0, 753)).toContain("0");
+    expect(raccontaFigure(246, 753)).toContain("246");
+    expect(raccontaFigure(246, 753)).toContain("stessa edizione");
   });
 });
 

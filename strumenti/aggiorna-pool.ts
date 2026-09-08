@@ -15,6 +15,7 @@ import {
   preparaPool,
   raccontaBuchi,
   raccontaDiario,
+  raccontaFigure,
   raccontaLingue,
   raccontaPosta,
   type CartaScryfall,
@@ -189,6 +190,8 @@ async function principale(): Promise<void> {
   console.log(raccontaDiario(confrontaPool(precedente, preparazione)));
   console.log("");
   console.log(raccontaBuchi(contaBuchi(preparazione.pool)));
+  console.log("");
+  console.log(raccontaFigure(preparazione.figureDaUnAltraCopia, preparazione.pool.carte.length));
 
   // Le carte che nessuna copia ammessa descrive. ADR-0006 dà questo caso per
   // impossibile — le stampe straniere di queste edizioni sono complete, ed è

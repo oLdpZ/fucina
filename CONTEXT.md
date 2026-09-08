@@ -315,10 +315,26 @@ diversi.
 La stampa che **descrive** la carta — edizione, numero di collezione, lingua e
 immagine — è quella che il giocatore vedrà e che verosimilmente comprerà: la
 prima [lingua ammessa](#lingue-ammesse) che esista, nell'ordine in cui
-l'edizione la dichiara, e la più economica dentro quella lingua. Nessun codice
-di lingua sta nel codice: l'ordine è dato, e cambiarlo cambia il cartoncino che
-l'app indica. Il nome e il testo restano **inglesi** comunque, perché Scryfall
-li scrive in inglese su ogni stampa.
+l'edizione la dichiara. Nessun codice di lingua sta nel codice: l'ordine è dato,
+e cambiarlo cambia il cartoncino che l'app indica. Il nome e il testo restano
+**inglesi** comunque, perché Scryfall li scrive in inglese su ogni stampa.
+
+A pari lingua — la stessa carta ristampata, l'italiana in due edizioni ammesse e
+in nessuna delle due un listino — a scegliere l'edizione è **quella da cui viene
+il prezzo**, e non la data di uscita: senza quel criterio decideva lo spareggio,
+cioè l'edizione più vecchia, che qui è anche la più cara, e 326 carte su 753
+portavano il prezzo di un cartoncino diverso da quello che la lista nominava. Il
+perché sta in [ADR-0007](docs/adr/0007-a-pari-lingua-l-edizione-mostrata-la-sceglie-il-prezzo.md).
+Non è una preferenza fra edizioni, e non va scritta nel documento come se lo
+fosse: è la regola che tiene mostrata e prezzata sullo stesso cartoncino.
+
+Quando la stampa mostrata per figura ha un **dorso** — capita a quasi tutta la
+Quarta italiana — l'illustrazione arriva da un'altra copia ammessa della **stessa
+edizione e dello stesso numero di collezione**: stesso cartoncino, stessa figura,
+la scritta in un'altra lingua. L'identità della stampa non si sposta: è la sola
+figura a essere presa in prestito, e mai da un'altra edizione, che sarebbe
+un'altra illustrazione. Senza questo ripiego metà del catalogo resterebbe senza
+figura.
 
 La stampa che **prezza** la carta è la copia più economica, fra quelle ammesse,
 che su Cardmarket un listino ce l'abbia davvero — di qualunque lingua ammessa
@@ -326,7 +342,11 @@ sia; qui la preferenza non conta, perché non si sceglie cosa mostrare ma il
 pavimento più basso fra le copie giocabili. Non è detto sia la stessa che
 descrive, e quando non lo è il prezzo se la porta dietro e l'app lo dice: senza,
 chi confronta su Cardmarket starebbe guardando un altro cartoncino senza
-accorgersene. Quando
+accorgersene. Le divergenze si dicono con parole diverse, perché non sono la
+stessa notizia: un'altra **lingua** dello stesso cartoncino è il caso normale e
+costa press'a poco uguale; un altro **numero di collezione** dentro la stessa
+edizione, e a maggior ragione un'altra **edizione**, sono un'altra carta da
+comprare, e l'app le scrive come avvisi. Quando
 nessuna copia ammessa ha listino il prezzo non c'è, e la provenienza nemmeno:
 una copia **non** ammessa non si usa mai per tappare quel buco.
 
@@ -372,13 +392,22 @@ gioca alle carte pensa col nome che ha letto sul cartoncino: chi scrive
 refusi che ha l'inglese. Il nome italiano sta nel pool per questo, e per niente
 altro.
 
-Non è una lingua d'interfaccia a metà: mostrarlo darebbe nome italiano, testo di
-regole sempre inglese e per un sesto delle carte nessuna immagine — due lingue
-in una scheda, e un riquadro vuoto. Il perché per esteso, coi numeri, sta in
-`PROGETTO.md` §7 sotto Q24. Un pezzo di quella motivazione è **decaduto** da
-quando le lingue ammesse le dichiara il documento: il numero di collezione
-mostrato non è più quello di una stampa inglese, ma quello della copia che il
-giocatore avrà in mano. La decisione resta, sugli argomenti che le restano.
+Non è una lingua d'interfaccia a metà: mostrarlo darebbe nome italiano e testo di
+regole sempre inglese — due lingue in una scheda. Il perché per esteso, coi
+numeri, sta in `PROGETTO.md` §7 sotto Q24, e **due terzi di quella motivazione
+sono decaduti** da allora, tutti e due per opera di questa app e non del tempo.
+
+Il primo: da quando le lingue ammesse le dichiara il documento (ADR-0006), il
+numero di collezione mostrato non è più quello di una stampa inglese, ma quello
+della copia che il giocatore avrà in mano. Il secondo: l'argomento del riquadro
+vuoto — «per un sesto delle carte nessuna immagine» — non regge più, perché da
+quando la figura si prende in prestito dentro l'edizione (ADR-0007) le carte
+senza illustrazione sono **nove su 753** e non 129.
+
+Resta in piedi l'argomento del testo di regole, che è il più grosso: su Scryfall
+il testo italiano di queste carte non esiste. La decisione regge su quello, e su
+quello soltanto: chi la riaprisse dovrà farlo sapendo che gli altri due
+argomenti non sono più disponibili.
 
 Chi legge «ricerca» in questo progetto guardi il contesto: qui è la ricerca del
 **catalogo** — trovare una carta — e in `src/ricerca/` è la ricerca del

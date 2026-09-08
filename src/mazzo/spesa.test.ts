@@ -5,6 +5,7 @@ import type { Carta } from "../dati/pool.js";
 import type { CopieDiCarta } from "./base-di-terre.js";
 import {
   altraStampaDelPrezzo,
+  attaccoDelPrezzo,
   AVVISO_STIMA_AL_RIBASSO,
   descriviLaStampa,
   listaDellaSpesa,
@@ -232,6 +233,60 @@ describe("quale stampa ha fatto il prezzo, quando non è quella mostrata", () =>
     };
 
     expect(altraStampaDelPrezzo(carta)).toBeNull();
+  });
+
+  it("dice che è un'altra **edizione** quando a cambiare non è solo la lingua", () => {
+    // La differenza che il ticket 30 chiede di non lasciare sottovoce. Un'altra
+    // lingua della stessa edizione è lo stesso cartoncino in un'altra stampa e
+    // costa press'a poco uguale; un'altra edizione è un'altra carta da comprare,
+    // e il pavimento che l'app promette non è il pavimento di quella mostrata.
+    const carta: Carta = {
+      ...goblin(),
+      prezzo: {
+        euro: 0.22,
+        aggiornatoIl: "2026-09-06T09:17:09.373+00:00",
+        stampa: { edizione: "4ed", numeroDiCollezione: "117", lingua: "en" },
+      },
+    };
+
+    expect(attaccoDelPrezzo(carta)).toContain("altra edizione");
+    expect(altraStampaDelPrezzo(carta)).toBe("4ED 117, inglese");
+  });
+
+  it("avvisa anche quando a cambiare è il numero di collezione dentro la stessa edizione", () => {
+    // Nel pool vero sono sette: le cinque terre base, che dentro la Quarta
+    // hanno più figure con numeri diversi, e due carte che la Quarta tedesca
+    // numera per conto suo. L'edizione è la stessa, ma il cartoncino no — e la
+    // riga manda a cercare un numero che non è quello mostrato. Dirlo nel
+    // registro sottovoce vorrebbe dire chiamarlo «la stessa carta».
+    const carta: Carta = {
+      ...goblin(),
+      edizione: "4ed",
+      numeroDiCollezione: "378",
+      prezzo: {
+        euro: 0.09,
+        aggiornatoIl: "2026-09-06T09:17:09.373+00:00",
+        stampa: { edizione: "4ed", numeroDiCollezione: "377", lingua: "en" },
+      },
+    };
+
+    expect(attaccoDelPrezzo(carta)).toContain("un’altra stampa");
+    expect(attaccoDelPrezzo(carta)).not.toContain("edizione");
+  });
+
+  it("non parla né di edizione né di stampa quando a cambiare è la sola lingua", () => {
+    // Dirlo qui vorrebbe dire dirlo quasi sempre — nel pool vero è il caso di
+    // gran lunga più comune — e un avviso che c'è sempre non avvisa di niente.
+    const carta: Carta = {
+      ...goblin(),
+      prezzo: {
+        euro: 280,
+        aggiornatoIl: "2026-09-06T09:17:09.373+00:00",
+        stampa: { edizione: "leg", numeroDiCollezione: "288", lingua: "fr" },
+      },
+    };
+
+    expect(attaccoDelPrezzo(carta)).not.toContain("edizione");
   });
 });
 

@@ -151,6 +151,15 @@ export type Preparazione = {
    * stesso — la lingua non è un criterio e non deve togliere nomi.
    */
   senzaLinguaAmmessa: string[];
+  /**
+   * Quante carte mostrano la figura di **un'altra copia della stessa edizione**,
+   * perché la stampa che le descrive per illustrazione ha un dorso (ADR-0007).
+   *
+   * Nel pool la carta non porta scritto da dove la figura venga: questo conto è
+   * l'unico posto in cui la cosa si vede, ed è il modo in cui chi tiene l'app
+   * si accorge se un giorno il prestito diventa la regola invece che il caso.
+   */
+  figureDaUnAltraCopia: number;
 };
 
 export type Diario = {
@@ -168,6 +177,21 @@ export type Buchi = {
   senzaTagNostri: number;
   /** Senza nemmeno un tag di nessuna delle due razze. */
   senzaTag: number;
+  /**
+   * Quante carte si mostrano su un cartoncino e si prezzano su un altro: il
+   * numero che il ticket 30 chiede di tenere sott'occhio.
+   *
+   * Non è un buco come gli altri — la carta ha un prezzo, ed è vero — ma è la
+   * distanza fra il cartoncino che la lista manda a comprare e quello da cui
+   * l'euro viene, ed è il solo modo di accorgersi se torna a crescere.
+   *
+   * Il cartoncino sono **edizione e numero di collezione insieme**, e non la
+   * sola edizione: le terre base hanno più figure numerate diversamente dentro
+   * la stessa edizione, e contare per edizione le darebbe per coincidenti
+   * quando non lo sono. La divergenza di sola **lingua** non si conta qui:
+   * quella ADR-0006 l'ha scelta apposta, ed è il funzionamento previsto.
+   */
+  prezzoDaUnAltroCartoncino: number;
   totale: number;
 };
 
@@ -389,6 +413,7 @@ export function preparaPool(
   const carte: Carta[] = [];
   const bandite: string[] = [];
   const senzaLinguaAmmessa: string[] = [];
+  let figureDaUnAltraCopia = 0;
 
   for (const [nome, stampe] of perNome) {
     if (!ammessaDalCriterio(stampe, formato)) continue;
@@ -407,11 +432,21 @@ export function preparaPool(
     const ammesse = stampeAmmesse(stampe, formato);
     if (ammesse.length === 0) senzaLinguaAmmessa.push(nome);
 
+    // Il prezzo si cerca **prima** di quel che si mostra, e l'ordine è la
+    // decisione del ticket 30: fra due copie di pari lingua a scegliere
+    // l'edizione mostrata è quella da cui il prezzo viene, così il giocatore
+    // legge il numero di collezione e l'euro dello stesso cartoncino.
+    const stampaDelPrezzo = stampaChePrezza(ammesse);
+    const stampa = stampaCheDescrive(stampe, ammesse, formato, stampaDelPrezzo);
+    const stampaDellaFigura = figuraDaUnAltraCopia(stampa, ammesse, formato);
+    if (stampaDellaFigura !== null) figureDaUnAltraCopia += 1;
+
     carte.push(
       riduci({
         nome,
-        stampa: stampaCheDescrive(stampe, ammesse, formato),
-        stampaDelPrezzo: stampaChePrezza(ammesse),
+        stampa,
+        stampaDelPrezzo,
+        stampaDellaFigura,
         nomeItaliano: nomeItalianoDi(stampe),
         limitata: limitate.has(nome),
         aggiornatoIl: opzioni.aggiornatoIl,
@@ -456,6 +491,7 @@ export function preparaPool(
     correzioniOrfane: corrette.orfane,
     postaNonBandita: cartePerLaPosta(corrette.carte),
     senzaLinguaAmmessa,
+    figureDaUnAltraCopia,
   };
 }
 
@@ -503,14 +539,97 @@ function ammessaDalCriterio(stampe: CartaScryfall[], formato: Formato): boolean 
  * caso che si nasconde: quella carta finisce in `senzaLinguaAmmessa` e la
  * preparazione la dice a voce alta. Descriverla con niente sarebbe togliere una
  * carta dal catalogo per un motivo che il criterio non contempla.
+ *
+ * ## A pari lingua decide l'edizione da cui viene il prezzo
+ *
+ * La lingua è il primo criterio e non l'unico, perché non basta a scegliere: una
+ * carta ristampata esiste in italiano in due edizioni, l'italiana non ha listino
+ * in nessuna delle due, e a quel punto il prezzo — che è il criterio successivo
+ * — vale «infinito» per entrambe e non decide. Prima del ticket 30 a decidere
+ * arrivava lo spareggio sulla data, nato per rendere ripetibile la scrittura del
+ * file e ritrovatosi a scegliere **l'edizione che il giocatore compra**: sempre
+ * la più vecchia, che è anche la più rara e la più cara. Erano 326 carte su 753,
+ * mostrate in un'edizione e prezzate in un'altra.
+ *
+ * Fra copie di pari lingua si preferisce allora quella dell'edizione da cui il
+ * prezzo viene davvero. Le due stampe tornano a essere la stessa carta nella
+ * stessa edizione, e a separarle resta la sola lingua — che è la divergenza che
+ * ADR-0006 ha scelto consapevolmente e che l'interfaccia sa già dire.
+ *
+ * Non è una preferenza fra edizioni e non va confuso con una: viene **dopo** la
+ * lingua, quindi non sposta mai una carta su una copia che il gruppo preferisce
+ * meno, e non è scritto da nessuna parte quale edizione sia meglio. Dove il
+ * prezzo non c'è non ha niente da dire, e la data torna a decidere: allora però
+ * non sta scegliendo fra un'edizione cara e una economica, sta solo rendendo
+ * ripetibile una scelta che nessun dato sa fare.
  */
 function stampaCheDescrive(
   stampe: CartaScryfall[],
   ammesse: CartaScryfall[],
   formato: Formato,
+  delPrezzo: CartaScryfall | null,
 ): CartaScryfall {
   if (ammesse.length === 0) return piuEconomica(stampe);
-  return scegli(ammesse, (stampa) => rangoDiLingua(stampa, formato));
+  const edizioneDelPrezzo = delPrezzo === null ? null : codiceDiEdizione(delPrezzo.set);
+  return scegli(
+    ammesse,
+    (stampa) => rangoDiLingua(stampa, formato),
+    (stampa) =>
+      edizioneDelPrezzo !== null && codiceDiEdizione(stampa.set) === edizioneDelPrezzo ? 0 : 1,
+  );
+}
+
+/**
+ * La copia da cui prendere la **figura** quando quella che descrive la carta non
+ * ne ha una, e `null` quando ce l'ha o quando non c'è niente da cui prenderla.
+ *
+ * È il costo che ADR-0007 si porta dietro. Da quando l'edizione mostrata segue
+ * il prezzo, 246 carte del pool vero si spostano sull'italiana di Quarta, e di
+ * quella Scryfall ha per figura un dorso: mostrarla vorrebbe dire lasciare senza
+ * illustrazione metà del catalogo, che è metà di quel che una carta di Magic è.
+ *
+ * Si cerca **solo dentro la stessa edizione e lo stesso numero di collezione**,
+ * ed è il confine che rende la cosa onesta invece che comoda: due copie così
+ * sono lo stesso cartoncino con un'altra scritta sopra — stessa illustrazione,
+ * stesso bordo, stessa cornice. Un'altra edizione sarebbe un'altra figura, e la
+ * scheda mostrerebbe una carta diversa da quella che il numero manda a comprare.
+ *
+ * Quel che resta non detto è la lingua della scritta sulla figura. È la parte
+ * imprecisa di questa scelta, ed è dichiarata: la si paga per non lasciare metà
+ * del catalogo senza illustrazione, e la preparazione conta quante volte capita.
+ */
+function figuraDaUnAltraCopia(
+  descrive: CartaScryfall,
+  ammesse: CartaScryfall[],
+  formato: Formato,
+): CartaScryfall | null {
+  if (haUnaFigura(descrive)) return null;
+  const sorelle = ammesse.filter(
+    (stampa) =>
+      stampa !== descrive &&
+      codiceDiEdizione(stampa.set) === codiceDiEdizione(descrive.set) &&
+      (stampa.collector_number ?? "") === (descrive.collector_number ?? "") &&
+      haUnaFigura(stampa),
+  );
+  if (sorelle.length === 0) return null;
+  // La lingua ordina anche qui: fra due figure buone, quella della copia che il
+  // gruppo preferirebbe portare al tavolo è la meno sorprendente da vedere.
+  return scegli(sorelle, (stampa) => rangoDiLingua(stampa, formato));
+}
+
+/**
+ * Se di questa stampa una figura esiste davvero: al livello della carta, o —
+ * quando la carta ha due facce e Scryfall gli indirizzi li scrive solo lì — sul
+ * davanti.
+ *
+ * Guarda gli stessi due posti da cui `riduci` la figura poi la prende, e nello
+ * stesso ordine. Guardarne uno solo direbbe «senza figura» di ogni carta a due
+ * facce, e manderebbe a chiedere in prestito una figura a chi ce l'ha già.
+ */
+function haUnaFigura(stampa: CartaScryfall): boolean {
+  if (leggiImmagine(stampa.image_uris, stampa.image_status) !== null) return true;
+  const davanti = (stampa.card_faces ?? [])[0];
+  return davanti !== undefined && leggiImmagine(davanti.image_uris, stampa.image_status) !== null;
 }
 
 /**
@@ -556,19 +675,32 @@ function nomeItalianoDi(stampe: CartaScryfall[]): string | null {
 }
 
 /**
- * La scelta fra le stampe di una carta: prima il `rango` che chi chiama dà a
- * ciascuna — è lì che entra la preferenza di lingua — poi il prezzo, poi la
- * stampa più vecchia, poi l'identificativo.
+ * La scelta fra le stampe di una carta: prima i `ranghi` che chi chiama dà a
+ * ciascuna, nell'ordine in cui li passa — è lì che entrano la preferenza di
+ * lingua e l'edizione da cui viene il prezzo — poi il prezzo, poi la stampa più
+ * vecchia, poi l'identificativo.
+ *
+ * I ranghi sono più d'uno perché sono **criteri**, e vanno letti in fila: il
+ * secondo parla solo dove il primo ha lasciato un pari merito. Impacchettarli in
+ * un numero solo — moltiplicare il primo e sommarci il secondo — darebbe la
+ * stessa risposta e la darebbe per aritmetica, cioè in un modo che chi rilegge
+ * deve decifrare invece che leggere.
  *
  * Le ultime tre servono solo a far sì che la scelta sia **sempre la stessa**:
  * il pool finisce in git, e due preparazioni sugli stessi dati devono scrivere
- * lo stesso file.
+ * lo stesso file. Sono l'ultima parola e non la prima: quando a decidere arriva
+ * la data, vuol dire che nessun criterio dichiarato aveva niente da dire.
  */
-function scegli(stampe: CartaScryfall[], rango: (stampa: CartaScryfall) => number): CartaScryfall {
+function scegli(
+  stampe: CartaScryfall[],
+  ...ranghi: ((stampa: CartaScryfall) => number)[]
+): CartaScryfall {
   const ordinate = [...stampe].sort((a, b) => {
-    const rangoA = rango(a);
-    const rangoB = rango(b);
-    if (rangoA !== rangoB) return rangoA - rangoB;
+    for (const rango of ranghi) {
+      const rangoA = rango(a);
+      const rangoB = rango(b);
+      if (rangoA !== rangoB) return rangoA - rangoB;
+    }
     // Confronto e non sottrazione: due carte senza prezzo valgono entrambe
     // «infinito», e la loro differenza non è un numero.
     const prezzoA = prezzoInEuro(a) ?? Infinity;
@@ -583,10 +715,10 @@ function scegli(stampe: CartaScryfall[], rango: (stampa: CartaScryfall) => numbe
 
 /**
  * La più economica fra le stampe date, senza preferenze di lingua: è `scegli`
- * con tutte le stampe a pari merito.
+ * senza nessun criterio davanti al prezzo.
  */
 function piuEconomica(stampe: CartaScryfall[]): CartaScryfall {
-  return scegli(stampe, () => 0);
+  return scegli(stampe);
 }
 
 /**
@@ -631,20 +763,40 @@ function riduci(quale: {
    * `null` quando nessuna copia ammessa ha un listino.
    */
   stampaDelPrezzo: CartaScryfall | null;
+  /**
+   * La copia da cui prendere la **figura**, quando quella che descrive la carta
+   * ha per illustrazione un segnaposto. È sempre della stessa edizione e dello
+   * stesso numero di collezione; `null` nel caso normale.
+   */
+  stampaDellaFigura: CartaScryfall | null;
   nomeItaliano: string | null;
   limitata: boolean;
   aggiornatoIl: string;
   tag: IndiceTag | undefined;
 }): Carta {
   const grezza = quale.stampa;
+  // Tutto viene dalla stampa che descrive, tranne la **figura**: quella può
+  // arrivare da un'altra copia della stessa edizione quando la mostrata ha per
+  // illustrazione un dorso (ADR-0007). Nel caso normale le due sono la stessa,
+  // e questa riga non cambia niente.
+  const figura = quale.stampaDellaFigura ?? grezza;
+  const facceDellaFigura = figura.card_faces ?? [];
   // Lo stato dell'immagine è della **stampa** e non della faccia: Scryfall lo
   // dichiara una volta sola. Passarlo alle facce è quel che tiene chiusa la
   // porta di servizio — senza, una stampa dichiarata segnaposto perdeva
   // l'immagine al livello della carta e se la riprendeva dal davanti, che è la
   // stessa figura con lo stesso indirizzo.
-  const facce = (grezza.card_faces ?? []).map((faccia) =>
-    riduciFaccia(faccia, grezza.image_status),
-  );
+  const facce = (grezza.card_faces ?? []).map((faccia, indice) => {
+    // La faccia che nella copia in prestito non esiste torna alla propria, e
+    // torna col **proprio** stato: stato e indirizzi dicono insieme se una
+    // figura esiste, e passare i propri indirizzi — che puntano al dorso, ed è
+    // il motivo per cui si stava chiedendo in prestito — col permesso della
+    // copia buona rimetterebbe in circolo proprio quel dorso.
+    const dellaFigura = facceDellaFigura[indice];
+    return dellaFigura === undefined
+      ? riduciFaccia(faccia, faccia, grezza.image_status)
+      : riduciFaccia(faccia, dellaFigura, figura.image_status);
+  });
   const davanti = facce[0] ?? null;
 
   const lineaDiTipo = grezza.type_line ?? facce.map((f) => f.lineaDiTipo).join(" // ");
@@ -658,7 +810,7 @@ function riduci(quale: {
       .join("\n");
 
   const immagine =
-    leggiImmagine(grezza.image_uris, grezza.image_status) ?? davanti?.immagine ?? null;
+    leggiImmagine(figura.image_uris, figura.image_status) ?? davanti?.immagine ?? null;
 
   const carta: Carta = {
     id: grezza.id ?? "",
@@ -741,7 +893,11 @@ function valoreDelLato(lato: string): number {
   return /^[XYZ]$/.test(lato) ? 0 : 1;
 }
 
-function riduciFaccia(grezza: FacciaScryfall, statoDellaStampa: string | undefined): Faccia {
+function riduciFaccia(
+  grezza: FacciaScryfall,
+  dellaFigura: FacciaScryfall,
+  statoDellaStampa: string | undefined,
+): Faccia {
   const lineaDiTipo = grezza.type_line ?? "";
   const { tipi, sottotipi } = leggiTipi(lineaDiTipo);
   return {
@@ -754,8 +910,9 @@ function riduciFaccia(grezza: FacciaScryfall, statoDellaStampa: string | undefin
     forza: grezza.power ?? null,
     costituzione: grezza.toughness ?? null,
     // Le facce non portano uno stato dell'immagine per conto proprio: quello è
-    // della stampa, e vale per tutte.
-    immagine: leggiImmagine(grezza.image_uris, statoDellaStampa),
+    // della stampa, e vale per tutte. Gli indirizzi vengono dalla copia da cui
+    // arriva la figura, che nel caso normale è questa stessa faccia.
+    immagine: leggiImmagine(dellaFigura.image_uris, statoDellaStampa),
   };
 }
 
@@ -894,6 +1051,12 @@ export function contaBuchi(pool: Pool): Buchi {
     senzaTag: pool.carte.filter(
       (carta) => carta.tag.length === 0 && carta.tagScryfall.length === 0,
     ).length,
+    prezzoDaUnAltroCartoncino: pool.carte.filter(
+      (carta) =>
+        carta.prezzo.stampa !== null &&
+        (carta.prezzo.stampa.edizione !== carta.edizione ||
+          carta.prezzo.stampa.numeroDiCollezione !== carta.numeroDiCollezione),
+    ).length,
     totale: pool.carte.length,
   };
 }
@@ -939,7 +1102,27 @@ export function raccontaBuchi(buchi: Buchi): string {
   return (
     `Sulle ${buchi.totale} carte del pool: ${buchi.senzaImmagine} senza immagine, ` +
     `${buchi.senzaPrezzo} senza prezzo, ${buchi.senzaTagNostri} senza nessuno dei nostri tag ` +
-    `(di cui ${buchi.senzaTag} senza nemmeno un tag).`
+    `(di cui ${buchi.senzaTag} senza nemmeno un tag).\n` +
+    `  ${buchi.prezzoDaUnAltroCartoncino} si mostrano su un cartoncino e si comprano al prezzo ` +
+    `di un altro — altra edizione, o altro numero di collezione: erano 326 su 753 prima ` +
+    `che l'edizione mostrata seguisse il prezzo (ADR-0007), e crescere di nuovo vorrebbe ` +
+    `dire che quella scelta ha smesso di reggere.`
+  );
+}
+
+/**
+ * Le figure prese in prestito, dette a schermo: quante carte mostrano
+ * l'illustrazione di un'altra copia della stessa edizione perché la stampa che
+ * le descrive, per figura, ha un dorso (ADR-0007).
+ *
+ * Si dice sempre, anche a zero, perché è il prezzo di una decisione e non un
+ * guasto: chi legge il comando deve poterlo confrontare con la volta prima.
+ */
+export function raccontaFigure(quante: number, totale: number): string {
+  return (
+    `Di quelle con una figura, ${quante} la prendono in prestito da un'altra copia ` +
+    `della stessa edizione e dello stesso numero: stessa illustrazione, la scritta ` +
+    `in un'altra lingua. Su ${totale} carte del pool.`
   );
 }
 

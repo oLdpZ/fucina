@@ -222,6 +222,41 @@ export function altraStampaDelPrezzo(carta: Carta): string | null {
   return descrivi(stampa);
 }
 
+/**
+ * Le parole con cui si introduce la stampa del prezzo, e sono tre perché tre
+ * sono le notizie: `prezzo di` quando a cambiare è la sola lingua, `prezzo di
+ * un'altra stampa:` quando cambia il numero di collezione dentro la stessa
+ * edizione, `prezzo di un'altra edizione:` quando cambia l'edizione.
+ *
+ * La distinzione non è pignoleria. Un'altra **lingua** della stessa edizione e
+ * dello stesso numero è lo stesso cartoncino con un'altra scritta sopra, e su
+ * Cardmarket costa press'a poco uguale: il pavimento regge, e non c'è niente da
+ * avvisare. Un'altra **edizione** è un'altra carta da comprare, spesso di
+ * un'altra rarità e di un'altra tiratura, e l'euro può essere un ordine di
+ * grandezza sotto quello della copia che la lista manda a cercare — è quel che
+ * il ticket 30 ha misurato su 326 carte su 753 prima che l'edizione mostrata
+ * tornasse a seguire il prezzo (ADR-0007).
+ *
+ * Il caso di mezzo è il più facile da lasciarsi sfuggire, ed è il motivo per cui
+ * queste frasi guardano il **numero di collezione** e non la sola edizione: nel
+ * pool vero sono sette carte — le cinque terre base, che dentro la stessa
+ * edizione hanno più figure numerate diversamente, e due carte che la Quarta
+ * tedesca numera per conto suo. L'edizione è la stessa, ma il numero da cercare
+ * al negozio no, e dirlo nel registro più quieto vorrebbe dire chiamarlo «la
+ * stessa carta».
+ *
+ * Le frasi stanno **qui** e non nelle schermate perché sono più d'una, e due
+ * componenti che se le riscrivessero per conto proprio finirebbero per dirle in
+ * modo diverso.
+ */
+export function attaccoDelPrezzo(carta: Carta): string {
+  const stampa = carta.prezzo.stampa;
+  if (stampa === null) return "prezzo di ";
+  if (stampa.edizione !== carta.edizione) return "prezzo di un’altra edizione: ";
+  if (stampa.numeroDiCollezione !== carta.numeroDiCollezione) return "prezzo di un’altra stampa: ";
+  return "prezzo di ";
+}
+
 function descrivi(stampa: Stampa): string {
   if (stampa.edizione === "") return "stampa sconosciuta";
   const numero = stampa.numeroDiCollezione === "" ? "" : ` ${stampa.numeroDiCollezione}`;

@@ -21,7 +21,12 @@ import { useEffect, useRef, useState } from "preact/hooks";
 
 import { dataInItaliano } from "../dati/carica-pool.js";
 import type { Carta, Faccia } from "../dati/pool.js";
-import { altraStampaDelPrezzo, AVVISO_STIMA_AL_RIBASSO, descriviLaStampa } from "../mazzo/spesa.js";
+import {
+  altraStampaDelPrezzo,
+  attaccoDelPrezzo,
+  AVVISO_STIMA_AL_RIBASSO,
+  descriviLaStampa,
+} from "../mazzo/spesa.js";
 import { tipoPrincipale } from "../catalogo/vocabolario.js";
 import { CostoDiMana } from "./CostoDiMana.js";
 import { PassiDelleCopie } from "./PassiDelleCopie.js";
@@ -179,10 +184,12 @@ export function SchedaCarta({
               <span class="stampa"> · {descriviLaStampa(carta)}</span>
               {/* E quando a prezzare è un'altra copia ammessa, si dice pure
                   quella: senza, il numero qui sopra e il numero su Cardmarket
-                  sarebbero di due cartoncini diversi senza che si veda. */}
+                  sarebbero di due cartoncini diversi senza che si veda. Le
+                  parole dell'attacco distinguono l'altra lingua dall'altra
+                  edizione, che non sono la stessa notizia (ticket 30). */}
               {altraStampa === null ? null : (
                 <>
-                  {" · prezzo di "}
+                  {` · ${attaccoDelPrezzo(carta)}`}
                   <span class="stampa">{altraStampa}</span>
                 </>
               )}

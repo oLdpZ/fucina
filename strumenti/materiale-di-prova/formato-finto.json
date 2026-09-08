@@ -14,9 +14,10 @@
   },
 
   "edizioni": [
-    { "codice": "xa", "nome": "Prima Fittizia", "perché": "L'edizione più vecchia delle tre. Le sue lingue sono tre, e il francese è una di quelle: è l'edizione su cui si prova che l'ordine è la preferenza.", "lingue": ["en", "it", "fr"], "daConfermare": null },
+    { "codice": "xa", "nome": "Prima Fittizia", "perché": "L'edizione più vecchia di tutte. Le sue lingue sono tre, e il francese è una di quelle: è l'edizione su cui si prova che l'ordine è la preferenza.", "lingue": ["en", "it", "fr"], "daConfermare": null },
     { "codice": "xb", "nome": "Seconda Fittizia", "perché": "Ristampa parte della prima, a prezzi diversi. Le sue lingue sono due e non tre: il francese qui dentro non si gioca, ed è il contrasto con la Prima Fittizia che prova la regola per edizione.", "lingue": ["en", "it"], "daConfermare": null },
-    { "codice": "xc", "nome": "Terza Fittizia", "perché": "Uscita solo in italiano, come Rinascimento.", "lingue": ["it"], "daConfermare": null }
+    { "codice": "xc", "nome": "Terza Fittizia", "perché": "Uscita solo in italiano, come Rinascimento.", "lingue": ["it"], "daConfermare": null },
+    { "codice": "xd", "nome": "Quarta Fittizia", "perché": "Ristampa parte della Terza Fittizia e, come lei, mette l'italiano davanti. È la coppia su cui si prova che a pari lingua l'edizione mostrata la sceglie il prezzo e non la data: senza una seconda edizione che dell'italiano faccia la prima lingua, quello spareggio non si potrebbe nemmeno mettere alla prova.", "lingue": ["it", "en"], "daConfermare": null }
   ],
 
   "limitate": {

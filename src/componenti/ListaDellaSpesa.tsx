@@ -24,6 +24,7 @@ import { dataInItaliano } from "../dati/carica-pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
 import {
   altraStampaDelPrezzo,
+  attaccoDelPrezzo,
   AVVISO_STIMA_AL_RIBASSO,
   descriviLaStampa,
   listaDellaSpesa,
@@ -85,7 +86,7 @@ export function ListaDellaSpesa({ mazzo }: { mazzo: readonly CopieDiCarta[] }) {
                 nome da solo pesca cinque edizioni a prezzi diversi. */}
               <span class="stampa">
                 {descriviLaStampa(voce.carta)}
-                {altraStampa === null ? null : ` · prezzo di ${altraStampa}`}
+                {altraStampa === null ? null : ` · ${attaccoDelPrezzo(voce.carta)}${altraStampa}`}
               </span>
               <span class="prezzo-voce">
                 {voce.euro === null ? (

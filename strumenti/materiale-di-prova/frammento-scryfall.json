@@ -891,5 +891,87 @@
       "small": "https://immagini/straniera-xb-fr-piccola.jpg",
       "normal": "https://immagini/straniera-xb-fr-normale.jpg"
     }
+  },
+  {
+    "_nota": "L'EDIZIONE MOSTRATA LA SCEGLIE IL PREZZO, NON LA DATA (ticket 30): questa carta esiste in italiano in due edizioni, e in nessuna delle due l'italiana ha un listino. A pari lingua il prezzo non decide, e prima del ticket 30 decideva la data — cioè questa stampa, la più vecchia — mentre il prezzo veniva dall'altra edizione. Adesso vince l'italiana di xd, che è l'edizione da cui il prezzo viene davvero.",
+    "object": "card", "id": "abominio-xc-it", "oracle_id": "oracolo-abominio", "lang": "it", "layout": "normal",
+    "name": "Fixture Abominio", "printed_name": "Abominio di Prova", "released_at": "1995-06-01",
+    "set": "xc", "collector_number": "87",
+    "mana_cost": "{3}{B}", "cmc": 4,
+    "type_line": "Creature — Horror",
+    "oracle_text": "Whenever Fixture Abominio blocks a creature, destroy that creature at end of combat.",
+    "power": "2", "toughness": "6",
+    "colors": ["B"], "color_identity": ["B"],
+    "games": ["paper"], "digital": false, "rarity": "uncommon",
+    "prices": { "usd": null, "eur": null },
+    "image_status": "highres_scan",
+    "image_uris": { "small": "https://immagini/abominio-piccola.jpg", "normal": "https://immagini/abominio-normale.jpg" }
+  },
+  {
+    "_nota": "FIGURA DAL SEGNAPOSTO ALLA COPIA DI FIANCO (ticket 30): questa e la stampa che l'app mostra, e Scryfall per lei ha solo un dorso. La figura arriva dall'inglese della stessa edizione e dello stesso numero: stessa illustrazione, stesso bordo, un'altra scritta.",
+    "object": "card", "id": "abominio-xd-it", "oracle_id": "oracolo-abominio", "lang": "it", "layout": "normal",
+    "name": "Fixture Abominio", "printed_name": "Abominio di Prova", "released_at": "1996-04-01",
+    "set": "xd", "collector_number": "117",
+    "mana_cost": "{3}{B}", "cmc": 4,
+    "type_line": "Creature — Horror",
+    "oracle_text": "Whenever Fixture Abominio blocks a creature, destroy that creature at end of combat.",
+    "power": "2", "toughness": "6",
+    "colors": ["B"], "color_identity": ["B"],
+    "games": ["paper"], "digital": false, "rarity": "uncommon",
+    "prices": { "usd": null, "eur": null },
+    "image_status": "placeholder",
+    "image_uris": { "small": "https://immagini/dorso-piccola.jpg", "normal": "https://immagini/dorso-normale.jpg" }
+  },
+  {
+    "object": "card", "id": "abominio-xd-en", "oracle_id": "oracolo-abominio", "lang": "en", "layout": "normal",
+    "name": "Fixture Abominio", "released_at": "1996-04-01",
+    "set": "xd", "collector_number": "117",
+    "mana_cost": "{3}{B}", "cmc": 4,
+    "type_line": "Creature — Horror",
+    "oracle_text": "Whenever Fixture Abominio blocks a creature, destroy that creature at end of combat.",
+    "power": "2", "toughness": "6",
+    "colors": ["B"], "color_identity": ["B"],
+    "games": ["paper"], "digital": false, "rarity": "uncommon",
+    "prices": { "usd": null, "eur": "0.22" },
+    "image_status": "highres_scan",
+    "image_uris": { "small": "https://immagini/abominio-xd-en-piccola.jpg", "normal": "https://immagini/abominio-xd-en-normale.jpg" }
+  },
+  {
+    "_nota": "LA PORTA DI SERVIZIO DELLA FIGURA IN PRESTITO (ticket 30): due facce, stato segnaposto, e gli indirizzi delle facce puntano al dorso. La copia inglese di fianco ha una faccia sola: la seconda faccia non ha da chi farsi prestare la figura, e deve restare vuota invece di riprendersi i propri indirizzi col permesso della copia inglese.",
+    "object": "card", "id": "bifronte-xd-it", "oracle_id": "oracolo-bifronte", "lang": "it", "layout": "transform",
+    "name": "Fixture Bifronte // Fixture Retro", "released_at": "1996-04-01",
+    "set": "xd", "collector_number": "200",
+    "cmc": 2, "color_identity": ["U"],
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": null, "eur": "0.40" },
+    "image_status": "placeholder",
+    "card_faces": [
+      {
+        "name": "Fixture Bifronte", "mana_cost": "{1}{U}", "type_line": "Creature — Spirit",
+        "oracle_text": "Flying", "power": "1", "toughness": "1",
+        "image_uris": { "small": "https://immagini/dorso-piccola.jpg", "normal": "https://immagini/dorso-normale.jpg" }
+      },
+      {
+        "name": "Fixture Retro", "mana_cost": "", "type_line": "Creature — Spirit",
+        "oracle_text": "Flying, vigilance", "power": "2", "toughness": "2",
+        "image_uris": { "small": "https://immagini/dorso-piccola.jpg", "normal": "https://immagini/dorso-normale.jpg" }
+      }
+    ]
+  },
+  {
+    "object": "card", "id": "bifronte-xd-en", "oracle_id": "oracolo-bifronte", "lang": "en", "layout": "transform",
+    "name": "Fixture Bifronte // Fixture Retro", "released_at": "1996-04-01",
+    "set": "xd", "collector_number": "200",
+    "cmc": 2, "color_identity": ["U"],
+    "games": ["paper"], "digital": false, "rarity": "rare",
+    "prices": { "usd": null, "eur": "0.40" },
+    "image_status": "highres_scan",
+    "card_faces": [
+      {
+        "name": "Fixture Bifronte", "mana_cost": "{1}{U}", "type_line": "Creature — Spirit",
+        "oracle_text": "Flying", "power": "1", "toughness": "1",
+        "image_uris": { "small": "https://immagini/bifronte-davanti-piccola.jpg", "normal": "https://immagini/bifronte-davanti-normale.jpg" }
+      }
+    ]
   }
 ]
