@@ -158,8 +158,12 @@ export type SpesaDellaRicerca = {
    * curva, colori né quante terre servano, e un mazzo vero costa parecchio di
    * più. Serve a una cosa sola — dire di no con dentro un numero, invece di un
    * no che non si può agire — e chi lo mostra deve dirlo per quello che è.
+   *
+   * `null` quando le copie rimaste non arrivano a sessanta: lì un pavimento per
+   * sessanta carte non esiste, e chi mostra non deve nominarne uno. Vedi
+   * `mazzoPiuEconomico`.
    */
-  minimo: number;
+  minimo: number | null;
   /**
    * Quanti passi della frontiera il tetto ha lasciato **senza mazzo**: il passo
    * un mazzo lo avrebbe, e costa più di quanto è stato chiesto.
@@ -416,8 +420,21 @@ function prezzoDellaSelezione(selezione: Selezione): number {
  * costruito con queste carte può costare meno — e per esserlo prende da ogni
  * carta tutte le copie che il suo tetto le concede, terre base comprese, che di
  * tetto non ne hanno. Serve a dire di no con dentro il numero che ci vorrebbe.
+ *
+ * Torna `null` quando le copie non arrivano a sessanta, ed è quella promessa
+ * presa sul serio. Prima il ciclo usciva a copie finite e restituiva la **somma
+ * parziale**, che l'app mostrava come pavimento: con un tetto da cinque
+ * centesimi il pool vero lascia tredici carte per cinquantadue copie, e la
+ * frase diceva «tanto costano le sessanta carte meno care» sopra un conto che
+ * ne aveva contate cinquantadue. Un numero preciso e falso — e chi prova
+ * «quanto poco posso spendere?» ci arriva al primo tentativo.
+ *
+ * Non era un guasto del calcolo, che sommava giusto, ma della **promessa**: un
+ * minimo per sessanta carte non si può dire quando sessanta carte non ci sono.
+ * La cosa vera, e più utile, è che con quelle carte un mazzo legale non esiste
+ * affatto, e chi chiama deve poterla dire invece di arrotondare.
  */
-function mazzoPiuEconomico(carte: readonly Carta[]): number {
+function mazzoPiuEconomico(carte: readonly Carta[]): number | null {
   const prezzi = carte
     .map((carta) => ({ euro: prezzoDiUnaCopia(carta) ?? 0, copie: copieMassime(carta) }))
     .sort((a, b) => a.euro - b.euro);
@@ -430,7 +447,7 @@ function mazzoPiuEconomico(carte: readonly Carta[]): number {
     totale += quante * voce.euro;
     restano -= quante;
   }
-  return totale;
+  return restano > 0 ? null : totale;
 }
 
 /** Gli euro come si scrivono in una frase: due decimali e il simbolo. */
@@ -605,11 +622,24 @@ export function costruisciMazzo(
   // se non ci stanno nel tetto nessun mazzo ci starà. Un no dato subito, con
   // dentro il numero che ci vorrebbe, si può agire; otto secondi di ricerca e
   // poi un no senza numero, no.
-  if (spesaDichiarata !== null && spesaDichiarata.minimo > spesaDichiarata.tetto) {
-    return niente(
-      "niente-da-costruire",
-      `Dentro ${euro(spesaDichiarata.tetto)} un mazzo non si fa: le sessanta carte meno care che restano ne costano ${euro(spesaDichiarata.minimo)}.`,
-    );
+  // Due no diversi, e l'ordine conta. Prima la domanda che precede il
+  // confronto: sessanta copie ci sono? Se no non c'è nessun pavimento da
+  // confrontare con niente, e il no è di un'altra specie — non «costa troppo»,
+  // ma «non esiste». Poi il confronto vero.
+  if (spesaDichiarata !== null) {
+    const { tetto: chiesto, minimo } = spesaDichiarata;
+    if (minimo === null) {
+      return niente(
+        "niente-da-costruire",
+        `Dentro ${euro(chiesto)} un mazzo legale non esiste: le carte che restano non fanno sessanta copie in tutto, nemmeno prendendone da ognuna quante il formato ne concede.`,
+      );
+    }
+    if (minimo > chiesto) {
+      return niente(
+        "niente-da-costruire",
+        `Dentro ${euro(chiesto)} un mazzo non si fa: le sessanta carte meno care che restano ne costano ${euro(minimo)}.`,
+      );
+    }
   }
 
   const risolto = risolviTema(tema, pool);

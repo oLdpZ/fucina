@@ -543,9 +543,23 @@ function CosaHaLasciatoFuori({ spesa }: { spesa: SpesaDellaRicerca }) {
           acceso l&rsquo;app non mette nel mazzo quel che non sa contare
         </>
       ) : null}
-      . Sotto {EURO.format(spesa.minimo)} non si scende comunque: tanto costano le sessanta
-      carte meno care rimaste, messe insieme senza guardare se facciano un mazzo — quello vero
-      costa di più.
+      .{" "}
+      {/* Il pavimento si nomina solo quando esiste: se le copie rimaste non
+          fanno sessanta, un minimo per sessanta carte non c'è, e dirne uno
+          sarebbe un numero preciso e falso (ticket 23). Lì la ricerca ha già
+          detto nel motivo che un mazzo legale non si fa affatto. */}
+      {spesa.minimo === null ? (
+        <>
+          Un pavimento non c&rsquo;è nemmeno: con quel che resta non si arriva a sessanta copie,
+          e un mazzo legale non si fa a nessun prezzo.
+        </>
+      ) : (
+        <>
+          Sotto {EURO.format(spesa.minimo)} non si scende comunque: tanto costano le sessanta
+          carte meno care rimaste, messe insieme senza guardare se facciano un mazzo — quello
+          vero costa di più.
+        </>
+      )}
     </p>
   );
 }

@@ -878,6 +878,37 @@ describe("il tetto di spesa", () => {
     }
   });
 
+  it("non dichiara un pavimento quando le carte rimaste non fanno sessanta copie", () => {
+    // `mazzoPiuEconomico` promette un minimo **vero**: nessun mazzo legale di
+    // sessanta carte può costare meno. Se le copie rimaste non arrivano a
+    // sessanta quella promessa non si può mantenere — il ciclo usciva e
+    // restituiva la somma parziale, e l'app la mostrava come un pavimento. È un
+    // guasto della promessa e non del calcolo: la cosa vera, e più utile, è che
+    // con quelle carte un mazzo legale non esiste affatto.
+    // Dieci carte da quattro copie e una terra da quattro: quarantaquattro
+    // copie in tutto, che bastano ai trentatré posti non-terra e non bastano a
+    // un mazzo. Le carte a copie **illimitate** restano fuori apposta: una sola
+    // ne riempirebbe sessanta da sé, e il caso sparirebbe.
+    const minuscolo: readonly Carta[] = [
+      ...POOL_DEL_MOTORE.filter(
+        (carta) => carta.terra === null && carta.tettoDiCopie === COPIE_MASSIME,
+      ).slice(0, 10),
+      ...TERRE_FINTE.filter((carta) => carta.nome === "Sootfall Gate"),
+    ];
+    const frontiera = costruisciMazzo(richiesta({ tettoDiSpesa: 1000 }), minuscolo, SVELTA);
+
+    expect(frontiera.esito).toBe("niente-da-costruire");
+    expect(frontiera.spesa?.minimo).toBeNull();
+    // E non nomina sessanta carte su un conto che ne ha contate meno.
+    expect(frontiera.motivo).not.toMatch(/sessanta carte meno care/);
+  });
+
+  it("quando sessanta copie ci sono il pavimento resta un numero", () => {
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 0.5 });
+
+    expect(frontiera.spesa?.minimo).toBeGreaterThan(0.5);
+  });
+
   it("dice quanti passi della frontiera il tetto ha lasciato senza mazzo", () => {
     // Un passo può mancare per due ragioni diverse, e l'app ne racconta una
     // sola: «cedendo tema non si guadagna potenza». Col tetto acceso l'altra
