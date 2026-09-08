@@ -16,6 +16,100 @@
   margin: 0 auto;
 }
 
+/* --- la galleria dei temi (ticket 13) --- */
+
+/*
+ * Otto voci, una sotto l'altra sul telefono e a due colonne appena c'è spazio.
+ * Ogni voce è un bottone intero e non un titolo con un bottone accanto: quel
+ * che si tocca è quel che si legge, e sul telefono l'area buona è tutta la
+ * scheda.
+ */
+.galleria .elenco-galleria {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: calc(var(--passo) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 40rem) {
+  .galleria .elenco-galleria {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.tema-di-galleria {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 1.5);
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  padding: calc(var(--passo) * 3) calc(var(--passo) * 4);
+  text-align: left;
+  background: var(--superficie);
+  color: var(--inchiostro);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  cursor: pointer;
+}
+
+.tema-di-galleria:hover {
+  border-color: var(--accento-secondario);
+  background: var(--superficie-alta);
+}
+
+.nome-tema {
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+}
+
+.promessa-tema {
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  color: var(--inchiostro-tenue);
+  text-wrap: pretty;
+}
+
+/*
+ * Il conto delle carte è un dato, e si veste come gli altri dati dell'app: nel
+ * carattere dei numeri. Quando una voce ha smesso di reggere il colore lo dice
+ * — è la stessa coppia di accenti del verdetto qui sotto, perché è lo stesso
+ * verdetto.
+ */
+.conto-tema {
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+  color: var(--inchiostro-debole);
+}
+
+.conto-tema[data-verdetto="stretto"] {
+  color: var(--accento-secondario);
+}
+
+.conto-tema[data-verdetto="impossibile"] {
+  color: var(--accento);
+}
+
+/* Con un tema già dichiarato la galleria è una riga da riaprire, non un muro. */
+.galleria > details > summary {
+  padding: calc(var(--passo) * 2) 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  color: var(--inchiostro);
+  cursor: pointer;
+}
+
+.galleria > details[open] > summary {
+  margin-bottom: calc(var(--passo) * 2);
+}
+
+.galleria > details > .nota-filtro {
+  margin-bottom: calc(var(--passo) * 2);
+}
+
 /* --- il verdetto --- */
 
 .verdetto {

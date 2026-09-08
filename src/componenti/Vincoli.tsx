@@ -31,6 +31,7 @@ import {
 import type { Carta, Colore, Pool, Tag } from "../dati/pool.js";
 import { frasePerCriterio } from "../tema/allargamenti.js";
 import { valutaTema } from "../tema/ampiezza.js";
+import { galleriaContata, type VoceContata } from "../tema/galleria.js";
 import {
   accetta,
   carteDelTema,
@@ -85,6 +86,10 @@ export function Vincoli({
   // stessa ragione: era una costante che diceva una cosa sul gioco, ed è durata
   // esattamente finché il gioco non è cambiato.
   const costoMassimoChiedibile = useMemo(() => costoPiuAlto(pool.carte), [pool]);
+  // Otto passaggi sul pool, rifatti solo quando il pool cambia: il conto
+  // accanto a ogni voce della galleria non è scritto in nessun file di codice,
+  // si ricava da queste carte (ADR-0004).
+  const galleria = useMemo(() => galleriaContata(pool.carte), [pool]);
 
   const dichiarato = temaDichiarato(tema);
   // Il verdetto costa un passaggio sul pool — pochi millisecondi sul pool vero —
@@ -110,6 +115,8 @@ export function Vincoli({
 
   return (
     <div class="vincoli">
+      <Galleria voci={galleria} dichiarato={dichiarato} scegli={cambiaTema} />
+
       <section class="verdetto" data-verdetto={dichiarato ? ampiezza.verdetto : "assente"}>
         {!dichiarato ? (
           <>
@@ -281,6 +288,80 @@ export function Vincoli({
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * La galleria: otto temi che in questo pool esistono davvero (ticket 13).
+ *
+ * Sta in cima alla schermata perché è la prima domanda a cui risponde — «da
+ * dove parto?» — e perché il modo peggiore di cominciare è scrivere un'idea al
+ * buio e vedersi rispondere che con quelle carte un mazzo non si fa.
+ *
+ * Le otto voci le sceglie `tema/galleria.ts`; il **conto** accanto a ognuna no,
+ * quello si rifà sul pool di oggi. Una voce che avesse smesso di reggere resta
+ * in elenco e lo dice: nasconderla farebbe sparire un guasto invece di
+ * mostrarlo, e chi guarda si chiederebbe dove sia finito un tema che c'era.
+ *
+ * Con un tema già dichiarato la galleria si chiude in una riga da riaprire. Non
+ * per far spazio: toccare una voce **sostituisce** quel che si è costruito, e un
+ * elenco di otto bottoni che cancellano il lavoro non va tenuto aperto sotto le
+ * dita di chi sta lavorando.
+ */
+function Galleria({
+  voci,
+  dichiarato,
+  scegli,
+}: {
+  voci: readonly VoceContata[];
+  /** Se un tema c'è già: allora la galleria è una ripartenza, non un ingresso. */
+  dichiarato: boolean;
+  scegli: (tema: Tema) => void;
+}) {
+  const elenco = (
+    <ul class="elenco-galleria">
+      {voci.map(({ voce, ampiezza }) => (
+        <li key={voce.nome}>
+          <button type="button" class="tema-di-galleria" onClick={() => scegli(voce.tema)}>
+            <span class="nome-tema">{voce.nome}</span>
+            <span class="promessa-tema">{voce.promessa}</span>
+            <span class="conto-tema" data-verdetto={ampiezza.verdetto}>
+              {ampiezza.verdetto === "impossibile"
+                ? `${carteContate(ampiezza.carteDisponibili)}: oggi non bastano per un mazzo`
+                : ampiezza.verdetto === "stretto"
+                  ? `${carteContate(ampiezza.carteDisponibili)}, appena appena`
+                  : carteContate(ampiezza.carteDisponibili)}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (!dichiarato) {
+    return (
+      <section class="gruppo-vincolo galleria">
+        <h2>Da dove partire</h2>
+        <p class="nota-filtro">
+          Otto mazzi che con queste carte si fanno per davvero, col numero di carte che ognuno
+          porta dentro. Toccane uno e il tema è quello: da lì si cambia tutto quel che vuoi.
+        </p>
+        {elenco}
+      </section>
+    );
+  }
+
+  return (
+    <section class="gruppo-vincolo galleria">
+      <details>
+        <summary>Riparti da un tema della galleria</summary>
+        <p class="nota-filtro">
+          Toccarne uno mette al posto del tuo quel tema: quello che hai costruito qui sotto non
+          resta.
+        </p>
+        {elenco}
+      </details>
+    </section>
   );
 }
 
