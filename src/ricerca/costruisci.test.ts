@@ -383,6 +383,62 @@ describe("il tetto di tempo, perché la ricerca gira sul telefono", () => {
     expect(costruisci().troncataPerTempo).toBe(false);
   });
 
+  it("un no che arriva dopo una ricerca troncata lo dichiara, invece di darsi per completo", () => {
+    // Il tetto lascia passare il controllo preventivo — le sessanta carte meno
+    // care ci stanno — e poi la ricerca non trova niente. È l'unica uscita che
+    // arriva **dopo** che il motore ha girato, e diceva «non troncata» come
+    // tutte le altre: l'app annunciava «un mazzo dentro quella cifra non c'è»
+    // avendo guardato metà di quel che poteva, e la nota del tempo restava
+    // nascosta proprio quando serviva.
+    let quando = 0;
+    const frontiera = costruisci(
+      { tema: NERO, tettoDiSpesa: 4 },
+      { ...SVELTA, orologio: () => (quando += 100) },
+    );
+
+    expect(frontiera.mazzi).toEqual([]);
+    expect(frontiera.esito).toBe("niente-da-costruire");
+    expect(frontiera.troncataPerTempo).toBe(true);
+  });
+
+  it("i contatori di una ricerca girata sono quelli veri anche quando non esce nessun mazzo", () => {
+    // Sono i numeri con cui alla sosta si tara la ricerca, e i casi in cui non
+    // si costruisce niente sono i più interessanti da guardare: azzerarli qui
+    // li faceva sparire proprio da lì.
+    const frontiera = costruisci({ tema: NERO, tettoDiSpesa: 4 });
+
+    expect(frontiera.mazzi).toEqual([]);
+    expect(frontiera.partenze).toBeGreaterThan(0);
+    expect(frontiera.scambiProvati).toBeGreaterThan(0);
+  });
+
+  it("le uscite che precedono la ricerca dicono zero e non troncata, perché per loro è la verità", () => {
+    // Senza tema non si è mai cercato niente: dichiarare partenze o troncamenti
+    // sarebbe inventarsi un lavoro che nessuno ha fatto.
+    const frontiera = costruisci({ tema: TEMA_VUOTO });
+
+    expect(frontiera.esito).toBe("tema-non-dichiarato");
+    expect(frontiera.troncataPerTempo).toBe(false);
+    expect(frontiera.partenze).toBe(0);
+    expect(frontiera.scambiProvati).toBe(0);
+    expect(frontiera.scambiTenuti).toBe(0);
+  });
+
+  it("il consiglio su quanto alzare il tetto dice se viene da una ricerca finita o interrotta", () => {
+    // Sono due consigli diversi. Da una ricerca finita, «alzando fin lì può
+    // bastare» è un'indicazione; da una interrotta, quel numero è il minimo di
+    // metà pool, e alzare fin lì può non bastare affatto.
+    const finita = costruisci({ tema: NERO, tettoDiSpesa: 4 });
+    let quando = 0;
+    const interrotta = costruisci(
+      { tema: NERO, tettoDiSpesa: 4 },
+      { ...SVELTA, orologio: () => (quando += 100) },
+    );
+
+    expect(finita.motivo).not.toMatch(/tempo/i);
+    expect(interrotta.motivo).toMatch(/tempo/i);
+  });
+
   it("racconta l'avanzamento mentre lavora, così l'interfaccia ha che dire", () => {
     const passi: number[] = [];
     costruisci({}, { ...SVELTA, avanzamento: (a) => passi.push(a.partenza) });

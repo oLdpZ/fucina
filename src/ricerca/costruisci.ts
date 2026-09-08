@@ -465,6 +465,38 @@ export function costruisciMazzo(
   // filtrato, e a quel punto del tetto non c'è ancora niente da raccontare.
   let spesaDichiarata: SpesaDellaRicerca | null = null;
 
+  // I contatori della ricerca stanno **qui sopra** e non accanto al ciclo che
+  // li muove, perché `niente` deve poterli leggere: un'uscita che arriva dopo
+  // che il motore ha girato deve dire i numeri veri, e prima che giri i numeri
+  // veri sono zero. Dichiararli dopo li renderebbe illeggibili proprio nella
+  // funzione che ne ha bisogno.
+  let scambiProvati = 0;
+  let scambiTenuti = 0;
+  let valutazioni = 0;
+  let troncata = false;
+  /**
+   * Se il ciclo della frontiera è partito. Serve a una cosa sola: `partenze`
+   * non è un contatore ma il numero di partenze **per passo** che la taratura
+   * dichiara, e dirlo prima che si sia cercato qualcosa vorrebbe dire annunciare
+   * un lavoro che nessuno ha fatto.
+   */
+  let laRicercaHaGirato = false;
+
+  /**
+   * L'uscita che non consegna nessun mazzo.
+   *
+   * Ce ne sono di due specie, e la differenza è tutta in quel che dichiarano.
+   * Le prime — nessun tema, nessuna carta, tetto sotto il minimo — arrivano
+   * **prima** che il motore giri, e per loro zero partenze e nessun troncamento
+   * sono la verità. L'ultima, «nessun mazzo sta dentro il tetto», arriva
+   * **dopo**: lì i contatori valgono quel che valgono, e un troncamento per
+   * tempo va detto — se no l'app annuncia che un mazzo non c'è avendo guardato
+   * metà di quel che poteva, e `Costruzione.tsx` tiene nascosta la nota del
+   * tempo proprio nel caso in cui serve.
+   *
+   * Per questo qui non c'è nessun letterale: si leggono i contatori, che
+   * rispondono la verità a tutte e due le specie senza doverle distinguere.
+   */
   const niente = (esito: Esito, motivo: string): Frontiera => ({
     esito,
     motivo,
@@ -475,10 +507,10 @@ export function costruisciMazzo(
     // maggior ragione: è spesso il tetto la ragione per cui non si costruisce.
     spesa: spesaDichiarata,
     allargamentiApplicati: tema.allargamenti,
-    troncataPerTempo: false,
-    partenze: 0,
-    scambiProvati: 0,
-    scambiTenuti: 0,
+    troncataPerTempo: troncata,
+    partenze: laRicercaHaGirato ? taratura.partenze : 0,
+    scambiProvati,
+    scambiTenuti,
   });
 
   if (!temaDichiarato(tema)) {
@@ -622,10 +654,6 @@ export function costruisciMazzo(
 
   /* --- La ricerca ------------------------------------------------------- */
 
-  let scambiProvati = 0;
-  let scambiTenuti = 0;
-  let valutazioni = 0;
-  let troncata = false;
   /**
    * Il mazzo meno caro che la ricerca abbia visto, dentro o fuori dal tetto.
    *
@@ -878,11 +906,36 @@ export function costruisciMazzo(
   // lì, che è quel che il ticket chiede.
   const pesi = taratura.pesiDellaPurezza;
   const trovati: MazzoCostruito[] = [];
+  laRicercaHaGirato = true;
   for (let passo = 0; passo < pesi.length; passo++) {
     const mazzo = cerca(pesi[passo]!, passo, pesi.length);
     if (mazzo !== null) trovati.push(mazzo);
     if (troncata) break;
   }
+
+  /**
+   * Il no del tetto di spesa, che deve restare **agibile**: senza un numero
+   * lascia a indovinare di quanto alzare.
+   *
+   * Il numero però non vale sempre lo stesso, ed è la metà che mancava. Da una
+   * ricerca finita è il meno caro che il motore abbia visto guardando tutto
+   * quel che poteva: alzare fin lì può bastare. Da una ricerca **interrotta** è
+   * il meno caro di metà lavoro, e alzare fin lì può non bastare affatto — sono
+   * due consigli diversi, e darli con la stessa frase ne rende falso uno.
+   *
+   * Quando la ricerca è stata troncata così presto da non aver misurato nemmeno
+   * un mazzo, un numero non c'è: si dice quello, invece di scrivere «∞ €».
+   */
+  const nessunoDentroIlTetto = (quanto: number): string => {
+    const testa = `Nessun mazzo sta dentro ${euro(quanto)}, e sopra il tetto chiesto non se ne consegna nessuno`;
+    if (!Number.isFinite(spesaPiuBassa)) {
+      return `${testa}: il tempo concesso è finito prima che la ricerca ne misurasse anche uno solo, quindi non c'è nemmeno un numero da cui partire. Riprova con più tempo.`;
+    }
+    const visto = `: il meno caro che la ricerca ha guardato ne costava ${euro(spesaPiuBassa)}.`;
+    return troncata
+      ? `${testa}${visto} Il tempo concesso è però finito prima che finisse lei: quel numero è il meno caro di mezza ricerca, e alzare il tetto fin lì può non bastare.`
+      : `${testa}${visto} È quel che ha visto lei, non il minimo che esista: alzando il tetto fin lì può bastare, ma non è una promessa.`;
+  };
 
   const mazzi = allineaLaFrontiera(trovati);
   const primo = mazzi[0];
@@ -891,7 +944,7 @@ export function costruisciMazzo(
       "niente-da-costruire",
       tetto === null
         ? "La ricerca non ha potuto provare nemmeno un mazzo."
-        : `Nessun mazzo sta dentro ${euro(tetto)}, e sopra il tetto chiesto non se ne consegna nessuno: il meno caro che la ricerca ha guardato ne costava ${euro(spesaPiuBassa)}. È quel che ha visto lei, non il minimo che esista: alzando il tetto fin lì può bastare, ma non è una promessa.`,
+        : nessunoDentroIlTetto(tetto),
     );
   }
 
