@@ -160,6 +160,23 @@ export type SpesaDellaRicerca = {
    * no che non si può agire — e chi lo mostra deve dirlo per quello che è.
    */
   minimo: number;
+  /**
+   * Quanti passi della frontiera il tetto ha lasciato **senza mazzo**: il passo
+   * un mazzo lo avrebbe, e costa più di quanto è stato chiesto.
+   *
+   * Serve a una frase sola, ed è una frase che senza questo numero dice il
+   * falso. Quando la frontiera resta lunga uno, l'app spiega che cedendo tema
+   * non si guadagna potenza da nessuna parte: è vero se i passi mancanti non
+   * c'erano, ed è falso se a toglierli è stato il tetto del giocatore — «non
+   * c'è niente da guadagnare» e «con questi soldi non si compra quel che si
+   * guadagnerebbe» sono due risposte diverse, e la seconda si può agire.
+   *
+   * Sta dentro `SpesaDellaRicerca` e non accanto a `mazzi` apposta: a tetto
+   * spento questo oggetto è `null`, e chi compone la frase non può nemmeno
+   * andare a cercare il numero. È il modo strutturale di tenere la promessa che
+   * a tetto spento non cambia una parola.
+   */
+  passiSenzaMazzo: number;
 };
 
 /** Quel che la ricerca racconta di sé mentre lavora, per chi mostra una barra. */
@@ -463,7 +480,10 @@ export function costruisciMazzo(
   // Quel che si potrà dire del tetto di spesa. Nasce vuoto perché le prime due
   // uscite — nessun tema, nessuna carta — arrivano prima che il pool sia stato
   // filtrato, e a quel punto del tetto non c'è ancora niente da raccontare.
-  let spesaDichiarata: SpesaDellaRicerca | null = null;
+  // Senza `passiSenzaMazzo`, che qui non si può ancora sapere: si conta mentre
+  // la frontiera gira, e si attacca all'uscita. Il tipo lo dice invece di
+  // lasciare uno zero provvisorio in giro a somigliare a una risposta.
+  let spesaDichiarata: Omit<SpesaDellaRicerca, "passiSenzaMazzo"> | null = null;
 
   // I contatori della ricerca stanno **qui sopra** e non accanto al ciclo che
   // li muove, perché `niente` deve poterli leggere: un'uscita che arriva dopo
@@ -481,6 +501,12 @@ export function costruisciMazzo(
    * un lavoro che nessuno ha fatto.
    */
   let laRicercaHaGirato = false;
+  /** I passi che il tetto ha lasciato senza mazzo. Vedi `SpesaDellaRicerca`. */
+  let passiSenzaMazzo = 0;
+
+  /** Il tetto e quel che ha lasciato fuori, col conto dei passi aggiornato. */
+  const spesaDaDichiarare = (): SpesaDellaRicerca | null =>
+    spesaDichiarata === null ? null : { ...spesaDichiarata, passiSenzaMazzo };
 
   /**
    * L'uscita che non consegna nessun mazzo.
@@ -505,7 +531,7 @@ export function costruisciMazzo(
     mazzi: [],
     // La spesa si dichiara **anche** quando non si costruisce niente, e a
     // maggior ragione: è spesso il tetto la ragione per cui non si costruisce.
-    spesa: spesaDichiarata,
+    spesa: spesaDaDichiarare(),
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: troncata,
     partenze: laRicercaHaGirato ? taratura.partenze : 0,
@@ -909,7 +935,13 @@ export function costruisciMazzo(
   laRicercaHaGirato = true;
   for (let passo = 0; passo < pesi.length; passo++) {
     const mazzo = cerca(pesi[passo]!, passo, pesi.length);
+    // Un passo che non consegna niente l'ha perso per il tetto, e per niente
+    // altro: col tetto spento `cerca` un mazzo lo trova sempre. Contarlo qui,
+    // e non dentro `cerca`, tiene le due uscite di quella funzione libere di
+    // restare due — nessuna selezione dentro il tetto, e la rivalutazione
+    // piena che lo sfonda — senza doverle far convergere su un contatore.
     if (mazzo !== null) trovati.push(mazzo);
+    else passiSenzaMazzo += 1;
     if (troncata) break;
   }
 
@@ -978,7 +1010,7 @@ export function costruisciMazzo(
     ampiezza,
     combo: comboRisolta,
     mazzi,
-    spesa: spesaDichiarata,
+    spesa: spesaDaDichiarare(),
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: troncata,
     partenze: taratura.partenze,

@@ -878,6 +878,30 @@ describe("il tetto di spesa", () => {
     }
   });
 
+  it("dice quanti passi della frontiera il tetto ha lasciato senza mazzo", () => {
+    // Un passo può mancare per due ragioni diverse, e l'app ne racconta una
+    // sola: «cedendo tema non si guadagna potenza». Col tetto acceso l'altra
+    // ragione esiste — il passo un mazzo lo avrebbe, e costa troppo — e senza
+    // questo numero l'app direbbe al giocatore che un baratto non c'è quando a
+    // toglierlo dal tavolo è stato il suo stesso tetto.
+    // A 4,80 € sul pool finto capita esattamente quel che il ticket descrive: i
+    // passi più fedeli al tema si costruiscono, e quelli che inseguono la
+    // potenza — dove le carte costano — no.
+    const stretto = costruisci({ tema: NERO, tettoDiSpesa: 4.8 });
+
+    expect(stretto.mazzi.length).toBeGreaterThan(0);
+    expect(stretto.mazzi.length).toBeLessThan(PESI_DELLA_PUREZZA.length);
+    expect(stretto.spesa?.passiSenzaMazzo).toBeGreaterThan(0);
+    expect(stretto.troncataPerTempo).toBe(false);
+  });
+
+  it("a tetto spento non c'è nessun passo tolto, perché non c'è niente che li tolga", () => {
+    // Il numero vive dentro `spesa`, che a tetto spento è `null`: la frase del
+    // mazzo solo non può nemmeno andare a cercarlo, ed è il modo strutturale di
+    // tenere ferma la promessa che a tetto spento non cambia una parola.
+    expect(costruisci({ tema: NERO }).spesa).toBeNull();
+  });
+
   it("la riserva per le terre è il prezzo di una base vera, non della terra meno cara", () => {
     // La base non sta nella selezione: la sceglie `analizzaBaseDiTerre` dalla
     // curva, e su questo formato costa. Stimandola con la terra meno cara la

@@ -22,6 +22,7 @@ import {
   decimale,
   elenco,
   frasePerIlGuaioDellaCombo,
+  frasePerIlMazzoSolo,
   frasePerIlPasso,
   frasePerIlPattoDellaCombo,
   frasePerLaCombo,
@@ -579,5 +580,59 @@ describe("quel che il tetto di spesa è costato alla base", () => {
     expect(frase).toContain("12,50 €");
     // Il totale c'è: è il numero che dice se valga la pena alzare il tetto.
     expect(frase).toContain("492,50 €");
+  });
+});
+
+describe("perché la frontiera ha un mazzo solo", () => {
+  it("a tetto spento dice che il baratto non c'è, parola per parola come prima", () => {
+    // La promessa del ticket 24: chi non ha acceso il tetto non deve accorgersi
+    // che il tetto esiste. La frase è quella storica, e questo test è il posto
+    // in cui resta tale.
+    expect(frasePerIlMazzoSolo({ troncataPerTempo: false, tetto: null })).toBe(
+      "Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.",
+    );
+  });
+
+  it("col tetto acceso ma nessun passo tolto dice ancora che il baratto non c'è", () => {
+    // Il tetto c'è e non ha tolto niente: la frontiera è corta per la ragione
+    // di sempre, e attribuirlo al portafoglio sarebbe inventare una causa.
+    expect(
+      frasePerIlMazzoSolo({ troncataPerTempo: false, tetto: { euro: 30, passiSenzaMazzo: 0 } }),
+    ).toBe("Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.");
+  });
+
+  it("quando il tetto ha tolto i passi lo dice, col numero dentro", () => {
+    // Senza il numero sarebbe un no come gli altri. Con il numero è una
+    // risposta che si può agire: alza il tetto e il baratto ricompare.
+    const frase = frasePerIlMazzoSolo({
+      troncataPerTempo: false,
+      tetto: { euro: 30, passiSenzaMazzo: 3 },
+    });
+
+    expect(frase).toContain("30,00 €");
+    expect(frase).toContain("3 passi");
+    expect(frase).not.toContain("non si guadagna potenza da nessuna parte");
+  });
+
+  it("accorda al singolare quando il passo tolto è uno solo", () => {
+    const frase = frasePerIlMazzoSolo({
+      troncataPerTempo: false,
+      tetto: { euro: 12.5, passiSenzaMazzo: 1 },
+    });
+
+    expect(frase).toContain("un altro passo");
+    expect(frase).toContain("12,50 €");
+  });
+
+  it("il tempo scaduto viene prima del tetto, perché quei passi non sono stati provati", () => {
+    // Una ricerca troncata non ha nemmeno **cercato** i passi che mancano:
+    // accusare il tetto sarebbe dare al portafoglio la colpa dell'orologio.
+    const frase = frasePerIlMazzoSolo({
+      troncataPerTempo: true,
+      tetto: { euro: 30, passiSenzaMazzo: 3 },
+    });
+
+    expect(frase).toContain("il tempo è finito");
+    expect(frase).not.toContain("tetto");
   });
 });

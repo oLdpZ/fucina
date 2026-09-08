@@ -661,3 +661,56 @@ export function frasePerIlGuaioDellaCombo(guaio: GuaioDellaCombo): string {
       return `«${guaio.nome}» è una terra: la base di terre la scelgo io dalla curva del mazzo, e una terra nominata non la so ancora forzare.`;
   }
 }
+
+/**
+ * Quel che serve a spiegare una frontiera lunga **uno**.
+ *
+ * Sono tre numeri e non tre frasi, come tutto quel che entra qui: la frase la
+ * compone questo modello, e chi mostra non ne inventa nessuna.
+ */
+export type GrezziDelMazzoSolo = {
+  /** Se il tempo concesso è finito prima che la ricerca si fermasse da sé. */
+  troncataPerTempo: boolean;
+  /**
+   * Il tetto di spesa e quanti passi ha lasciato senza mazzo; `null` quando il
+   * tetto è spento, e allora di soldi non si parla affatto.
+   */
+  tetto: { euro: number; passiSenzaMazzo: number } | null;
+};
+
+/**
+ * Perché la frontiera ha un mazzo solo, che sono **tre** risposte diverse e non
+ * una.
+ *
+ * La frase storica — «cedendo tema, qui, non si guadagna potenza da nessuna
+ * parte» — è una frase sul **tasso di cambio**, cioè sul fulcro di quest'app, ed
+ * era vera finché un passo poteva mancare solo per quella ragione. Col tetto di
+ * spesa acceso non lo è più: un passo può mancare perché il mazzo che avrebbe
+ * trovato costa più di quanto il giocatore ha chiesto, e dirgli che un baratto
+ * non esiste quando a toglierlo è stato il suo stesso tetto è dire il falso su
+ * quel che l'app esiste per mostrare.
+ *
+ * La differenza è fra «non c'è niente da guadagnare» e «con questi soldi non si
+ * compra quel che si guadagnerebbe». La seconda è una risposta che si può
+ * agire: alza il tetto e il baratto ricompare. Per questo porta dentro il
+ * numero — senza, sarebbe un no come gli altri.
+ *
+ * L'ordine delle tre non è casuale: il tempo viene prima del tetto perché una
+ * ricerca troncata non ha nemmeno **provato** i passi che mancano, e dire che
+ * il tetto li ha tolti sarebbe accusare il portafoglio di una cosa che ha fatto
+ * l'orologio.
+ */
+export function frasePerIlMazzoSolo(grezzi: GrezziDelMazzoSolo): string {
+  if (grezzi.troncataPerTempo) {
+    return "Un mazzo solo: il tempo è finito prima che l’app potesse cercare gli altri. Non vuol dire che un baratto non ci sia — vuol dire che non è stato cercato.";
+  }
+  const tetto = grezzi.tetto;
+  if (tetto !== null && tetto.passiSenzaMazzo > 0) {
+    const passi =
+      tetto.passiSenzaMazzo === 1
+        ? "un altro passo, e il mazzo che avrebbe trovato costava"
+        : `altri ${tetto.passiSenzaMazzo} passi, e i mazzi che avrebbero trovato costavano`;
+    return `Un mazzo solo, e a lasciarlo solo è stato il tetto: l’app ha cercato ${passi} più di ${decimale(tetto.euro)} €. Non vuol dire che un baratto non ci sia — vuol dire che con questi soldi non si compra. Alza il tetto e ricompare.`;
+  }
+  return "Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.";
+}

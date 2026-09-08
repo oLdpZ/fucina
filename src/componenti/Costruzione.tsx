@@ -64,6 +64,7 @@ import { AVVISO_STIMA_AL_RIBASSO, listaDellaSpesa } from "../mazzo/spesa.js";
 import type { Richiesta, SpesaDellaRicerca } from "../ricerca/costruisci.js";
 import { TEMPO_MASSIMO_PREDEFINITO_MS } from "../ricerca/taratura.js";
 import type { Motore } from "../ricerca/usa-motore.js";
+import { frasePerIlMazzoSolo } from "../spiegazioni/frasi.js";
 import { spiegaFrontiera } from "../spiegazioni/spiegazioni.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
 
@@ -255,14 +256,22 @@ export function Costruzione({
                   {mazzi.length} mazzi, dal più fedele al tema al più forte. Ogni passo dice quanto
                   tema costa e quanta potenza rende: dove fermarsi lo scegli tu.
                 </p>
-              ) : motore.frontiera.troncataPerTempo ? (
-                <p class="nota-frontiera">
-                  Un mazzo solo: il tempo è finito prima che l&rsquo;app potesse cercare gli altri.
-                  Non vuol dire che un baratto non ci sia — vuol dire che non è stato cercato.
-                </p>
               ) : (
+                // Le tre ragioni per cui la frontiera resta lunga uno — il
+                // tempo, il tetto, e il baratto che davvero non c'è — le
+                // distingue `frasePerIlMazzoSolo`, che sta coi modelli di frase
+                // insieme a tutti gli altri (ticket 24).
                 <p class="nota-frontiera">
-                  Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.
+                  {frasePerIlMazzoSolo({
+                    troncataPerTempo: motore.frontiera.troncataPerTempo,
+                    tetto:
+                      motore.frontiera.spesa === null
+                        ? null
+                        : {
+                            euro: motore.frontiera.spesa.tetto,
+                            passiSenzaMazzo: motore.frontiera.spesa.passiSenzaMazzo,
+                          },
+                  })}
                 </p>
               )}
               <ol class="frontiera">
