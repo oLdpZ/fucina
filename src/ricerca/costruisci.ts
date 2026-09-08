@@ -74,7 +74,8 @@ import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
 import { comprabile, prezzoDelMazzo, prezzoDiUnaCopia } from "../mazzo/spesa.js";
 import { terreCandidate, terrePermesseDalTema } from "../mazzo/terre-candidate.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
-import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
+import { DIMENSIONE_MAZZO, TERRE_MASSIME, TERRE_MINIME } from "../mazzo/taratura.js";
+import { terre as terreDette } from "../spiegazioni/frasi.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
 import { POSTI_NON_TERRA } from "../tema/taratura.js";
 import {
@@ -436,7 +437,11 @@ function prezzoDellaSelezione(selezione: Selezione): number {
  * tetto non ne hanno. Serve a dire di no con dentro il numero che ci vorrebbe.
  *
  * Torna `null` quando le copie non arrivano a sessanta, ed è quella promessa
- * presa sul serio. Prima il ciclo usciva a copie finite e restituiva la **somma
+ * presa sul serio. Chi costruisce quel caso non lo incontra — `postiRiempibili`
+ * lo ferma prima, a tetto acceso come a tetto spento — ma le uscite che
+ * arrivano ancora prima (nessuna terra, posti non-terra scoperti) dichiarano la
+ * spesa lo stesso, e lì un pavimento che non esiste va detto `null` invece che
+ * arrotondato. Prima il ciclo usciva a copie finite e restituiva la **somma
  * parziale**, che l'app mostrava come pavimento: con un tetto da cinque
  * centesimi il pool vero lascia tredici carte per cinquantadue copie, e la
  * frase diceva «tanto costano le sessanta carte meno care» sopra un conto che
@@ -462,6 +467,11 @@ function mazzoPiuEconomico(carte: readonly Carta[]): number | null {
     restano -= quante;
   }
   return restano > 0 ? null : totale;
+}
+
+/** «1 carta giocabile», «9 carte giocabili»: le frasi non scrivono «1 carte». */
+function giocabiliDette(quante: number): string {
+  return quante === 1 ? "1 carta giocabile" : `${quante} carte giocabili`;
 }
 
 /** Gli euro come si scrivono in una frase: due decimali e il simbolo. */
@@ -626,8 +636,29 @@ export function costruisciMazzo(
     return niente(
       "niente-da-costruire",
       tetto === null
-        ? `Restano ${giocabili.length} carte giocabili, buone per ${capienza} posti: un mazzo ne chiede almeno ${POSTI_NON_TERRA}.`
-        : `Dentro ${euro(tetto)} restano ${giocabili.length} carte giocabili, buone per ${capienza} posti: un mazzo ne chiede almeno ${POSTI_NON_TERRA}.`,
+        ? `Restano ${giocabiliDette(giocabili.length)}, buone per ${capienza} posti: un mazzo ne chiede almeno ${POSTI_NON_TERRA}.`
+        : `Dentro ${euro(tetto)} restano ${giocabiliDette(giocabili.length)}, buone per ${capienza} posti: un mazzo ne chiede almeno ${POSTI_NON_TERRA}.`,
+    );
+  }
+
+  // E il controllo gemello del gemello: i posti non-terra si riempiono, ma i
+  // posti in tutto — terre comprese — non arrivano a sessanta. È la stessa
+  // promessa del ticket 09, «un mazzo intero oppure niente, mai un mazzo
+  // corto», per la strada che quel ticket non guardava.
+  //
+  // Sta **qui** e non dentro il racconto del tetto di spesa, dov'era: contare
+  // le copie che ci sono non è una domanda sul prezzo, e `SpesaDellaRicerca` a
+  // tetto spento è `null` — legarcela voleva dire farla solo a chi il tetto lo
+  // accende, e consegnare a tutti gli altri trentanove carte chiamandole un
+  // mazzo costruito (ticket 33).
+  const posti = postiRiempibili(giocabili, terreDelPool);
+  if (posti.nonTerra + posti.terra < DIMENSIONE_MAZZO) {
+    const conto = `buone per ${posti.nonTerra} posti non-terra e ${posti.terra} di terre, e un mazzo ne chiede ${DIMENSIONE_MAZZO} in tutto.`;
+    return niente(
+      "niente-da-costruire",
+      tetto === null
+        ? `Restano ${giocabiliDette(giocabili.length)} e ${terreDette(terreDelPool.length)}: ${conto}`
+        : `Dentro ${euro(tetto)} restano ${giocabiliDette(giocabili.length)} e ${terreDette(terreDelPool.length)}: ${conto}`,
     );
   }
 
@@ -636,19 +667,12 @@ export function costruisciMazzo(
   // se non ci stanno nel tetto nessun mazzo ci starà. Un no dato subito, con
   // dentro il numero che ci vorrebbe, si può agire; otto secondi di ricerca e
   // poi un no senza numero, no.
-  // Due no diversi, e l'ordine conta. Prima la domanda che precede il
-  // confronto: sessanta copie ci sono? Se no non c'è nessun pavimento da
-  // confrontare con niente, e il no è di un'altra specie — non «costa troppo»,
-  // ma «non esiste». Poi il confronto vero.
+  // Qui il pavimento c'è di sicuro: la domanda che lo precede — sessanta copie
+  // ci sono? — l'ha già fatta la guardia qui sopra, a tetto acceso come a tetto
+  // spento. Resta il confronto, che invece del prezzo parla davvero.
   if (spesaDichiarata !== null) {
     const { tetto: chiesto, minimo } = spesaDichiarata;
-    if (minimo === null) {
-      return niente(
-        "niente-da-costruire",
-        `Dentro ${euro(chiesto)} un mazzo legale non esiste: le carte che restano non fanno sessanta copie in tutto, nemmeno prendendone da ognuna quante il formato ne concede.`,
-      );
-    }
-    if (minimo > chiesto) {
+    if (minimo !== null && minimo > chiesto) {
       return niente(
         "niente-da-costruire",
         `Dentro ${euro(chiesto)} un mazzo non si fa: le sessanta carte meno care che restano ne costano ${euro(minimo)}.`,
@@ -1208,6 +1232,38 @@ function ordinaPerPartenza(
  */
 function capienzaDi(carte: readonly Carta[]): number {
   return carte.reduce((somma, carta) => somma + copieAlMassimo(carta), 0);
+}
+
+/**
+ * I posti che queste carte sanno riempire, contati **dalle due parti che un
+ * mazzo tiene separate**: i posti non-terra e quelli di terra.
+ *
+ * Non è la somma delle copie disponibili, ed è tutta la differenza. Le due parti
+ * non si sostituiscono a vicenda: quattordici carte giocabili da quattro copie
+ * fanno cinquantasei copie, e un mazzo non ne prende più di quaranta perché alle
+ * terre ne restano venti — le sedici che avanzano non tappano il buco delle
+ * terre. Sommare e basta direbbe «sessanta ci sono» sopra un mazzo da trentotto
+ * carte, ed è il difetto che questa funzione esiste per non ripetere.
+ *
+ * Perciò ogni parte si tronca al suo tetto, e i tetti sono quelli con cui il
+ * mazzo si riempie davvero: le giocabili a quel che avanza lasciando alle terre
+ * le loro minime, le terre al massimo che la base ne mette (`terreDallaCurva`
+ * non esce mai da lì).
+ *
+ * Dentro ogni parte i tetti per carta restano diversi, e apposta: trentatré
+ * copie della stessa creatura sono un mazzo legale che non è un mazzo, e di lì
+ * non si parte; trenta Paludi in un mazzo nero sono un mazzo normalissimo, e
+ * contarle quattro direbbe che un mazzo non si fa quando si fa.
+ */
+function postiRiempibili(
+  giocabili: readonly Carta[],
+  terre: readonly Carta[],
+): { nonTerra: number; terra: number } {
+  const copieDelleTerre = terre.reduce((somma, carta) => somma + copieMassime(carta), 0);
+  return {
+    nonTerra: Math.min(capienzaDi(giocabili), DIMENSIONE_MAZZO - TERRE_MINIME),
+    terra: Math.min(copieDelleTerre, TERRE_MASSIME),
+  };
 }
 
 /**

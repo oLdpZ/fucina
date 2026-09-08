@@ -84,6 +84,23 @@ function costruisci(parti: Partial<Richiesta> = {}, opzioni: Opzioni = SVELTA): 
   return costruisciMazzo(richiesta(parti), POOL, opzioni);
 }
 
+/**
+ * Un pool minuscolo: `quante` carte da quattro copie e **una terra sola**, da
+ * quattro copie anche lei.
+ *
+ * Le carte a copie **illimitate** restano fuori apposta, e così le terre base:
+ * una sola delle prime riempirebbe sessanta posti da sé, e le seconde ne
+ * concedono infinite — con dentro una qualsiasi delle due il caso sparirebbe.
+ */
+function poolMinuscolo(quante: number): readonly Carta[] {
+  return [
+    ...POOL_DEL_MOTORE.filter(
+      (carta) => carta.terra === null && carta.tettoDiCopie === COPIE_MASSIME,
+    ).slice(0, quante),
+    ...TERRE_FINTE.filter((carta) => carta.nome === "Sootfall Gate"),
+  ];
+}
+
 /** Tutte le voci del mazzo, carte e terre insieme, come si conta una lista. */
 function voci(frontiera: Frontiera) {
   const mazzo = frontiera.mazzi[0];
@@ -485,6 +502,39 @@ describe("i temi degeneri, che devono dare un esito e mai un crollo", () => {
     expect(frontiera.esito).toBe("niente-da-costruire");
     expect(frontiera.mazzi).toHaveLength(0);
     expect(frontiera.motivo.length).toBeGreaterThan(0);
+  });
+
+  it("un pool che non fa sessanta copie non consegna un mazzo nemmeno a tetto spento", () => {
+    // Il controllo gemello di quello sui posti non-terra, e per la stessa
+    // ragione: «un mazzo intero oppure niente, mai un mazzo corto». Viveva
+    // dentro il racconto del tetto di spesa, che a tetto spento è `null`, e da
+    // quella strada la ricerca proseguiva e consegnava trentanove carte
+    // chiamandole un mazzo costruito. Contare le copie non è una domanda sul
+    // prezzo, e si fa sempre.
+    // Dieci carte da quattro copie e una terra da quattro: quarantaquattro
+    // posti, che bastano ai trentatré non-terra e non bastano a un mazzo.
+    const frontiera = costruisciMazzo(richiesta(), poolMinuscolo(10), SVELTA);
+
+    expect(frontiera.esito).toBe("niente-da-costruire");
+    expect(frontiera.mazzi).toHaveLength(0);
+    // E non nomina un tetto che non c'è.
+    expect(frontiera.spesa).toBeNull();
+    expect(frontiera.motivo).not.toMatch(/Dentro|€/);
+    // Né scrive «1 terre», che è la frase di nessuno.
+    expect(frontiera.motivo).toContain("1 terra:");
+  });
+
+  it("i posti non-terra che avanzano non tappano il buco delle terre", () => {
+    // Le copie disponibili non si sommano e basta: le due parti di un mazzo non
+    // si sostituiscono a vicenda. Quattordici carte giocabili da quattro copie
+    // e una terra da quattro fanno sessanta copie in tutto — e un mazzo non
+    // prende più di quaranta carte non-terra, perché alle terre ne restano
+    // venti. Le sedici copie che avanzano non sono terre, e il mazzo resta
+    // corto: sommando si diceva «sessanta ci sono» sopra trentotto carte.
+    const frontiera = costruisciMazzo(richiesta(), poolMinuscolo(14), SVELTA);
+
+    expect(frontiera.esito).toBe("niente-da-costruire");
+    expect(frontiera.mazzi).toHaveLength(0);
   });
 
   it("senza tema non si costruisce niente, e non è un guasto", () => {
@@ -893,12 +943,7 @@ describe("il tetto di spesa", () => {
     // copie in tutto, che bastano ai trentatré posti non-terra e non bastano a
     // un mazzo. Le carte a copie **illimitate** restano fuori apposta: una sola
     // ne riempirebbe sessanta da sé, e il caso sparirebbe.
-    const minuscolo: readonly Carta[] = [
-      ...POOL_DEL_MOTORE.filter(
-        (carta) => carta.terra === null && carta.tettoDiCopie === COPIE_MASSIME,
-      ).slice(0, 10),
-      ...TERRE_FINTE.filter((carta) => carta.nome === "Sootfall Gate"),
-    ];
+    const minuscolo = poolMinuscolo(10);
     const frontiera = costruisciMazzo(richiesta({ tettoDiSpesa: 1000 }), minuscolo, SVELTA);
 
     expect(frontiera.esito).toBe("niente-da-costruire");
