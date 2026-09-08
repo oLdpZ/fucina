@@ -714,3 +714,87 @@ export function frasePerIlMazzoSolo(grezzi: GrezziDelMazzoSolo): string {
   }
   return "Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.";
 }
+
+/* --- La corsa contro gli orologi ------------------------------------------ */
+
+/**
+ * **Il patto della corsa**, scritto dove si legge senza scorrere.
+ *
+ * Non è una cortesia ed è la riga più importante di tutta questa funzionalità.
+ * ADR-0002 lo dice alla lettera: ogni posto che mostra un esito di corsa deve
+ * dichiarare che l'avversario è una caricatura, perché un numero che sembra un
+ * tasso di vittoria senza esserlo sarebbe la bugia peggiore che quest'app possa
+ * dire.
+ *
+ * È una costante e non una frase composta perché non ha numeri dentro: dev'essere
+ * la stessa dappertutto, parola per parola, e chi ne scrivesse una variante
+ * finirebbe per ammorbidirla.
+ */
+export const PATTO_DELLA_CORSA =
+  "L’avversario qui è una caricatura: tre numeri scritti a mano, non un mazzo. " +
+  "Nessuna sua rimozione uccide una carta scelta, nessuno blocca, nessuno tiene " +
+  "in mano la contromagia per il turno giusto. Quel che segue non è un tasso di " +
+  "vittoria e non ci somiglia: è un confronto fra due orologi.";
+
+/** I numeri di una corsa, come chi la mostra li ha in mano. */
+export type GrezziDellaCorsa = {
+  contro: string;
+  turnoMio: number | null;
+  turnoSuo: number;
+  ritardoDaRimozioni: number;
+  ritardoDaContromagie: number;
+  turnoMioRitardato: number | null;
+  quotaPartiteChiuse: number;
+};
+
+/**
+ * Com'è andata contro un orologio, detto con dentro i numeri che lo dicono.
+ *
+ * La frase cita **tutti** i pezzi del conto — il mio turno, il suo, e quanto mi
+ * costano le sue rimozioni e le sue contromagie — perché è l'unico modo di
+ * renderla verificabile: chi la legge può rifare la somma. Una frase che dicesse
+ * «vai male contro il mono rosso» non si potrebbe né controllare né usare.
+ *
+ * Il ritardo si nomina solo quando c'è. Scrivere «le sue rimozioni ti costano
+ * zero turni» sarebbe rumore, e insegnerebbe a saltare la riga proprio le volte
+ * che il numero non è zero.
+ */
+export function frasePerLaCorsa(grezzi: GrezziDellaCorsa): string {
+  if (grezzi.turnoMio === null || grezzi.turnoMioRitardato === null) {
+    return `Contro ${grezzi.contro}, che chiude al turno ${grezzi.turnoSuo}, questo mazzo non chiude mai entro il tempo che la simulazione guarda: la corsa non la corre.`;
+  }
+
+  const ritardi: string[] = [];
+  if (grezzi.ritardoDaRimozioni > 0) {
+    ritardi.push(`${decimale(grezzi.ritardoDaRimozioni, 1)} per le sue rimozioni`);
+  }
+  if (grezzi.ritardoDaContromagie > 0) {
+    ritardi.push(`${decimale(grezzi.ritardoDaContromagie, 1)} per le sue contromagie`);
+  }
+
+  const mio = decimale(grezzi.turnoMio, 1);
+  const arrivo =
+    ritardi.length === 0
+      ? `chiude al turno ${mio}`
+      : `chiude al turno ${mio}, che diventa ${decimale(grezzi.turnoMioRitardato, 1)} contando ${elenco(ritardi)}`;
+
+  const chi =
+    grezzi.turnoMioRitardato < grezzi.turnoSuo
+      ? "arriva prima lui"
+      : grezzi.turnoMioRitardato > grezzi.turnoSuo
+        ? "arriva prima l’avversario"
+        : "arrivano insieme";
+
+  // Quante volte ci arriva si dice **sempre**, perché senza di lei il turno
+  // medio mente: chiudere al quarto turno una volta su cinque non è arrivare
+  // primi. Ma «le altre volte non chiude affatto» si dice solo quando le altre
+  // volte esistono: scriverlo sotto un 100% sarebbe una frase che si contraddice
+  // da sola, ed è il genere di riga che insegna a non leggere le altre.
+  const quota = percento(grezzi.quotaPartiteChiuse);
+  const quanteVolte =
+    grezzi.quotaPartiteChiuse >= 1
+      ? `E ci arriva tutte le volte.`
+      : `E ci arriva ${quota} delle volte — le altre non chiude affatto, e la corsa non si vince nemmeno partendo bene.`;
+
+  return `Contro ${grezzi.contro}, che chiude al turno ${grezzi.turnoSuo}, questo mazzo ${arrivo}: ${chi}. ${quanteVolte}`;
+}

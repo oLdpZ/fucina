@@ -67,6 +67,7 @@ import {
   type ComboRisolta,
   type EsitoDellaCombo,
 } from "../combo/combo.js";
+import type { Orologio } from "../avversario/orologio.js";
 import type { Carta } from "../dati/pool.js";
 import { terreDallaCurva, type BaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
@@ -121,6 +122,19 @@ export type Richiesta = {
    * `SpesaDellaRicerca` per quel che la ricerca racconta di sé quando lo fa.
    */
   tettoDiSpesa: number | null;
+  /**
+   * I mazzi del meta contro cui il mazzo costruito deve reggere: gli
+   * **orologi**, scritti dall'utente ([ADR-0002](../../docs/adr/0002-avversario-come-orologio-motore-di-regole-rimandato.md)).
+   *
+   * Entrano nella **richiesta** e non nelle opzioni perché cambiano il mazzo che
+   * esce: la corsa è una componente del punteggio, e il punteggio è quel che la
+   * ricerca massimizza. Due richieste con orologi diversi sono due richieste
+   * diverse, e devono poter dare due mazzi diversi.
+   *
+   * Vuoti o assenti, la corsa non esiste e la ricerca ordina i mazzi
+   * esattamente come faceva prima che la corsa fosse scritta.
+   */
+  orologi?: readonly Orologio[];
 };
 
 /**
@@ -745,6 +759,10 @@ export function costruisciMazzo(
       // il mazzo esattamente a sessanta carte a ogni scambio provato.
       terreVolute: DIMENSIONE_MAZZO - posti,
       budgetPerLeTerre: perLeTerre,
+      // Gli orologi arrivano fin qui perché la corsa è una **componente del
+      // punteggio**: la ricerca costruisce per non perdere contro il meta, non
+      // scopre a cose fatte che perderebbe.
+      orologi: richiesta.orologi ?? [],
       ...(partite === undefined ? {} : { partite }),
     });
     const pura = purezza(carte, risolto);

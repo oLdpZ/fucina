@@ -23,9 +23,11 @@ import {
   elenco,
   frasePerIlGuaioDellaCombo,
   frasePerIlMazzoSolo,
+  frasePerLaCorsa,
   frasePerIlPasso,
   frasePerIlPattoDellaCombo,
   frasePerLaCombo,
+  PATTO_DELLA_CORSA,
   frasePerLaPresenza,
   frasePerLeCopie,
   frasePerLeTerre,
@@ -634,5 +636,84 @@ describe("perché la frontiera ha un mazzo solo", () => {
 
     expect(frase).toContain("il tempo è finito");
     expect(frase).not.toContain("tetto");
+  });
+});
+
+describe("la corsa contro un orologio", () => {
+  const GREZZI = {
+    contro: "Mono rosso",
+    turnoMio: 5,
+    turnoSuo: 6,
+    ritardoDaRimozioni: 0,
+    ritardoDaContromagie: 0,
+    turnoMioRitardato: 5,
+    quotaPartiteChiuse: 0.8,
+  };
+
+  it("dichiara che l'avversario è una caricatura, e non un tasso di vittoria", () => {
+    // La riga più importante di tutta la funzionalità: ADR-0002 la impone, e un
+    // numero che sembra un tasso di vittoria senza esserlo sarebbe la bugia
+    // peggiore che quest'app possa dire.
+    expect(PATTO_DELLA_CORSA).toMatch(/caricatura/i);
+    expect(PATTO_DELLA_CORSA).toMatch(/non è un tasso di vittoria/i);
+  });
+
+  it("cita i due turni e dice chi arriva prima", () => {
+    const frase = frasePerLaCorsa(GREZZI);
+    expect(frase).toContain("Mono rosso");
+    expect(frase).toContain("turno 6");
+    expect(frase).toContain("turno 5,0");
+    expect(frase).toContain("arriva prima lui");
+  });
+
+  it("nomina i ritardi solo quando ci sono, uno per uno", () => {
+    // Scrivere «le sue rimozioni ti costano zero turni» sarebbe rumore, e
+    // insegnerebbe a saltare la riga proprio le volte che il numero non è zero.
+    expect(frasePerLaCorsa(GREZZI)).not.toContain("rimozioni");
+
+    const conRitardo = frasePerLaCorsa({
+      ...GREZZI,
+      ritardoDaRimozioni: 1.2,
+      turnoMioRitardato: 6.2,
+    });
+    expect(conRitardo).toContain("1,2 per le sue rimozioni");
+    expect(conRitardo).not.toContain("contromagie");
+    expect(conRitardo).toContain("arriva prima l’avversario");
+  });
+
+  it("dice di entrambi i ritardi quando ci sono tutti e due", () => {
+    const frase = frasePerLaCorsa({
+      ...GREZZI,
+      ritardoDaRimozioni: 1.2,
+      ritardoDaContromagie: 0.5,
+      turnoMioRitardato: 6.7,
+    });
+    expect(frase).toContain("rimozioni");
+    expect(frase).toContain("contromagie");
+  });
+
+  it("dice il pareggio invece di scegliere un vincitore a caso", () => {
+    expect(frasePerLaCorsa({ ...GREZZI, turnoSuo: 5 })).toContain("arrivano insieme");
+  });
+
+  it("non racconta una corsa quando il mazzo non chiude mai", () => {
+    const frase = frasePerLaCorsa({ ...GREZZI, turnoMio: null, turnoMioRitardato: null });
+    expect(frase).toContain("non chiude mai");
+    expect(frase).not.toContain("arriva prima");
+  });
+
+  it("dice sempre quante volte ci arriva, che è il numero che regge tutto il resto", () => {
+    expect(frasePerLaCorsa(GREZZI)).toContain("80%");
+    expect(frasePerLaCorsa(GREZZI)).toContain("le altre non chiude affatto");
+  });
+
+  it("non parla di «le altre volte» quando altre volte non ce ne sono", () => {
+    // Vista girare nell'app: sotto un 100% la frase diceva «ci arriva 100%
+    // delle volte — le altre non chiude affatto», che si contraddice da sola. È
+    // il genere di riga che insegna a non leggere le altre.
+    const frase = frasePerLaCorsa({ ...GREZZI, quotaPartiteChiuse: 1 });
+
+    expect(frase).toContain("tutte le volte");
+    expect(frase).not.toContain("le altre");
   });
 });

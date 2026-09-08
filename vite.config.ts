@@ -21,20 +21,25 @@ const colori = coloriDelTema(qui("./src/stili/tema.css"), DIREZIONE_VISIVA) as R
 type Risorsa = { nome: string; tipo: string; contenuto: Buffer | string };
 
 /**
- * I due file di dati inclusi nell'app, copiati da `public/`.
+ * I file di dati inclusi nell'app, copiati da `public/`.
  *
- * Sono di due razze opposte e viaggiano insieme per una ragione sola: senza
- * rete l'app deve avere in mano tutti e due. Il **pool** lo scrive
- * `npm run dati` e non si tocca a mano; il **documento di formato** lo scrive
- * una persona (ADR-0004) e non lo genera nessun comando.
+ * Sono di razze diverse e viaggiano insieme per una ragione sola: senza rete
+ * l'app deve averli in mano tutti. Il **pool** lo scrive `npm run dati` e non
+ * si tocca a mano; il **documento di formato** lo scrive una persona (ADR-0004)
+ * e non lo genera nessun comando; gli **orologi** sono il file di cortesia del
+ * manutentore, che serve perché la prima schermata non sia vuota (ADR-0002) e
+ * che l'utente butta appena scrive i suoi.
  *
  * Hanno un nome ciascuno perché non si guardano più solo in fila: il controllo
  * di allineamento qui sotto ne apre uno per volta, e ognuno per una ragione
- * diversa.
+ * diversa. Gli orologi in quel controllo non entrano — non dicono niente su
+ * quale gioco si giochi — ma nella cache sì, perché senza rete la prima
+ * apertura resterebbe senza avversari per sempre.
  */
 const POOL = "dati/pool.json";
 const FORMATO = "dati/formato.json";
-const DATI_INCLUSI = [POOL, FORMATO];
+const OROLOGI = "dati/orologi.json";
+const DATI_INCLUSI = [POOL, FORMATO, OROLOGI];
 
 /** Uno dei due file di dati, letto da `public/` come lo legge la compilazione. */
 const leggiDato = (nome: string) => readFileSync(qui(`./public/${nome}`), "utf8");

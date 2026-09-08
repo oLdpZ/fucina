@@ -61,10 +61,11 @@ import type { Combo as CarteDellaCombo } from "../combo/combo.js";
 import type { Pool } from "../dati/pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { AVVISO_STIMA_AL_RIBASSO, listaDellaSpesa } from "../mazzo/spesa.js";
+import type { Orologio } from "../avversario/orologio.js";
 import type { Richiesta, SpesaDellaRicerca } from "../ricerca/costruisci.js";
 import { TEMPO_MASSIMO_PREDEFINITO_MS } from "../ricerca/taratura.js";
 import type { Motore } from "../ricerca/usa-motore.js";
-import { frasePerIlMazzoSolo } from "../spiegazioni/frasi.js";
+import { frasePerIlMazzoSolo, frasePerLaCorsa, PATTO_DELLA_CORSA } from "../spiegazioni/frasi.js";
 import { spiegaFrontiera } from "../spiegazioni/spiegazioni.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
 
@@ -106,6 +107,7 @@ export function Costruzione({
   cambiaSeme,
   tettoDiSpesa,
   cambiaTetto,
+  orologi,
   motore,
   mettiInMano,
 }: {
@@ -118,6 +120,11 @@ export function Costruzione({
   /** Il tetto di spesa in euro, `null` quando è spento — ed è così che parte. */
   tettoDiSpesa: number | null;
   cambiaTetto: (tetto: number | null) => void;
+  /**
+   * I mazzi del meta contro cui correre. Vuoti, la sesta componente non esiste
+   * e la ricerca ordina i mazzi come ha sempre fatto.
+   */
+  orologi: readonly Orologio[];
   motore: Motore;
   /** Il mazzo costruito torna in mano all'utente, nella schermata «Mazzo». */
   mettiInMano: (
@@ -163,6 +170,7 @@ export function Costruzione({
       seme,
       tempoMassimoMs: TEMPO_MASSIMO_PREDEFINITO_MS,
       tettoDiSpesa,
+      orologi,
     };
     // L'impronta del pool è la data dei suoi dati: cambia quando e solo quando
     // cambiano le carte (ticket 05).
@@ -318,13 +326,34 @@ export function Costruzione({
                   <span>fedeltà al tema</span>
                   <strong>{PERCENTO.format(mazzo.purezza)}</strong>
                 </li>
-                {Object.values(mazzo.punteggio).map((componente) => (
-                  <li key={componente.etichetta}>
-                    <span>{componente.etichetta}</span>
-                    <strong>{PERCENTO.format(componente.valore)}</strong>
-                  </li>
-                ))}
+                {/* `corsa` è `null` finché l'utente non ha dichiarato nessun
+                    orologio: la sesta componente non esiste, e non si mostra
+                    una riga vuota per una domanda che non è stata fatta. */}
+                {Object.values(mazzo.punteggio)
+                  .filter((componente) => componente !== null)
+                  .map((componente) => (
+                    <li key={componente.etichetta}>
+                      <span>{componente.etichetta}</span>
+                      <strong>{PERCENTO.format(componente.valore)}</strong>
+                    </li>
+                  ))}
               </ul>
+
+              {mazzo.punteggio.corsa === null ? null : (
+                <section class="corsa">
+                  <h3>Contro chi incontri</h3>
+                  {/* Il patto si ripete qui e non solo nella schermata in cui
+                      gli orologi si scrivono: ADR-0002 lo chiede in **ogni**
+                      posto che mostri un esito di corsa, e questo è il posto in
+                      cui l'esito si legge davvero. */}
+                  <p class="patto">{PATTO_DELLA_CORSA}</p>
+                  <ul class="esiti-corsa">
+                    {mazzo.punteggio.corsa.grezzi.esiti.map((esito) => (
+                      <li key={esito.contro}>{frasePerLaCorsa(esito)}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
               <p class="spiegazione spiegazione-spesa">
                 {/* «Almeno» quando qualche carta un listino non ce l&rsquo;ha: il conto le

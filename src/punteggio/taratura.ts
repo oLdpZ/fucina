@@ -38,6 +38,60 @@ export const PESI_DELLE_COMPONENTI = {
 } as const;
 
 /* ------------------------------------------------------------------------- *
+ * La corsa contro gli orologi dell'avversario
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Quanto pesa la **sesta** componente, quando c'è.
+ *
+ * Sta fuori da `PESI_DELLE_COMPONENTI` perché la corsa non c'è sempre: senza
+ * orologi dichiarati non esiste, e le altre cinque tornano a sommare a uno da
+ * sole. È `combina` a rinormalizzare, e l'effetto è quello che serve — chi non
+ * dichiara nessun orologio ottiene esattamente la classifica di prima.
+ *
+ * Il valore è alto quanto la velocità perché la corsa è la domanda che l'utente
+ * ha fatto per prima — *batto il mazzo che incontro?* — e non un contorno. È
+ * provvisorio come tutti gli altri: alla sosta si guarda se sposta davvero la
+ * classifica dei mazzi, e se non la sposta scende o sparisce.
+ */
+export const PESO_DELLA_CORSA = 0.3;
+
+/**
+ * Le copie non-terra di un mazzo tipico: il metro su cui si legge quante copie
+ * l'avversario dedica a una cosa sola.
+ *
+ * Serve perché dell'avversario si sanno **tre numeri** e nient'altro: quanto sia
+ * grande la sua metà non-terra l'app non lo sa, e otto rimozioni si devono pur
+ * confrontare con qualcosa. Ventiquattro è sessanta meno una base di terre
+ * ordinaria, arrotondato: da ritarare guardando i mazzi veri.
+ */
+export const COPIE_NON_TERRA_DI_RIFERIMENTO = 24;
+
+/**
+ * Quanti turni mi costano le sue rimozioni, quando ne porta tante e io do
+ * bersagli a tutte.
+ *
+ * Il numero è a occhio, come dev'essere: nessuno ha misurato quanto valga un
+ * Terminate contro un mazzo di creature, perché misurarlo vorrebbe dire far
+ * giocare la partita. Due turni è la scommessa di partenza.
+ *
+ * **Messo a zero, le rimozioni smettono di contare.** È la via per cui ADR-0002
+ * chiede di aggiungere i tre numeri dell'orologio uno alla volta: alla sosta si
+ * azzera, si guarda se la classifica dei mazzi cambia, e se non cambia il
+ * numero si toglie dall'orologio invece di restare lì a fare volume.
+ */
+export const TURNI_PERSI_PER_RIMOZIONI = 2;
+
+/**
+ * Quanti turni mi costano le sue contromagie. Vedi `TURNI_PERSI_PER_RIMOZIONI`:
+ * stessa scommessa, stessa disciplina, e la stessa via per toglierle.
+ *
+ * È più basso perché le contromagie mordono **tutti** — non chiedono bersagli —
+ * e un peso pieno le farebbe pesare due volte.
+ */
+export const TURNI_PERSI_PER_CONTROMAGIE = 1.5;
+
+/* ------------------------------------------------------------------------- *
  * Velocità e affidabilità
  * ------------------------------------------------------------------------- */
 

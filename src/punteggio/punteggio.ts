@@ -34,6 +34,8 @@
  * solo caso è quello seminato della simulazione, col seme che arriva da fuori.
  */
 
+import { corriControUnOrologio, type EsitoDellaCorsa } from "../avversario/corsa.js";
+import type { Orologio } from "../avversario/orologio.js";
 import type { Carta, Tag } from "../dati/pool.js";
 import {
   analizzaBaseDiTerre,
@@ -51,6 +53,7 @@ import {
   EFFICIENZA_ATTESA,
   PESI_DELLA_VELOCITA,
   PESI_DELLE_COMPONENTI,
+  PESO_DELLA_CORSA,
   QUOTA_DELLA_RIMOZIONE_CONDIZIONALE,
   TAG_DI_VANTAGGIO_CARTE,
   TURNO_DI_CHIUSURA_OTTIMO,
@@ -169,9 +172,28 @@ export type GrezziDiQualita = {
 };
 
 /**
- * Le cinque componenti, **separate**. Non c'è nessun totale qui dentro: chi ne
- * vuole uno lo chiede a `combina`, e così le componenti non possono essere
- * sommate via per distrazione.
+ * I valori grezzi della corsa: **un esito per orologio dichiarato**, e il
+ * peggiore fra loro tenuto a parte.
+ *
+ * Il peggiore sta qui perché è la risposta agibile. La media dice come va in
+ * generale; il peggiore dice contro **chi** si perde, e quello è il mazzo che
+ * il venerdì fa la differenza.
+ */
+export type GrezziDiCorsa = {
+  esiti: EsitoDellaCorsa[];
+  /** L'orologio contro cui questo mazzo va peggio. */
+  peggiore: EsitoDellaCorsa;
+};
+
+/**
+ * Le componenti, **separate**. Non c'è nessun totale qui dentro: chi ne vuole
+ * uno lo chiede a `combina`, e così le componenti non possono essere sommate
+ * via per distrazione.
+ *
+ * Cinque ci sono sempre. La **sesta**, la corsa, c'è solo quando l'utente ha
+ * dichiarato almeno un orologio: senza, non esiste — e `null` è la cosa giusta
+ * da mettere, perché zero direbbe «va malissimo contro il meta» a chi il meta
+ * non l'ha ancora scritto.
  */
 export type Punteggio = {
   velocita: Componente<GrezziDiVelocita>;
@@ -179,6 +201,7 @@ export type Punteggio = {
   colori: Componente<GrezziDiColori>;
   sinergia: Componente<GrezziDiSinergia>;
   qualita: Componente<GrezziDiQualita>;
+  corsa: Componente<GrezziDiCorsa> | null;
 };
 
 export type RichiestaDiPunteggio = {
@@ -198,6 +221,11 @@ export type RichiestaDiPunteggio = {
    * alla base quali terre può permettersi, non quanto valgono.
    */
   budgetPerLeTerre?: number | null;
+  /**
+   * I mazzi del meta contro cui correre, scritti dall'utente. Assenti o vuoti,
+   * la sesta componente non esiste e le altre cinque valgono come sempre.
+   */
+  orologi?: readonly Orologio[];
 };
 
 export type MazzoValutato = {
@@ -251,6 +279,7 @@ export function valutaMazzo(
       colori: colori(base),
       sinergia: sinergia(nonTerre),
       qualita: qualita(nonTerre),
+      corsa: corsa(simulazione, nonTerre, richiesta.orologi ?? []),
     },
   };
 }
@@ -264,13 +293,56 @@ export function valutaMazzo(
  * trova già fatta.
  */
 export function combina(punteggio: Punteggio): number {
-  return (
+  const cinque =
     PESI_DELLE_COMPONENTI.velocita * punteggio.velocita.valore +
     PESI_DELLE_COMPONENTI.curva * punteggio.curva.valore +
     PESI_DELLE_COMPONENTI.colori * punteggio.colori.valore +
     PESI_DELLE_COMPONENTI.sinergia * punteggio.sinergia.valore +
-    PESI_DELLE_COMPONENTI.qualita * punteggio.qualita.valore
-  );
+    PESI_DELLE_COMPONENTI.qualita * punteggio.qualita.valore;
+
+  // Senza orologi la sesta componente non esiste, e il totale è **identico** a
+  // quello di prima che la corsa fosse scritta: chi non dichiara nessun mazzo
+  // del meta ottiene la classifica di sempre, e non una peggiorata da un
+  // confronto che non ha chiesto.
+  if (punteggio.corsa === null) return cinque;
+
+  // La rinormalizzazione tiene il totale fra zero e uno con sei componenti come
+  // con cinque, senza dover riscrivere gli altri cinque pesi ogni volta che
+  // questo cambia — e alla sosta questo cambierà.
+  const somma = 1 + PESO_DELLA_CORSA;
+  return (cinque + PESO_DELLA_CORSA * punteggio.corsa.valore) / somma;
+}
+
+/* --- La corsa contro il meta --------------------------------------------- */
+
+/**
+ * La sesta componente: come va contro i mazzi che l'utente dice di incontrare.
+ *
+ * `null` senza orologi, e non zero. La differenza è tutta: zero è un giudizio
+ * — «contro il meta va malissimo» — e darlo a chi il meta non l'ha ancora
+ * scritto sarebbe inventare una sconfitta. `null` è l'assenza della domanda.
+ *
+ * Il valore è la **media** dei voti, non il peggiore: un mazzo che perde contro
+ * uno dei cinque mazzi del venerdì e batte gli altri quattro è un buon mazzo, e
+ * ordinarlo per il suo peggior accoppiamento lo direbbe cattivo. Contro chi
+ * perde sta nei grezzi, che è dove le spiegazioni vanno a prenderlo.
+ */
+function corsa(
+  simulazione: EsitoDellaSimulazione,
+  nonTerre: readonly CopieDiCarta[],
+  orologi: readonly Orologio[],
+): Componente<GrezziDiCorsa> | null {
+  if (orologi.length === 0) return null;
+
+  const esiti = orologi.map((orologio) => corriControUnOrologio(simulazione, nonTerre, orologio));
+  const media = esiti.reduce((somma, esito) => somma + esito.voto, 0) / esiti.length;
+  const peggiore = esiti.reduce((peggio, esito) => (esito.voto < peggio.voto ? esito : peggio));
+
+  return {
+    etichetta: "corsa contro il meta",
+    valore: fraZeroEUno(media),
+    grezzi: { esiti, peggiore },
+  };
 }
 
 /* --- Velocità e affidabilità --------------------------------------------- */

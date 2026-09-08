@@ -16,9 +16,10 @@ import { describe, expect, it } from "vitest";
 
 import { TERRE_FINTE } from "../catalogo/pool-finto.js";
 import type { Carta, Colore, Tag } from "../dati/pool.js";
+import type { Orologio } from "../avversario/orologio.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { leggiTettoDiCopie } from "../mazzo/copie.js";
-import { valutaMazzo, type Punteggio } from "./punteggio.js";
+import { combina, valutaMazzo, type Punteggio } from "./punteggio.js";
 import {
   CURVA_ATTESA_LENTA,
   CURVA_ATTESA_VELOCE,
@@ -271,16 +272,21 @@ const MUTO: CopieDiCarta[] = [
 /* --- I test -------------------------------------------------------------- */
 
 describe("il punteggio a componenti separate", () => {
-  it("restituisce cinque componenti, ciascuna fra zero e uno, e nessuna somma", () => {
+  it("restituisce le componenti, ciascuna fra zero e uno, e nessuna somma", () => {
     const { punteggio } = valuta(AGGRO);
 
     expect(Object.keys(punteggio).sort()).toEqual([
       "colori",
+      "corsa",
       "curva",
       "qualita",
       "sinergia",
       "velocita",
     ]);
+    // La sesta è `null` finché nessun orologio è dichiarato, e non zero: zero
+    // sarebbe un giudizio — «contro il meta va malissimo» — dato a chi il meta
+    // non l'ha ancora scritto.
+    expect(punteggio.corsa).toBeNull();
     for (const componente of componenti(punteggio)) {
       expect(componente.valore).toBeGreaterThanOrEqual(0);
       expect(componente.valore).toBeLessThanOrEqual(1);
@@ -649,5 +655,91 @@ describe("il mazzo valutato", () => {
     for (const componente of componenti(valutato.punteggio)) {
       expect(Number.isFinite(componente.valore)).toBe(true);
     }
+  });
+});
+
+describe("la corsa, sesta componente quando gli orologi ci sono", () => {
+  const OROLOGIO: Orologio = {
+    nome: "Mono rosso",
+    perche: "",
+    turnoDiChiusura: 5,
+    rimozioni: 8,
+    contromagie: 0,
+  };
+
+  const conOrologi = (mazzo: readonly CopieDiCarta[], orologi: readonly Orologio[]) =>
+    valutaMazzo(mazzo, TERRE_FINTE, { seme: SEME, partite: PARTITE, orologi });
+
+  it("non esiste finché nessun orologio è dichiarato", () => {
+    expect(conOrologi(AGGRO, []).punteggio.corsa).toBeNull();
+  });
+
+  it("compare con un orologio, e porta un esito per ciascuno", () => {
+    const corsa = conOrologi(AGGRO, [OROLOGIO, { ...OROLOGIO, nome: "Controllo blu" }]).punteggio
+      .corsa;
+
+    expect(corsa).not.toBeNull();
+    expect(corsa?.grezzi.esiti.map((esito) => esito.contro)).toEqual([
+      "Mono rosso",
+      "Controllo blu",
+    ]);
+    expect(corsa?.valore).toBeGreaterThanOrEqual(0);
+    expect(corsa?.valore).toBeLessThanOrEqual(1);
+  });
+
+  it("tiene a parte l'orologio contro cui va peggio, che è la risposta agibile", () => {
+    // La media dice come va in generale; il peggiore dice contro **chi** si
+    // perde, e quello è il mazzo che il venerdì fa la differenza.
+    const facile = { ...OROLOGIO, nome: "Lento", turnoDiChiusura: 12 };
+    const duro = { ...OROLOGIO, nome: "Fulmineo", turnoDiChiusura: 2 };
+    const corsa = conOrologi(AGGRO, [facile, duro]).punteggio.corsa;
+
+    expect(corsa?.grezzi.peggiore.contro).toBe("Fulmineo");
+  });
+
+  it("il valore è la media e non il peggiore: un accoppiamento perso non fa cattivo un mazzo", () => {
+    const facile = { ...OROLOGIO, nome: "Lento", turnoDiChiusura: 12 };
+    const duro = { ...OROLOGIO, nome: "Fulmineo", turnoDiChiusura: 2 };
+    const corsa = conOrologi(AGGRO, [facile, duro]).punteggio.corsa;
+
+    expect(corsa?.valore).toBeGreaterThan(corsa!.grezzi.peggiore.voto);
+  });
+
+  it("senza orologi il totale è identico a quello di prima che la corsa esistesse", () => {
+    // La promessa che rende innocua la sesta componente: chi non dichiara
+    // nessun mazzo del meta ottiene la classifica di sempre, e non una
+    // peggiorata da un confronto che non ha chiesto.
+    const punteggio = conOrologi(AGGRO, []).punteggio;
+    const aMano =
+      PESI_DELLE_COMPONENTI.velocita * punteggio.velocita.valore +
+      PESI_DELLE_COMPONENTI.curva * punteggio.curva.valore +
+      PESI_DELLE_COMPONENTI.colori * punteggio.colori.valore +
+      PESI_DELLE_COMPONENTI.sinergia * punteggio.sinergia.valore +
+      PESI_DELLE_COMPONENTI.qualita * punteggio.qualita.valore;
+
+    expect(combina(punteggio)).toBeCloseTo(aMano, 12);
+  });
+
+  it("con gli orologi il totale resta fra zero e uno", () => {
+    // La rinormalizzazione: sei componenti pesate devono stare nella stessa
+    // scala di cinque, se no due mazzi non si confrontano più a occhio.
+    for (const orologi of [[OROLOGIO], [OROLOGIO, { ...OROLOGIO, nome: "Altro" }]]) {
+      const totale = combina(conOrologi(AGGRO, orologi).punteggio);
+      expect(totale).toBeGreaterThanOrEqual(0);
+      expect(totale).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("un orologio che si batte alza il totale, uno che si perde lo abbassa", () => {
+    const senza = combina(conOrologi(AGGRO, []).punteggio);
+    const facile = combina(
+      conOrologi(AGGRO, [{ ...OROLOGIO, turnoDiChiusura: 15, rimozioni: 0 }]).punteggio,
+    );
+    const duro = combina(
+      conOrologi(AGGRO, [{ ...OROLOGIO, turnoDiChiusura: 1, rimozioni: 20 }]).punteggio,
+    );
+
+    expect(facile).toBeGreaterThan(senza);
+    expect(duro).toBeLessThan(senza);
   });
 });

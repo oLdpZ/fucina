@@ -1,0 +1,39 @@
+[
+  {
+    "_nota": "GLI OROLOGI DI PARTENZA. Non sono il tuo meta: sono cinque mazzi che in un formato come questo si incontrano spesso, scritti perché la prima schermata non sia vuota. Cancellali e scrivi i tuoi — i tre mazzi che incontri davvero il venerdì li conosci tu, e quella conoscenza vale più di qualunque elenco compilato. I tre numeri di ciascuno sono stimati a occhio da chi tiene l'app, non misurati: sono il punto di partenza da correggere, non una verità.",
+
+    "nome": "Mono rosso",
+    "perche": "Il mazzo che c'è sempre. Creature da uno e due mana e bruciato diretto: Kird Ape, Mons's Goblin Raiders, Ironclaw Orcs, Lightning Bolt, Fireball. Chiude presto o non chiude affatto, e il bruciato gli fa da rimozione senza smettere di essere danno alla faccia. Contromagie nessuna: non è il suo colore e non è il suo piano.",
+    "turnoDiChiusura": 5,
+    "rimozioni": 8,
+    "contromagie": 0
+  },
+  {
+    "nome": "Blu-bianco controllo",
+    "perche": "L'altra metà del formato. Counterspell, Swords to Plowshares, Wrath of God, Control Magic, e una Serra Angel che chiude quando il tavolo è vuoto. Non ha fretta: vince tardi e vince perché tu non hai vinto. È l'orologio contro cui un mazzo veloce si misura meglio, perché il suo turno di chiusura è lontano e le sue contromagie sono tante.",
+    "turnoDiChiusura": 11,
+    "rimozioni": 10,
+    "contromagie": 8
+  },
+  {
+    "nome": "Nero da scarto",
+    "perche": "Dark Ritual per anticipare, Hypnotic Specter e Sengir Vampire per picchiare, Mind Twist e The Rack per svuotare la mano. Non è velocissimo e non è lento: fa male mentre ti toglie le carte con cui risponderesti. Le rimozioni sono poche perché la sua risposta alle creature è averne di più grosse.",
+    "turnoDiChiusura": 7,
+    "rimozioni": 6,
+    "contromagie": 0
+  },
+  {
+    "nome": "Verde-rosso da picchiare",
+    "perche": "Creature efficienti e bruciato per aprire la strada: Kird Ape, Sedge Troll, Lightning Bolt. Somiglia al mono rosso ma tiene di più — le sue creature sopravvivono a una rimozione da tre danni — e per questo chiude più o meno insieme a lui contando meno sul colpo di coda.",
+    "turnoDiChiusura": 6,
+    "rimozioni": 8,
+    "contromagie": 0
+  },
+  {
+    "nome": "Bianco da Armageddon",
+    "perche": "Land Tax e creature che non hanno bisogno di mana, poi Armageddon quando il tabellone è suo. Chiude tardi e in un modo che la simulazione goldfish non vede — dopo l'Armageddon smetti di giocare, non solo lui. Il turno qui sotto dice quando chiude; quel che il numero non dice è che ti lascia fermo, ed è il limite dichiarato di ogni orologio.",
+    "turnoDiChiusura": 9,
+    "rimozioni": 8,
+    "contromagie": 0
+  }
+]

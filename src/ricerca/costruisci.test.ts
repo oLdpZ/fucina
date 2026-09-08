@@ -182,7 +182,7 @@ describe("il primo mazzo costruito dall'app", () => {
     expect(new Set(nomi(costruisci())).size).toBe(nomi(costruisci()).length);
   });
 
-  it("porta con sé la base di terre, la simulazione e le cinque componenti", () => {
+  it("porta con sé la base di terre, la simulazione e le componenti", () => {
     const mazzo = costruisci().mazzi[0]!;
     expect(mazzo.terre.length).toBeGreaterThan(0);
     expect(mazzo.simulazione.partite).toBeGreaterThan(0);
@@ -192,7 +192,11 @@ describe("il primo mazzo costruito dall'app", () => {
       "colori",
       "sinergia",
       "qualita",
+      "corsa",
     ]);
+    // Senza orologi dichiarati la sesta non esiste, e la ricerca ordina i mazzi
+    // esattamente come li ordinava prima che la corsa fosse scritta.
+    expect(mazzo.punteggio.corsa).toBeNull();
   });
 });
 

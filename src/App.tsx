@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
+import { caricaOrologiDiPartenza } from "./avversario/carica-orologi.js";
+import type { Orologio } from "./avversario/orologio.js";
+import { Avversario } from "./componenti/Avversario.js";
 import { Catalogo } from "./componenti/Catalogo.js";
 import { Combo } from "./componenti/Combo.js";
 import { Costruzione } from "./componenti/Costruzione.js";
@@ -13,6 +16,7 @@ import { NoteLegali } from "./componenti/NoteLegali.js";
 import { SchedaCarta } from "./componenti/SchedaCarta.js";
 import { Vincoli } from "./componenti/Vincoli.js";
 import { aggiornaInSottofondo, poolDaAprire } from "./dati/aggiornamento.js";
+import { dimenticaOrologi, leggiOrologiSalvati, salvaOrologi } from "./dati/deposito.js";
 import { identitaDelFormato } from "./dati/ambito.js";
 import { caricaFormato } from "./dati/carica-formato.js";
 import { dataInItaliano } from "./dati/carica-pool.js";
@@ -133,6 +137,20 @@ export function App() {
    */
   const [tettoDelMazzoInMano, setTettoDelMazzoInMano] = useState<number | null>(null);
   /**
+   * Gli orologi dell'avversario: i mazzi che l'utente dice di incontrare
+   * ([ADR-0002](../docs/adr/0002-avversario-come-orologio-motore-di-regole-rimandato.md)).
+   *
+   * Vivono qui accanto al tema, al seme e al tetto, e per la stessa ragione:
+   * sono un ingresso della richiesta, e passando da una schermata all'altra non
+   * si devono perdere.
+   *
+   * Partono vuoti e non dal file del manutentore: il file arriva **dopo**,
+   * nell'effetto che carica i dati, e solo se l'utente non ne ha di suoi. Un
+   * elenco pieno prima che si sappia cosa l'utente ha salvato farebbe lampeggiare
+   * i mazzi del manutentore a chi li aveva cancellati.
+   */
+  const [orologi, setOrologi] = useState<readonly Orologio[]>([]);
+  /**
    * Il motore vive qui e non nella schermata da cui lo si accende: le pagine
    * si smontano passando da una all'altra, e una ricerca che vivesse dentro la
    * pagina morirebbe andando a controllare una carta nel catalogo — cioè
@@ -191,6 +209,45 @@ export function App() {
       vivo = false;
     };
   }, []);
+
+  /**
+   * Da dove vengono gli orologi all'apertura: prima quel che l'utente ha
+   * salvato, e solo se non ha mai salvato niente il file del manutentore.
+   *
+   * La distinzione fra «non ha mai deciso» e «ha salvato un elenco vuoto» è
+   * tutta qui: senza, chi cancella tutti gli orologi se li ritroverebbe alla
+   * riapertura, e l'app gli rimetterebbe in bocca un meta che ha rifiutato.
+   */
+  useEffect(() => {
+    let vivo = true;
+    void leggiOrologiSalvati()
+      .then(async (suoi) => {
+        if (!vivo) return;
+        if (suoi !== null) return setOrologi(suoi);
+        const diPartenza = await caricaOrologiDiPartenza();
+        if (vivo) setOrologi(diPartenza);
+      })
+      // Gli orologi che non si caricano non fermano l'app: senza, la corsa
+      // semplicemente non si corre, e tutto il resto funziona intero.
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  /** Gli orologi cambiati si salvano subito: non c'è un bottone «salva». */
+  const cambiaOrologi = (nuovi: readonly Orologio[]) => {
+    setOrologi(nuovi);
+    void salvaOrologi(nuovi);
+  };
+
+  /** Rimette i mazzi di partenza, dimenticando quel che l'utente aveva scritto. */
+  const ripristinaOrologi = () => {
+    void dimenticaOrologi()
+      .then(() => caricaOrologiDiPartenza())
+      .then(setOrologi)
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (pool === null || giaControllato.current) return undefined;
@@ -397,6 +454,11 @@ export function App() {
               cambiaCopie={cambiaCopie}
             />
             <Combo pool={pool} tema={tema} combo={combo} cambiaCombo={setCombo} />
+            <Avversario
+              orologi={orologi}
+              cambiaOrologi={cambiaOrologi}
+              ripristina={ripristinaOrologi}
+            />
             <Costruzione
               pool={pool}
               tema={tema}
@@ -405,6 +467,7 @@ export function App() {
               cambiaSeme={setSeme}
               tettoDiSpesa={tettoDiSpesa}
               cambiaTetto={setTettoDiSpesa}
+              orologi={orologi}
               motore={motore}
               mettiInMano={mettiInMano}
             />

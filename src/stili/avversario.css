@@ -1,0 +1,143 @@
+/*
+ * Gli orologi dell'avversario (ticket 02 della tappa 3): il riquadro in cui
+ * l'utente scrive i mazzi che incontra, e quello in cui legge com'è andata la
+ * corsa.
+ *
+ * Prende la forma della combo, che gli sta subito sopra: stesso riquadro,
+ * stesso passo, stessi comandi larghi almeno 44px per il pollice. Nessun colore
+ * letterale — solo le variabili di `tema.css`, come nel resto dell'app.
+ */
+
+.avversario {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.avversario > h2 {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+  color: var(--inchiostro);
+}
+
+/*
+ * Il patto: che l'avversario è una caricatura. Come quello della combo si legge
+ * per intero — colore pieno, riga stretta, e non il grigio delle note — perché
+ * è la riga che rende onesto tutto quel che si legge dopo.
+ */
+.avversario .patto,
+.corsa .patto {
+  max-width: 60ch;
+  margin: 0;
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  color: var(--inchiostro);
+}
+
+.orologi,
+.orologi-riassunto,
+.esiti-corsa {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orologi > li {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  padding: calc(var(--passo) * 3);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.nome-orologio,
+.perche-orologio {
+  width: 100%;
+  min-height: 44px;
+  padding: calc(var(--passo) * 2);
+  font: inherit;
+  color: var(--inchiostro);
+  background: var(--fondo);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.perche-orologio {
+  resize: vertical;
+  font-size: var(--testo-piccolo);
+}
+
+/* I tre numeri stanno in fila e vanno a capo da soli sul telefono. */
+.numeri-orologio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--passo) * 2);
+}
+
+.numeri-orologio label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--passo);
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+}
+
+.numeri-orologio input {
+  width: 6rem;
+  min-height: 44px;
+  padding: calc(var(--passo) * 2);
+  font: inherit;
+  color: var(--inchiostro);
+  background: var(--fondo);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.passi-orologi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--passo) * 2);
+}
+
+.orologi-riassunto > li {
+  font-size: var(--testo-piccolo);
+  color: var(--inchiostro-tenue);
+}
+
+/* --- L'esito della corsa, nella schermata del mazzo ---------------------- */
+
+.corsa {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 2);
+  padding: calc(var(--passo) * 3);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.corsa > h3 {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--testo-piccolo);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--inchiostro-tenue);
+}
+
+.esiti-corsa > li {
+  max-width: 70ch;
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  color: var(--inchiostro);
+}
