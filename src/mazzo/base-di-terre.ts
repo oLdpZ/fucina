@@ -129,9 +129,24 @@ export type BaseDiTerre = {
   copieNonTerra: number;
   dimensioneMazzo: number;
   coloriRichiesti: RichiestaDiColore[];
-  /** Le terre di utilità che ci sono finite: quelle che fanno altro dai colori. */
+  /**
+   * Le terre di utilità che ci sono finite: quelle che la base ha preso **per
+   * quel che fanno**, non per i colori che danno.
+   *
+   * È quel che il passo dell'utilità ha aggiunto, meno quel che il budget gli ha
+   * tolto — e non un conto rifatto col predicato su tutte le terre scelte. Una
+   * terra doppia presa per i suoi colori, che per caso porta anche un tag, non è
+   * una terra che il mazzo ha scelto per il tag, e contarla lì farebbe superare
+   * al numero il tetto che `taratura.ts` gli dichiara (ticket 17).
+   */
   terreDiUtilita: number;
-  /** Di quelle, quante non fanno mana affatto: sono posti che non lanciano. */
+  /**
+   * Di quelle, quante non fanno mana affatto: sono posti che non lanciano.
+   *
+   * «Di quelle» alla lettera: si legge dalla stessa scelta di `terreDiUtilita`,
+   * così il sottoinsieme è una proprietà della struttura e non un caso che
+   * regge finché nessuno tocca i predicati.
+   */
   terreSenzaMana: number;
   terreCheEntranoGirate: number;
   /** Di quelle girate, quante entrano girate **solo a certe condizioni**. */
@@ -209,7 +224,7 @@ export function analizzaBaseDiTerre(
     }
   }
 
-  const { terre, rinunceDelBudget } = scegliTerre(
+  const { terre, rinunceDelBudget, terreDiUtilita, terreSenzaMana } = scegliTerre(
     terreDelPool,
     coloriRichiesti,
     simboliPerColore,
@@ -277,12 +292,8 @@ export function analizzaBaseDiTerre(
       simboli: simboliPerColore.get(colore) ?? 0,
       fonti: fontiPerColore.get(colore) ?? 0,
     })),
-    terreDiUtilita: terre
-      .filter((voce) => terraDiUtilita(voce.carta))
-      .reduce((somma, voce) => somma + voce.copie, 0),
-    terreSenzaMana: terre
-      .filter((voce) => (voce.carta.terra?.coloriProdotti.length ?? 0) === 0)
-      .reduce((somma, voce) => somma + voce.copie, 0),
+    terreDiUtilita,
+    terreSenzaMana,
     terreCheEntranoGirate: terre
       .filter((voce) => voce.carta.terra?.entraGirata === true)
       .reduce((somma, voce) => somma + voce.copie, 0),
@@ -318,8 +329,18 @@ function scegliTerre(
   numeroTerre: number,
   carteConTag: ReadonlyMap<Tag, readonly CopieDiCarta[]>,
   budget: number | null,
-): { terre: CopieDiCarta[]; rinunceDelBudget: RinunciaDelBudget[] } {
-  const niente = { terre: [] as CopieDiCarta[], rinunceDelBudget: [] as RinunciaDelBudget[] };
+): {
+  terre: CopieDiCarta[];
+  rinunceDelBudget: RinunciaDelBudget[];
+  terreDiUtilita: number;
+  terreSenzaMana: number;
+} {
+  const niente = {
+    terre: [] as CopieDiCarta[],
+    rinunceDelBudget: [] as RinunciaDelBudget[],
+    terreDiUtilita: 0,
+    terreSenzaMana: 0,
+  };
   if (numeroTerre <= 0) return niente;
 
   const base = new Map<ColoreMana, Carta>();
@@ -400,6 +421,12 @@ function scegliTerre(
   //    e non un caso. Il budget è dichiarato e **non** dipende dai colori, se no
   //    un mazzo monocolore non ne vedrebbe mai una.
   const presi = new Set(scelte.map((voce) => voce.carta.nome));
+  /**
+   * I nomi che **questo passo** aggiunge, e da cui si legge poi il numero
+   * dichiarato. Sono disgiunti da quelli del passo dei colori (`presi` li
+   * esclude) e dalle terre base del passo finale, che un tag non ce l'hanno.
+   */
+  const nomiDiUtilita = new Set<string>();
   const tettoUtilita = Math.max(
     0,
     Math.min(TERRE_DI_UTILITA_MASSIME, restanti - perRiempire.length),
@@ -435,6 +462,7 @@ function scegliTerre(
       );
       if (quante <= 0) continue;
       scelte.push({ carta, copie: quante });
+      nomiDiUtilita.add(carta.nome);
       messe += quante;
       restanti -= quante;
       if (faMana(carta) === 0) senzaMana += quante;
@@ -450,10 +478,29 @@ function scegliTerre(
 
   const sceso = scendiNelBudget(scelte, restanti, budget, basi);
 
+  /** Le copie del passo 2 **sopravvissute** al budget: da qui i due numeri. */
+  const dellUtilita = sceso.scelte.filter((voce) => nomiDiUtilita.has(voce.carta.nome));
+
   // 4. Il resto in terre base.
   return {
     terre: [...sceso.scelte, ...basi(sceso.restanti)],
     rinunceDelBudget: sceso.rinunceDelBudget,
+    // Le copie del passo 2 che sono **sopravvissute** al budget. Si guardano i
+    // nomi che quel passo ha dichiarato e non il predicato: rifare il predicato
+    // su tutte le terre scelte conterebbe come terra di utilità una doppia
+    // presa al passo 1 per i suoi colori, che per caso porta anche un tag — e
+    // il numero dichiarato supererebbe il proprio tetto (ticket 17). Si legge da
+    // `sceso.scelte` e non da `scelte` perché il budget può averne tolte.
+    terreDiUtilita: dellUtilita.reduce((somma, voce) => somma + voce.copie, 0),
+    // «Di quelle»: il fratello si legge dalla **stessa** provenienza, e non dal
+    // predicato su tutte le terre. Oggi i due conti coincidono lo stesso, ma per
+    // un invariante che nessuno dichiara — una terra che non fa mana non può
+    // entrare dal passo dei colori, che ne chiede due, né dal passo delle basi,
+    // che ne fanno una. Allentato quel predicato, «di quelle» direbbe il falso
+    // senza che niente lo fermi.
+    terreSenzaMana: dellUtilita
+      .filter((voce) => faMana(voce.carta) === 0)
+      .reduce((somma, voce) => somma + voce.copie, 0),
   };
 }
 

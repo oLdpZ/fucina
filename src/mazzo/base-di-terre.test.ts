@@ -398,6 +398,36 @@ describe("le terre di utilità: quelle che fanno qualcosa invece dei colori", ()
     expect(senza.terreSenzaMana).toBe(0);
   });
 
+  it("una terra presa per i suoi colori non finisce nel conto delle terre di utilità", () => {
+    // Il conto si faceva rifacendo il predicato su **tutte** le terre scelte,
+    // invece di dire quel che il passo dell'utilità aveva aggiunto. Una terra
+    // doppia presa al primo passo per i suoi colori, che per caso porta anche
+    // un tag, ci finiva dentro: il numero dichiarato poteva superare il proprio
+    // tetto, e non era la scelta ma una misura fatta a valle della scelta.
+    //
+    // Col pool di adesso i due conti coincidono, perché nessuna terra doppia
+    // porta un tag. Qui gliene si dà uno, ed è il caso che il ticket descrive.
+    const doppieConTag = TERRE_FINTE.map((carta) =>
+      carta.terra !== null && carta.terra.coloriProdotti.length > 1
+        ? { ...carta, tag: ["potenzia"] as Tag[] }
+        : carta,
+    );
+    const base = analizzaBaseDiTerre(
+      [{ carta: magia("Ingrossatore", "{B}{R}", 2, ["potenzia"]), copie: 38 }],
+      doppieConTag,
+      opzioni,
+    );
+
+    // Le doppie ci sono davvero: se no il caso non si starebbe provando.
+    const copieDoppie = base.terre
+      .filter((voce) => (voce.carta.terra?.coloriProdotti.length ?? 0) > 1)
+      .reduce((somma, voce) => somma + voce.copie, 0);
+    expect(copieDoppie).toBeGreaterThan(TERRE_DI_UTILITA_MASSIME);
+
+    // E non sono terre di utilità: il mazzo non le ha prese per quel che fanno.
+    expect(base.terreDiUtilita).toBeLessThanOrEqual(TERRE_DI_UTILITA_MASSIME);
+  });
+
   it("le terre che non fanno mana hanno un tetto più stretto delle altre", () => {
     const base = analizzaBaseDiTerre(
       [{ carta: magia("Parapetto", "{1}{W}", 2, ["previene-il-danno"]), copie: 38 }],
