@@ -613,6 +613,47 @@ describe("il tetto in vigore sul mazzo in mano", () => {
     expect(frase).not.toMatch(/la base si rifà/u);
   });
 
+  it("con incontabili e col suo tema dice comunque che si levano insieme", () => {
+    // Il tasto accanto stacca tutti e due i vincoli: se la riga tace, l'utente
+    // preme «Rifà le terre coi vincoli di adesso» senza sapere che si porta via
+    // anche il tema. È la cifra invisibile che i ticket 21 e 31 esistono per
+    // togliere, e non torna dentro per via di un prezzo mancante.
+    const frase = frasePerIlTettoInVigore({
+      tetto: 30,
+      conIlSuoTema: true,
+      incontabili: ["Serra Angel"],
+    });
+
+    expect(frase).toContain("si levano insieme");
+    // «Il tema vale ancora» è vero e va detto: a cadere è la promessa sul
+    // **tetto**, che è l'unica delle due che poggi su un prezzo.
+    expect(frase).not.toContain("il tetto vale ancora");
+  });
+
+  it("non elenca un mazzo intero di nomi quando il pool perde un'edizione", () => {
+    // Il pool si rigenera da solo, e una rigenerazione che perde i listini di
+    // un'edizione intera farebbe un paragrafo lungo quanto il mazzo: una riga
+    // che non si legge non avvisa nessuno.
+    const molte = Array.from({ length: 12 }, (_, quale) => `Carta ${quale + 1}`);
+    const frase = frasePerIlTettoInVigore({ tetto: 30, incontabili: molte });
+
+    expect(frase).toContain("Carta 1");
+    expect(frase).not.toContain("Carta 12");
+    // Quante ne restano si dice: un elenco troncato in silenzio è un elenco che
+    // mente sul suo numero.
+    expect(frase).toMatch(/altre 8 carte/u);
+  });
+
+  it("su quel che esce ritira la promessa quando il mazzo non si sa contare", () => {
+    // Il ticket 38 sul foglio per l'arbitro, che è dove la promessa costa di
+    // più: è la lista che esce dal negozio con un numero sotto.
+    const frase = frasePerIlTettoSuQuelCheEsce({ tetto: 30, incontabili: ["Serra Angel"] });
+
+    expect(frase).not.toMatch(/stanno dentro il tetto/u);
+    expect(frase).toContain("Serra Angel");
+    expect(frase).toContain("30,00 €");
+  });
+
   it("su quel che esce dice la cifra e dove si leva", () => {
     const frase = frasePerIlTettoSuQuelCheEsce({ tetto: 30 });
     expect(frase).toContain("30,00 €");
@@ -626,7 +667,7 @@ describe("il tetto in vigore sul mazzo in mano", () => {
     // non sa raggiungere.
     const frase = frasePerIlTettoInVigore({ tetto: 30, incontabili: ["Serra Angel"] });
 
-    expect(frase).not.toContain("vale ancora");
+    expect(frase).not.toContain("il tetto vale ancora");
     expect(frase).not.toMatch(/scelte per starci dentro/u);
   });
 

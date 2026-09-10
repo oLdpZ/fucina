@@ -143,6 +143,10 @@ export function Mazzo({
    */
   const budget = useMemo(() => budgetPerLeTerre(mazzo, tettoDiSpesa), [mazzo, tettoDiSpesa]);
   const euroPerLeTerre = budget?.euro ?? null;
+  const incontabili = useMemo(
+    () => (budget?.incontabili ?? []).map((carta) => carta.nome),
+    [budget],
+  );
   /**
    * Di quanto il tema di questo mazzo e quello dei Vincoli differiscono sulle
    * terre: i numeri della frase, e la risposta a **se dirla**.
@@ -242,7 +246,7 @@ export function Mazzo({
                 {frasePerIlTettoInVigore({
                   tetto: tettoDiSpesa,
                   conIlSuoTema: temaDelMazzo !== null,
-                  incontabili: (budget?.incontabili ?? []).map((carta) => carta.nome),
+                  incontabili,
                 })}
               </p>
             ) : null}
@@ -271,7 +275,15 @@ export function Mazzo({
           </div>
         ) : null}
 
-        {base.rinunceDelBudget.length > 0 && tettoDiSpesa !== null ? (
+        {/*
+          Le rinunce si dicono solo quando l'app sa contare il mazzo (ticket 38).
+          Sono un conto fatto **sul budget**, e con una carta incontabile quel
+          budget è più largo del vero: gli euro rinunciati sarebbero sottostimati
+          e, peggio, la riga direbbe «per stare dentro 30,00 € la base ha
+          lasciato fuori…» due righe sotto quella che ha appena spiegato che
+          dentro quella cifra non si può promettere niente.
+        */}
+        {base.rinunceDelBudget.length > 0 && tettoDiSpesa !== null && incontabili.length === 0 ? (
           <p class="spiegazione avviso-budget-terre">
             {frasePerLeRinunceDelBudget({
               tetto: tettoDiSpesa,

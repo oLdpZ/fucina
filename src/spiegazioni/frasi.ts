@@ -443,6 +443,23 @@ export type GrezziDelTettoInVigore = {
  * riga: dice la cifra con cui il mazzo è nato, nomina la carta che non si sa
  * contare, e non promette niente sulle terre.
  */
+/**
+ * Quante carte incontabili si nominano prima di passare a contarle.
+ *
+ * Il pool si rigenera da solo, e una rigenerazione che perde i listini di
+ * un'edizione intera darebbe un paragrafo lungo quanto il mazzo: una riga che
+ * non si legge non avvisa nessuno. Quattro nomi bastano a far capire di che
+ * carte si tratti; per il resto vale il numero, che è la misura del guasto.
+ */
+const NOMI_INCONTABILI_DA_DIRE = 4;
+
+/** «Serra Angel, Cleanse e altre 8 carte»: i nomi, e quante non ci stanno. */
+function incontabiliDette(nomi: readonly string[]): string {
+  if (nomi.length <= NOMI_INCONTABILI_DA_DIRE) return elenco(nomi);
+  const dette = nomi.slice(0, NOMI_INCONTABILI_DA_DIRE);
+  return elenco([...dette, `altre ${nomi.length - dette.length} carte`]);
+}
+
 export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string {
   // Il mazzo è ancora quello che il motore ha consegnato — le carte non sono
   // cambiate — ma il pool di oggi non lo sa più prezzare tutto, e allora la
@@ -450,18 +467,21 @@ export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string 
   // che non sa contare, e lascia all'utente le due strade che restano. Il nome
   // c'è perché senza il nome non si prende né l'una né l'altra, com'è per il no
   // del ticket 34.
-  //
-  // Della coda su `conIlSuoTema` qui non c'è traccia, e non è una svista: quella
-  // coda dice che cosa succede **togliendo** il tetto, e questa frase ha appena
-  // finito di dire che di questo mazzo non si sa il prezzo. Chi la legge ha
-  // davanti il tasto e la frase del tema accanto, che i suoi numeri ce li ha.
   if (grezzi.incontabili !== undefined && grezzi.incontabili.length > 0) {
     return (
       `Questo mazzo è stato costruito con un tetto di ${decimale(grezzi.tetto)} €, ` +
-      `ma oggi l’app non sa il prezzo di ${elenco(grezzi.incontabili)}: ` +
+      `ma oggi l’app non sa il prezzo di ${incontabiliDette(grezzi.incontabili)}: ` +
       "quanto costi davvero non si sa dire, e le terre qui sotto non si possono promettere " +
       "dentro quella cifra. Sono rimaste quelle con cui il mazzo è stato costruito: " +
-      "un listino sparito non è una ragione per riscriverti il mazzo."
+      "un listino sparito non è una ragione per riscriverti il mazzo. " +
+      // La coda sul tema resta anche qui, e non è un ripensamento: dice che cosa
+      // fa **il tasto**, non che cosa promette il tetto, e il tasto c'è lo
+      // stesso. Tacerla lascerebbe l'utente a premere «Rifà le terre coi
+      // vincoli di adesso» senza sapere che si porta via anche il tema, cioè
+      // rimetterebbe dentro la cifra invisibile dei ticket 21 e 31.
+      (grezzi.conIlSuoTema === true
+        ? "Anche il tema con cui è stato costruito vale ancora, e si levano insieme."
+        : "Togliendo il tetto, la base si rifà su tutte le terre che il tema permette.")
     );
   }
 
@@ -584,6 +604,19 @@ export function frasePerIlTemaSuQuelCheEsce(grezzi: GrezziDelTemaInVigore): stri
  * ricordarsi di cambiarla.
  */
 export function frasePerIlTettoSuQuelCheEsce(grezzi: GrezziDelTettoInVigore): string {
+  // Il ticket 38 qui **più** che nella schermata del mazzo: queste sono le liste
+  // che escono di casa. Un foglio consegnato all'arbitro con sotto una cifra che
+  // non tiene è il danno del ticket 34 arrivato fino in fondo, e la cifra non
+  // tiene appena una carta del mazzo il pool di oggi non sa prezzarla.
+  if (grezzi.incontabili !== undefined && grezzi.incontabili.length > 0) {
+    return (
+      `Queste liste vengono da un mazzo costruito con un tetto di ${decimale(grezzi.tetto)} €, ` +
+      `ma oggi l’app non sa il prezzo di ${incontabiliDette(grezzi.incontabili)}: ` +
+      "quanto costino davvero non si sa dire, e le terre qui elencate non si possono " +
+      "promettere dentro quella cifra. Sono le stesse che vedi nella schermata «Mazzo»."
+    );
+  }
+
   return (
     `Le terre di queste liste stanno dentro il tetto di ${decimale(grezzi.tetto)} € ` +
     // «È stato costruito» e non «l'ha costruito il motore»: da quando un mazzo

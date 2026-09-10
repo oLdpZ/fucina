@@ -184,12 +184,22 @@ export function MazziSalvati({
     () => terreCandidate(pool.carte, tema, tettoDiSpesa),
     [pool, tema, tettoDiSpesa],
   );
-  // Solo gli euro: questa schermata non dichiara nessun tetto — la riga che il
-  // ticket 38 corregge sta nella schermata del mazzo — e la lista per l'arbitro
-  // vuole le stesse terre che il giocatore ha in mano, incontabili o no.
-  const budget = useMemo(
-    () => budgetPerLeTerre(mazzo, tettoDiSpesa)?.euro ?? null,
-    [mazzo, tettoDiSpesa],
+  /**
+   * Quel che resta alla base dopo le carte, e le carte che il pool di oggi non
+   * sa prezzare (ticket 38).
+   *
+   * Gli euro vanno alla base **anche** quando qualcuna è incontabile: queste
+   * liste devono elencare le stesse terre che il giocatore ha in mano, o si
+   * torna al guasto del ticket 19. Le incontabili vanno invece alla frase qui
+   * sotto, che senza di loro prometterebbe che le terre stanno dentro una cifra
+   * che non si sa raggiungere — e lo prometterebbe sul **foglio per l'arbitro**,
+   * cioè dove la promessa costa di più.
+   */
+  const budget = useMemo(() => budgetPerLeTerre(mazzo, tettoDiSpesa), [mazzo, tettoDiSpesa]);
+  const euroPerLeTerre = budget?.euro ?? null;
+  const incontabili = useMemo(
+    () => (budget?.incontabili ?? []).map((carta) => carta.nome),
+    [budget],
   );
   /**
    * Lo stesso confronto della schermata del mazzo, con **la stessa funzione**:
@@ -207,13 +217,16 @@ export function MazziSalvati({
     // giocatore le terre che avrà in mano, e il foglio per l'arbitro deve
     // dirne le stesse. Con `null` qui, un mazzo costruito sotto un tetto usciva
     // sul foglio con le terre che il tetto gli aveva **negato**.
-    const base = analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute, budget });
+    const base = analizzaBaseDiTerre(mazzo, terreDelPool, {
+      terreVolute,
+      budget: euroPerLeTerre,
+    });
     return listaDaTorneo(
       base.righe.map((riga) => ({ nome: riga.carta.nome, copie: riga.copie })),
       base.terre.map((voce) => ({ nome: voce.carta.nome, copie: voce.copie })),
       formato,
     );
-  }, [mazzo, terreDelPool, terreVolute, budget, formato]);
+  }, [mazzo, terreDelPool, terreVolute, euroPerLeTerre, formato]);
 
   const salva = async () => {
     // L'orologio si legge qui: è adesso che l'utente sta salvando.
@@ -373,7 +386,7 @@ export function MazziSalvati({
           */}
           {tettoDiSpesa !== null ? (
             <p class="nota vincoli-in-vigore">
-              {frasePerIlTettoSuQuelCheEsce({ tetto: tettoDiSpesa })}
+              {frasePerIlTettoSuQuelCheEsce({ tetto: tettoDiSpesa, incontabili })}
             </p>
           ) : null}
           {/*

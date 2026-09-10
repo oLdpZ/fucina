@@ -187,7 +187,10 @@ describe("un mazzo salvato sotto un tetto, riaperto dopo che una carta ha perso 
       incontabili: (budget?.incontabili ?? []).map((carta) => carta.nome),
     });
 
-    expect(frase).not.toContain("vale ancora");
+    // Il tetto no; il tema di questo mazzo sì, e la sua coda lo dice: a cadere
+    // è la sola promessa che poggia su un prezzo.
+    expect(frase).not.toContain("il tetto vale ancora");
+    expect(frase).not.toMatch(/scelte per starci dentro/u);
     expect(frase).toContain("Goblin");
     expect(frase).toContain("30,00 €");
   });
