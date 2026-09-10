@@ -397,6 +397,16 @@ export type GrezziDelTettoInVigore = {
    * e lascia dirlo a quella accanto, che quel tema lo conta.
    */
   conIlSuoTema?: boolean;
+  /**
+   * I nomi delle carte del mazzo di cui l'app oggi non sa il prezzo
+   * (`BudgetDelleTerre.incontabili`, ticket 38). Vuoto o assente è il caso
+   * normale, e la frase è quella di sempre.
+   *
+   * Cambia **la frase intera** e non una coda, perché quel che cade è la
+   * promessa: non si può dire che le terre sono scelte per stare dentro una
+   * cifra quando la cifra da cui si parte non si sa raggiungere.
+   */
+  incontabili?: readonly string[];
 };
 
 /**
@@ -412,8 +422,49 @@ export type GrezziDelTettoInVigore = {
  * tolto qualcosa: questa parla **ogni volta che un tetto c'è**, anche quando
  * non è costato niente. Un vincolo in vigore va dichiarato mentre vale, non
  * quando morde.
+ *
+ * ## Quando il mazzo non si sa più contare (ticket 38)
+ *
+ * Un mazzo salvato si riapre col pool di oggi, e il pool si rigenera da solo:
+ * una carta può aver perso il listino da quando è stato costruito — delistata
+ * la copia più economica che ce l'aveva, e nessun'altra copia ammessa ne ha.
+ * Le carte non sono cambiate, quindi il tetto è ancora in vigore
+ * (`in-vigore.ts`) e va detto; ma quel che resta alle terre non si sa più, e
+ * la promessa «sono scelte per starci dentro» diventa una cosa che nessuno può
+ * mantenere. È lo stesso danno del ticket 34 — una lista che esce dal negozio
+ * con un numero sotto che non tiene — sulla strada del mazzo riaperto.
+ *
+ * Deciso: **cade la promessa, non il mazzo**. Là c'era un mazzo da non
+ * consegnare; qui c'è un mazzo che esiste già e che l'utente ha in mano, e
+ * rifiutarsi di mostrarlo non è fra le risposte oneste. Non si fa sparire la
+ * carta, non si rifà la base, e i vincoli non decadono — farli decadere
+ * porterebbe via anche il tema, che si stacca insieme al tetto, e riempirebbe
+ * di paludi un mazzo nato «niente nero» per via di un prezzo mancante. Cade la
+ * riga: dice la cifra con cui il mazzo è nato, nomina la carta che non si sa
+ * contare, e non promette niente sulle terre.
  */
 export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string {
+  // Il mazzo è ancora quello che il motore ha consegnato — le carte non sono
+  // cambiate — ma il pool di oggi non lo sa più prezzare tutto, e allora la
+  // riga non promette: dice la cifra con cui il mazzo è nato, nomina la carta
+  // che non sa contare, e lascia all'utente le due strade che restano. Il nome
+  // c'è perché senza il nome non si prende né l'una né l'altra, com'è per il no
+  // del ticket 34.
+  //
+  // Della coda su `conIlSuoTema` qui non c'è traccia, e non è una svista: quella
+  // coda dice che cosa succede **togliendo** il tetto, e questa frase ha appena
+  // finito di dire che di questo mazzo non si sa il prezzo. Chi la legge ha
+  // davanti il tasto e la frase del tema accanto, che i suoi numeri ce li ha.
+  if (grezzi.incontabili !== undefined && grezzi.incontabili.length > 0) {
+    return (
+      `Questo mazzo è stato costruito con un tetto di ${decimale(grezzi.tetto)} €, ` +
+      `ma oggi l’app non sa il prezzo di ${elenco(grezzi.incontabili)}: ` +
+      "quanto costi davvero non si sa dire, e le terre qui sotto non si possono promettere " +
+      "dentro quella cifra. Sono rimaste quelle con cui il mazzo è stato costruito: " +
+      "un listino sparito non è una ragione per riscriverti il mazzo."
+    );
+  }
+
   return (
     `Questo mazzo è stato costruito con un tetto di ${decimale(grezzi.tetto)} €, ` +
     "e il tetto vale ancora: le terre qui sotto sono scelte per starci dentro. " +

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { temaInVigore, tettoInVigore, vincoliDiUnMazzoRiaperto } from "./in-vigore.js";
 import { interpretaMazzoSalvato, type MazzoSalvato } from "./salvato.js";
-import { terreCandidate } from "./terre-candidate.js";
+import { budgetPerLeTerre, terreCandidate } from "./terre-candidate.js";
+import type { CopieDiCarta } from "./base-di-terre.js";
+import { frasePerIlTettoInVigore } from "../spiegazioni/frasi.js";
 import { leggiScambio, scriviScambio } from "./scambio.js";
 import { FILTRO_TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import type { Carta } from "../dati/pool.js";
@@ -111,5 +113,94 @@ describe("un mazzo salvato «niente nero», riaperto dopo aver cambiato tema", (
     expect(consegnato).toBeNull();
     const temaDelMazzo = temaInVigore(consegnato, copie) ?? TUTTO;
     expect(terreCandidate(POOL, temaDelMazzo, null).map((c) => c.nome)).toEqual(["Swamp"]);
+  });
+});
+
+/**
+ * Ticket 38, e di nuovo dalla porta da cui entra l'utente: un mazzo salvato
+ * sotto un tetto, e un pool di oggi in cui una delle sue carte ha perso il
+ * listino — la copia più economica che l'aveva è stata delistata, e nessun'altra
+ * copia ammessa ne ha.
+ *
+ * Il ticket 34 ha chiuso questa strada dentro la ricerca: col tetto acceso, un
+ * mazzo che l'app non sa contare tutto non si consegna. Qui nessuna ricerca gira
+ * più, e il mazzo **esiste già**: rifiutarsi di mostrarlo non è fra le risposte
+ * oneste, e riscrivergli le terre nemmeno — è il mazzo dell'utente, e un listino
+ * sparito da Cardmarket non è una buona ragione per cambiarglielo sotto le mani.
+ *
+ * Quel che cade è dunque **la promessa**, non il mazzo: i vincoli restano in
+ * vigore, la base resta quella, e la riga smette di dire che le terre sono
+ * scelte per starci dentro — dice invece quale carta non si sa contare.
+ *
+ * Sta qui, e non in un test di componente, per la ragione di sempre: il guasto
+ * vive nella cucitura fra i pezzi. `in-vigore.ts` sa che il tetto vale ancora
+ * ma non sa che il mazzo sia diventato incontabile, `terre-candidate.ts` fa la
+ * sottrazione ma non sa chi gliela chieda, e `frasi.ts` scrive la riga senza
+ * sapere su che mazzo finisce.
+ */
+describe("un mazzo salvato sotto un tetto, riaperto dopo che una carta ha perso il listino", () => {
+  const SALVATO_A_TRENTA: MazzoSalvato = {
+    ...SALVATO_SENZA_NERO,
+    id: "tre",
+    nome: "Trenta euro",
+    richiesta: { origine: "a-mano", terreVolute: 22, tema: SENZA_NERO, tetto: 30 },
+  };
+
+  /** Il pool di oggi: il Goblin non ha più nessuna copia ammessa con listino. */
+  const OGGI: readonly Carta[] = POOL.map((carta) =>
+    carta.nome === "Goblin"
+      ? ({ ...carta, prezzo: { euro: null, aggiornatoIl: "", stampa: null } } as Carta)
+      : ({ ...carta, prezzo: { euro: 1, aggiornatoIl: "", stampa: null } } as Carta),
+  );
+
+  /** Quel che la schermata ha in mano: le carte salvate, prezzate col pool di oggi. */
+  const inMano = (salvato: MazzoSalvato): CopieDiCarta[] =>
+    salvato.carte.map((voce) => ({
+      carta: OGGI.find((carta) => carta.nome === voce.nome) as Carta,
+      copie: voce.copie,
+    }));
+
+  it("il tetto è ancora in vigore, perché il mazzo è ancora quello", () => {
+    // Non è una svista da correggere: le carte non sono cambiate, e il tetto
+    // viaggia col mazzo. È il presupposto del ticket, non il suo difetto.
+    const { copie, consegnato } = riapri(interpretaMazzoSalvato(structuredClone(SALVATO_A_TRENTA)));
+    expect(tettoInVigore(consegnato, copie)).toBe(30);
+  });
+
+  it("il budget delle terre nomina la carta che non si sa contare", () => {
+    const letto = interpretaMazzoSalvato(structuredClone(SALVATO_A_TRENTA));
+    const { copie, consegnato } = riapri(letto);
+    const budget = budgetPerLeTerre(inMano(letto), tettoInVigore(consegnato, copie));
+
+    expect(budget?.incontabili.map((carta) => carta.nome)).toEqual(["Goblin"]);
+  });
+
+  it("e la schermata non dichiara più che il tetto vale ancora", () => {
+    const letto = interpretaMazzoSalvato(structuredClone(SALVATO_A_TRENTA));
+    const { copie, consegnato } = riapri(letto);
+    const tetto = tettoInVigore(consegnato, copie);
+    const budget = budgetPerLeTerre(inMano(letto), tetto);
+
+    const frase = frasePerIlTettoInVigore({
+      tetto: tetto as number,
+      conIlSuoTema: temaInVigore(consegnato, copie) !== null,
+      incontabili: (budget?.incontabili ?? []).map((carta) => carta.nome),
+    });
+
+    expect(frase).not.toContain("vale ancora");
+    expect(frase).toContain("Goblin");
+    expect(frase).toContain("30,00 €");
+  });
+
+  it("le terre del mazzo restano quelle: la carta non sparisce e la base non si rifà", () => {
+    // Il «da non fare» del ticket, provato: il mazzo salvato resta intero, e il
+    // tema con cui è nato continua a scegliergli le terre.
+    const letto = interpretaMazzoSalvato(structuredClone(SALVATO_A_TRENTA));
+    const { copie, consegnato } = riapri(letto);
+
+    expect(inMano(letto).map((voce) => voce.carta.nome)).toEqual(["Goblin"]);
+    const temaDelMazzo = temaInVigore(consegnato, copie) ?? TUTTO;
+    const terre = terreCandidate(OGGI, temaDelMazzo, tettoInVigore(consegnato, copie));
+    expect(terre.map((c) => c.nome)).toEqual(["Mountain"]);
   });
 });

@@ -129,13 +129,20 @@ export function Mazzo({
     [pool, tema, tettoDiSpesa],
   );
   /**
-   * Quel che resta alla base dopo le carte, quando un tetto c'è.
+   * Quel che resta alla base dopo le carte, quando un tetto c'è — e le carte
+   * che il pool di oggi non sa prezzare, se ce ne sono (ticket 38).
    *
    * Si ricava qui e non si eredita: la base che si mostra dev'essere la base
    * che il mazzo può permettersi **con queste carte**, o la schermata
    * elencherebbe terre che il conto in fondo non copre.
+   *
+   * Gli euro si passano alla base **anche** quando qualche carta è incontabile,
+   * e non è una svista: il mazzo è dell'utente e le sue terre restano quelle
+   * che aveva. Quel che cambia è la riga qui sotto, che smette di promettere di
+   * starci dentro — la ragione per esteso sta in `budgetPerLeTerre`.
    */
   const budget = useMemo(() => budgetPerLeTerre(mazzo, tettoDiSpesa), [mazzo, tettoDiSpesa]);
+  const euroPerLeTerre = budget?.euro ?? null;
   /**
    * Di quanto il tema di questo mazzo e quello dei Vincoli differiscono sulle
    * terre: i numeri della frase, e la risposta a **se dirla**.
@@ -149,8 +156,8 @@ export function Mazzo({
     [pool, tema, temaDeiVincoli],
   );
   const base = useMemo(
-    () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute, budget }),
-    [mazzo, terreDelPool, terreVolute, budget],
+    () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute, budget: euroPerLeTerre }),
+    [mazzo, terreDelPool, terreVolute, euroPerLeTerre],
   );
 
   // Carte e terre in un elenco solo, ricavato una volta: la lista della spesa
@@ -235,6 +242,7 @@ export function Mazzo({
                 {frasePerIlTettoInVigore({
                   tetto: tettoDiSpesa,
                   conIlSuoTema: temaDelMazzo !== null,
+                  incontabili: (budget?.incontabili ?? []).map((carta) => carta.nome),
                 })}
               </p>
             ) : null}

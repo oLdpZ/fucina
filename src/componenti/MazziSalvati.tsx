@@ -184,7 +184,13 @@ export function MazziSalvati({
     () => terreCandidate(pool.carte, tema, tettoDiSpesa),
     [pool, tema, tettoDiSpesa],
   );
-  const budget = useMemo(() => budgetPerLeTerre(mazzo, tettoDiSpesa), [mazzo, tettoDiSpesa]);
+  // Solo gli euro: questa schermata non dichiara nessun tetto — la riga che il
+  // ticket 38 corregge sta nella schermata del mazzo — e la lista per l'arbitro
+  // vuole le stesse terre che il giocatore ha in mano, incontabili o no.
+  const budget = useMemo(
+    () => budgetPerLeTerre(mazzo, tettoDiSpesa)?.euro ?? null,
+    [mazzo, tettoDiSpesa],
+  );
   /**
    * Lo stesso confronto della schermata del mazzo, con **la stessa funzione**:
    * le due schermate devono dire di queste terre le stesse cose, e riscriverlo

@@ -619,6 +619,36 @@ describe("il tetto in vigore sul mazzo in mano", () => {
     expect(frase).toContain("Mazzo");
   });
 
+  it("sopra un mazzo che non sa contare non dice che il tetto vale ancora", () => {
+    // Il ticket 38. Il mazzo esiste e l'utente ce l'ha in mano: non si rifiuta
+    // di mostrarlo, e non gli si riscrivono le terre. Quel che cade è la
+    // promessa — l'app non può dire che le terre stanno dentro una cifra che
+    // non sa raggiungere.
+    const frase = frasePerIlTettoInVigore({ tetto: 30, incontabili: ["Serra Angel"] });
+
+    expect(frase).not.toContain("vale ancora");
+    expect(frase).not.toMatch(/scelte per starci dentro/u);
+  });
+
+  it("nomina la carta che non sa contare, perché è da lì che si riparte", () => {
+    // Senza il nome non si prende nessuna delle strade: né togliere la carta,
+    // né levare il tetto. È la stessa ragione per cui il no del ticket 34
+    // nomina i pezzi della combo.
+    const frase = frasePerIlTettoInVigore({ tetto: 30, incontabili: ["Serra Angel", "Cleanse"] });
+
+    expect(frase).toContain("Serra Angel");
+    expect(frase).toContain("Cleanse");
+    // La cifra resta: è ancora il tetto con cui il mazzo è nato, ed è il fatto
+    // che rende leggibile la base che si sta guardando.
+    expect(frase).toContain("30,00 €");
+  });
+
+  it("un elenco vuoto è il caso normale, e la frase è quella di prima", () => {
+    expect(frasePerIlTettoInVigore({ tetto: 30, incontabili: [] })).toBe(
+      frasePerIlTettoInVigore({ tetto: 30 }),
+    );
+  });
+
   it("il tetto a zero si scrive come tutti gli altri", () => {
     // Zero euro è una richiesta legittima — «solo carte senza prezzo» — e una
     // frase che se lo mangiasse lascerebbe l'utente senza sapere perché la
