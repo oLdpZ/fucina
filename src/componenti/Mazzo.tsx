@@ -32,7 +32,7 @@ import type { Tema } from "../tema/tema.js";
 import { CostoDiMana } from "./CostoDiMana.js";
 import { ListaDellaSpesa } from "./ListaDellaSpesa.js";
 import { budgetPerLeTerre, terreCandidate } from "../mazzo/terre-candidate.js";
-import { frasePerLeRinunceDelBudget } from "../spiegazioni/frasi.js";
+import { frasePerIlTettoInVigore, frasePerLeRinunceDelBudget } from "../spiegazioni/frasi.js";
 
 const PERCENTUALE = new Intl.NumberFormat("it-IT", {
   style: "percent",
@@ -57,6 +57,7 @@ export function Mazzo({
   terreVolute,
   cambiaTerre,
   tettoDiSpesa,
+  togliIlTetto,
   apri,
 }: {
   pool: Pool;
@@ -68,6 +69,8 @@ export function Mazzo({
   cambiaTerre: (quante: number | null) => void;
   /** Il tetto di spesa, `null` quando è spento: vale anche sulle terre. */
   tettoDiSpesa: number | null;
+  /** Levare il tetto a questo mazzo, senza toccarne le carte (ticket 21). */
+  togliIlTetto: () => void;
   apri: (carta: Carta) => void;
 }) {
   // Le esclusioni del tema valgono anche per le terre, e valgono **qui** come
@@ -164,6 +167,28 @@ export function Mazzo({
             " Nessuna di queste terre entra girata."
           )}
         </p>
+
+        {/*
+          Il tetto in vigore si **dichiara**, e si dichiara sempre che ci sia
+          (ticket 21): finché non lo diceva nessuno, la schermata filtrava le
+          terre e ne contava le copie con una cifra invisibile, e chi non se la
+          ricordava vedeva una base senza sapere perché fosse quella. Il tasto
+          accanto è quel che rende accettabile la regola severa che stacca il
+          tetto alla prima carta cambiata: chi lo vuole via lo dice qui.
+        */}
+        {tettoDiSpesa !== null ? (
+          <div class="tetto-in-vigore">
+            <p class="spiegazione">{frasePerIlTettoInVigore({ tetto: tettoDiSpesa })}</p>
+            {/*
+              Il tasto sta su una riga sua e non in mezzo alla frase: dentro il
+              testo sarebbe alto quanto una riga, e questa è un'app da telefono
+              (Q20) dove sotto il dito ci vogliono i suoi millimetri.
+            */}
+            <button type="button" class="togli-tetto" onClick={togliIlTetto}>
+              Togli il tetto
+            </button>
+          </div>
+        ) : null}
 
         {base.rinunceDelBudget.length > 0 && tettoDiSpesa !== null ? (
           <p class="spiegazione avviso-budget-terre">

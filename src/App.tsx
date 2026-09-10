@@ -25,6 +25,7 @@ import type { Carta, Pool } from "./dati/pool.js";
 import { FILTRI_VUOTI, type Filtri } from "./catalogo/filtri.js";
 import type { CopieDiCarta } from "./mazzo/base-di-terre.js";
 import { copieMassime } from "./mazzo/copie.js";
+import { tettoInVigore, type MazzoConsegnato } from "./mazzo/tetto-in-vigore.js";
 import { DIMENSIONE_MAZZO, TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
 import type { MazzoSalvato } from "./mazzo/salvato.js";
 import { usaMotore } from "./ricerca/usa-motore.js";
@@ -122,20 +123,26 @@ export function App() {
    */
   const [tettoDiSpesa, setTettoDiSpesa] = useState<number | null>(null);
   /**
-   * Il tetto con cui il mazzo **che si ha in mano** è stato costruito.
+   * Il mazzo che il motore ha consegnato: il tetto con cui l'ha costruito, e le
+   * carte che ci ha messo.
    *
-   * Non è `tettoDiSpesa`, ed è tutta la differenza: la schermata del mazzo si
-   * rifà la base di terre da sola, e per ritrovare quella che il motore aveva
-   * scelto deve filtrare le terre col tetto di **allora**. Col tetto di adesso,
-   * chi costruisce a 30 euro e poi spegne l'interruttore si vedrebbe cambiare
-   * la base e il conto sotto le mani, senza aver toccato il mazzo — e chi
-   * accende un tetto su un mazzo messo insieme a mano se ne vedrebbe sparire le
-   * terre senza listino, che nessuno gli aveva detto di togliere.
+   * Il tetto non è `tettoDiSpesa`, ed è tutta la differenza: la schermata del
+   * mazzo si rifà la base di terre da sola, e per ritrovare quella che il
+   * motore aveva scelto deve filtrare le terre col tetto di **allora**. Col
+   * tetto di adesso, chi costruisce a 30 euro e poi spegne l'interruttore si
+   * vedrebbe cambiare la base e il conto sotto le mani, senza aver toccato il
+   * mazzo — e chi accende un tetto su un mazzo messo insieme a mano se ne
+   * vedrebbe sparire le terre senza listino, che nessuno gli aveva detto di
+   * togliere.
+   *
+   * Accanto al tetto ci sono le carte perché il tetto **non vale per sempre**:
+   * vale finché il mazzo in mano è ancora quello consegnato, e per saperlo
+   * bisogna avere con che confrontarlo (`tettoInVigore`, ticket 21).
    *
    * `null` per i mazzi messi insieme a mano e per quelli riaperti dai salvati:
    * nessun tetto li ha prodotti, e nessuno se ne applica.
    */
-  const [tettoDelMazzoInMano, setTettoDelMazzoInMano] = useState<number | null>(null);
+  const [consegnato, setConsegnato] = useState<MazzoConsegnato | null>(null);
   /**
    * Gli orologi dell'avversario: i mazzi che l'utente dice di incontrare
    * ([ADR-0002](../docs/adr/0002-avversario-come-orologio-motore-di-regole-rimandato.md)).
@@ -285,6 +292,30 @@ export function App() {
 
   const carteNelMazzo = mazzo.reduce((somma, voce) => somma + voce.copie, 0);
 
+  /**
+   * Il tetto che vale **adesso** sul mazzo in mano: quello con cui il motore
+   * l'ha costruito finché è ancora quel mazzo, niente appena non lo è più
+   * (ticket 21).
+   *
+   * Si ricava e non si tiene: un tetto tenuto a parte sarebbe un secondo stato
+   * da mantenere allineato alle carte, e la volta che non lo fosse la schermata
+   * del mazzo filtrerebbe le terre con una cifra che non appartiene più a
+   * niente. Ricavarlo dalle carte toglie di mezzo quella possibilità.
+   */
+  const tettoDelMazzoInMano = useMemo(
+    () => tettoInVigore(consegnato, copiePerNome),
+    [consegnato, copiePerNome],
+  );
+
+  /**
+   * Levare il tetto al mazzo che si ha in mano, senza toccarne le carte: è la
+   * seconda metà del ticket 21, e la ragione per cui la prima può permettersi
+   * di essere severa. Chi vuole tenere il mazzo com'è e vedere la base rifatta
+   * su tutte le terre lo dice qui, invece di doverlo ottenere di sponda
+   * cambiando una carta e rimettendola.
+   */
+  const togliIlTetto = () => setConsegnato(null);
+
   const cambiaCopie = (carta: Carta, delta: number) => {
     setCopiePerNome((prima) => {
       const dopo = new Map(prima);
@@ -349,7 +380,7 @@ export function App() {
     // Un mazzo riaperto non porta con sé nessun tetto: la richiesta salvata non
     // lo scrive ancora (`mazzo/salvato.ts`), e inventarne uno vorrebbe dire
     // togliergli delle terre per una cifra che nessuno ha chiesto.
-    setTettoDelMazzoInMano(null);
+    setConsegnato(null);
     setAperto({ id: salvato.id, nome: salvato.nome, salvatoIl: salvato.salvatoIl });
     // Se c'è qualcosa da dire, si resta dove la frase si legge: portare
     // l'utente al mazzo con un messaggio alle spalle vorrebbe dire non dirglielo
@@ -372,12 +403,19 @@ export function App() {
     // esclusioni del tema, e con lo stesso numero ritrova la stessa base.
     // Portarsi dietro l'elenco vorrebbe dire avere due liste di terre che
     // possono divergere, e prima o poi divergerebbero.
-    setCopiePerNome(new Map(carte.map((voce) => [voce.carta.nome, voce.copie])));
+    const copie = new Map(carte.map((voce) => [voce.carta.nome, voce.copie]));
+    setCopiePerNome(copie);
     cambiaTerre(terre);
     // Il tetto viaggia col mazzo, non con l'interruttore: da qui in poi questo
     // mazzo è «quello costruito a tanti euro», e resta tale anche se
-    // l'interruttore cambia idea.
-    setTettoDelMazzoInMano(tetto);
+    // l'interruttore cambia idea. Resta tale finché resta **questo** mazzo:
+    // le carte partono di qui insieme al tetto proprio per poterlo dire
+    // (`tettoInVigore`).
+    // Le copie si fotografano in una mappa **sua**: quella dello stato può
+    // cambiare padrone, e una fotografia che fosse lo stesso oggetto
+    // confronterebbe il mazzo con se stesso — cioè non staccherebbe il tetto
+    // mai più, che è esattamente il difetto per cui esiste `tettoInVigore`.
+    setConsegnato(tetto === null ? null : { tetto, copie: new Map(copie) });
     setAperto(null);
     setPagina("mazzo");
   };
@@ -494,6 +532,7 @@ export function App() {
             terreVolute={terreVolute}
             cambiaTerre={cambiaTerre}
             tettoDiSpesa={tettoDelMazzoInMano}
+            togliIlTetto={togliIlTetto}
           />
         )}
       </main>
@@ -532,6 +571,7 @@ function SchermataMazzo({
   terreVolute,
   cambiaTerre,
   tettoDiSpesa,
+  togliIlTetto,
 }: {
   pool: Pool;
   tema: Tema;
@@ -542,6 +582,8 @@ function SchermataMazzo({
   cambiaTerre: (quante: number | null) => void;
   /** Il tetto di spesa, che vale anche sulle terre che la schermata sceglie. */
   tettoDiSpesa: number | null;
+  /** Levare il tetto a questo mazzo, senza toccarne le carte (ticket 21). */
+  togliIlTetto: () => void;
 }) {
   const [aperta, setAperta] = useState<Carta | null>(null);
 
@@ -564,6 +606,7 @@ function SchermataMazzo({
         terreVolute={terreVolute}
         cambiaTerre={cambiaTerre}
         tettoDiSpesa={tettoDiSpesa}
+        togliIlTetto={togliIlTetto}
         apri={setAperta}
       />
       {aperta ? (

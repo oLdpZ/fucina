@@ -44,6 +44,8 @@ import {
   type GrezziDelPasso,
   type GrezziDiPresenza,
   frasePerLeRinunceDelBudget,
+  frasePerIlTettoInVigore,
+  frasePerIlTettoSuQuelCheEsce,
 } from "./frasi.js";
 
 describe("come si scrivono i numeri", () => {
@@ -582,6 +584,33 @@ describe("quel che il tetto di spesa è costato alla base", () => {
     expect(frase).toContain("12,50 €");
     // Il totale c'è: è il numero che dice se valga la pena alzare il tetto.
     expect(frase).toContain("492,50 €");
+  });
+});
+
+describe("il tetto in vigore sul mazzo in mano", () => {
+  it("dice la cifra e dice che vale sulle terre", () => {
+    const frase = frasePerIlTettoInVigore({ tetto: 30 });
+    expect(frase).toContain("30,00 €");
+    expect(frase).toContain("terre");
+  });
+
+  it("non promette terre che il tema esclude", () => {
+    // Le esclusioni del tema valgono sulle terre prima del prezzo: a tetto
+    // levato la base si rifà su quel che il tema permette, non sul pool intero.
+    expect(frasePerIlTettoInVigore({ tetto: 30 })).toContain("che il tema permette");
+  });
+
+  it("su quel che esce dice la cifra e dove si leva", () => {
+    const frase = frasePerIlTettoSuQuelCheEsce({ tetto: 30 });
+    expect(frase).toContain("30,00 €");
+    expect(frase).toContain("Mazzo");
+  });
+
+  it("il tetto a zero si scrive come tutti gli altri", () => {
+    // Zero euro è una richiesta legittima — «solo carte senza prezzo» — e una
+    // frase che se lo mangiasse lascerebbe l'utente senza sapere perché la
+    // base sia quella che è.
+    expect(frasePerIlTettoInVigore({ tetto: 0 })).toContain("0,00 €");
   });
 });
 

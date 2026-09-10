@@ -444,6 +444,19 @@ mentre il prezzo è la stessa cosa per entrambe. Quel che il tetto le è costato
 l'app **lo dice**, con le copie e gli euro: una base peggiore senza una ragione
 scritta sarebbe l'app che decide di nascosto.
 
+Il tetto con cui un mazzo è stato costruito viaggia **col mazzo**, non con
+l'interruttore: chi costruisce a 30 € e poi spegne l'interruttore non deve
+vedersi cambiare la base sotto le mani. Ma vale finché il mazzo in mano è ancora
+quello che il motore ha consegnato: alla **prima copia cambiata a mano** il tetto
+si stacca da solo, perché quel mazzo non l'ha più costruito nessuno con quella
+cifra — e chi quella copia la rimette si ritrova il tetto, perché la domanda non
+è «ha toccato qualcosa» ma «quel che ha in mano è il mazzo che il motore gli ha
+dato». La regola è severa apposta — l'alternativa era una quota di carte cambiate,
+cioè un numero da tarare che nessun dato giustifica — e quel che la rende
+accettabile è che finché il tetto vale l'app **lo dice**, con un tasto accanto per
+levarlo senza toccare una carta. Un mazzo riaperto dai salvati e uno messo insieme
+a mano non hanno tetto: nessuno li ha prodotti, e nessuno se ne applica.
+
 Il budget come **secondo asse** della frontiera, accanto alla purezza, è la
 versione ambiziosa e sta fuori: vedi `spec.md`, «Out of Scope».
 

@@ -19,7 +19,10 @@ import { budgetPerLeTerre, terreCandidate } from "../mazzo/terre-candidate.js";
 import type { Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { leggiScambio, listaDaTorneo, scriviScambio } from "../mazzo/scambio.js";
-import { frasePerLeTerreScartate } from "../spiegazioni/frasi.js";
+import {
+  frasePerIlTettoSuQuelCheEsce,
+  frasePerLeTerreScartate,
+} from "../spiegazioni/frasi.js";
 import {
   nomePulito,
   NOME_MASSIMO,
@@ -322,6 +325,18 @@ export function MazziSalvati({
 
       {contenuto !== null ? (
         <>
+          {/*
+            Il tetto vale anche qui — le terre di queste liste sono filtrate
+            con la stessa cifra della schermata del mazzo — e qui va detto per
+            la stessa ragione (ticket 21): un foglio per l'arbitro con una base
+            decisa da un numero che nella pagina non compare è la stessa cifra
+            invisibile di prima, spostata di una schermata.
+          */}
+          {tettoDiSpesa !== null ? (
+            <p class="nota tetto-in-vigore">
+              {frasePerIlTettoSuQuelCheEsce({ tetto: tettoDiSpesa })}
+            </p>
+          ) : null}
           <Testo
             titolo="Il mazzo da mandare a un amico"
             spiegazione="Contiene la lista e la richiesta che l’ha prodotta: chi lo importa

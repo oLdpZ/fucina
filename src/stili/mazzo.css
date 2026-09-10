@@ -144,6 +144,28 @@
   max-width: var(--larghezza-colonna);
 }
 
+/* --- il tetto in vigore --- */
+
+/*
+  Stessa forma del «torna» della manopola, e per la stessa ragione: si legge
+  come una parola su cui si può premere, non come un comando che grida. Il
+  bersaglio sotto il dito è quello di tutti gli altri — 44px — perché questa è
+  un'app da telefono (Q20), e un tasto alto quanto una riga di testo lì non si
+  prende.
+*/
+.tetto-in-vigore .togli-tetto {
+  display: block;
+  padding: calc(var(--passo) * 2) 0;
+  min-height: 44px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: var(--testo-piccolo);
+  color: var(--accento);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* --- la manopola delle terre --- */
 
 .manopola-terre {

@@ -379,6 +379,59 @@ export function frasePerLeRinunceDelBudget(grezzi: GrezziDelleRinunce): string {
   );
 }
 
+/* --- Il tetto che vale sul mazzo che si ha in mano ------------------------- */
+
+export type GrezziDelTettoInVigore = {
+  /** Il tetto con cui il mazzo in mano è stato costruito, in euro. */
+  tetto: number;
+};
+
+/**
+ * Che un tetto di spesa sia ancora in vigore sul mazzo che si guarda
+ * (ticket 21).
+ *
+ * Esiste perché finora quel tetto non lo diceva nessuno: la schermata filtrava
+ * le terre e ne contava le copie con una cifra che non compariva da nessuna
+ * parte, e chi non se la ricordava vedeva una base senza sapere perché fosse
+ * quella. Metà del difetto era questa.
+ *
+ * Non è come `frasePerLeRinunceDelBudget`, che parla solo quando il tetto ha
+ * tolto qualcosa: questa parla **ogni volta che un tetto c'è**, anche quando
+ * non è costato niente. Un vincolo in vigore va dichiarato mentre vale, non
+ * quando morde.
+ */
+export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string {
+  return (
+    `Questo mazzo l'ha costruito il motore con un tetto di ${decimale(grezzi.tetto)} €, ` +
+    "e il tetto vale ancora: le terre qui sotto sono scelte per starci dentro. " +
+    // «Che il tema permette» e non «del pool»: le esclusioni del tema valgono
+    // sulle terre prima del prezzo, e chi ha detto «niente verde» non vedrebbe
+    // comparire una foresta nemmeno a tetto levato. Promettergliela sarebbe
+    // inventare, che è la cosa che questo file non fa.
+    "Togliendolo, la base si rifà su tutte le terre che il tema permette."
+  );
+}
+
+/**
+ * Che il tetto vale anche su quel che esce di qui: la lista per l'arbitro e il
+ * mazzo da mandare a un amico (ticket 21).
+ *
+ * La schermata dei salvati non sceglie le terre, ma le **scrive** — e le scrive
+ * filtrate col tetto, come la schermata del mazzo. Senza questa frase quel
+ * foglio uscirebbe con una base decisa da una cifra che nella pagina non
+ * compare da nessuna parte.
+ *
+ * Il tetto qui non si leva: si leva dove il mazzo si tocca, e la frase dice
+ * dove. Due tasti che fanno la stessa cosa in due pagine sono due posti in cui
+ * ricordarsi di cambiarla.
+ */
+export function frasePerIlTettoSuQuelCheEsce(grezzi: GrezziDelTettoInVigore): string {
+  return (
+    `Le terre di queste liste stanno dentro il tetto di ${decimale(grezzi.tetto)} € ` +
+    "con cui il motore ha costruito questo mazzo. Si leva dalla schermata «Mazzo»."
+  );
+}
+
 export function frasePerLeTerre(grezzi: GrezziDelleTerre): string {
   const parti = [
     grezzi.numeroTerre === grezzi.numeroTerreDallaCurva
