@@ -95,18 +95,61 @@ export function prezzoDiUnaCopia(carta: Carta): number | null {
 }
 
 /**
- * Quanto costa il mazzo: le copie di ogni carta che **un prezzo ce l'ha**.
+ * Quanto costa il mazzo, e **che cosa il conto non racconta**.
  *
- * Le altre non entrano nel conto e non lo azzerano: il numero che ne esce è un
- * minimo, e chi lo mostra lo dice.
+ * I due pezzi viaggiano insieme apposta, e sono un tipo e non un numero per una
+ * ragione precisa (ticket 34). Finché questa funzione restituiva il solo
+ * `minimo`, chi lo **mostrava** sapeva di dover dire «almeno» — il commento
+ * glielo diceva — ma chi lo **confrontava col tetto di spesa** non lo sapeva
+ * affatto, e non aveva modo di saperlo: un mazzo con dentro una carta senza
+ * listino la contava zero, stava dentro il tetto per finta, e si consegnava con
+ * un prezzo scritto sotto che nessuno poteva mantenere.
+ *
+ * Con `incontabili` accanto al numero quel confronto non si può più scrivere
+ * per sbaglio: chi vuole il minimo deve nominarlo, e nominandolo si ricorda che
+ * è un minimo.
  */
-export function prezzoDelMazzo(voci: readonly CopieDiCarta[]): number {
-  let totale = 0;
+export type ContoDelMazzo = {
+  /**
+   * Le copie di ogni carta che **un prezzo ce l'ha**. Le altre non entrano nel
+   * conto e non lo azzerano: è un **minimo** ogni volta che `incontabili` non è
+   * vuoto, e vale come totale solo quando lo è.
+   */
+  minimo: number;
+  /**
+   * Le carte di cui nessuna copia ammessa ha listino, senza ripetizioni e
+   * nell'ordine in cui stavano nel mazzo — e **solo quelle che ci stanno
+   * davvero**: una voce a zero copie non è una carta del mazzo. Vuoto è la notizia buona: il `minimo`
+   * è il prezzo, e non un pezzo di prezzo.
+   */
+  incontabili: readonly Carta[];
+};
+
+/** Vedi `ContoDelMazzo`: il minimo, e le carte che il minimo non racconta. */
+export function contoDelMazzo(voci: readonly CopieDiCarta[]): ContoDelMazzo {
+  let minimo = 0;
+  const incontabili: Carta[] = [];
+  const gia = new Set<string>();
   for (const voce of voci) {
+    // Zero copie non sono una carta nel mazzo, e non vanno nominate come tale.
+    // Non è un caso di scuola: `scendiNelBudget` prova a togliere una copia alla
+    // volta e chiama di qui con la voce già scesa a zero. Legge solo il
+    // `minimo`, dove uno zero non fa danno — ma `incontabili` è un elenco di
+    // carte che ci sono, e chi lo leggesse da lì rifiuterebbe un mazzo per una
+    // carta che non contiene.
+    if (voce.copie <= 0) continue;
     const euro = prezzoDiUnaCopia(voce.carta);
-    if (euro !== null) totale += euro * voce.copie;
+    if (euro !== null) {
+      minimo += euro * voce.copie;
+      continue;
+    }
+    // Lo stesso nome in due voci — le terre e le carte, un giorno che si
+    // incontrassero — è una carta sola da nominare, come in `listaDellaSpesa`.
+    if (gia.has(voce.carta.nome)) continue;
+    gia.add(voce.carta.nome);
+    incontabili.push(voce.carta);
   }
-  return totale;
+  return { minimo, incontabili };
 }
 
 /**

@@ -71,11 +71,11 @@ import type { Orologio } from "../avversario/orologio.js";
 import type { Carta } from "../dati/pool.js";
 import { terreDallaCurva, type BaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
-import { comprabile, prezzoDelMazzo, prezzoDiUnaCopia } from "../mazzo/spesa.js";
+import { comprabile, contoDelMazzo, prezzoDiUnaCopia } from "../mazzo/spesa.js";
 import { terreCandidate, terrePermesseDalTema } from "../mazzo/terre-candidate.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import { DIMENSIONE_MAZZO, TERRE_MASSIME, TERRE_MINIME } from "../mazzo/taratura.js";
-import { terre as terreDette } from "../spiegazioni/frasi.js";
+import { elenco, terre as terreDette } from "../spiegazioni/frasi.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
 import { POSTI_NON_TERRA } from "../tema/taratura.js";
 import {
@@ -119,8 +119,22 @@ export type Richiesta = {
    * domanda per cui l'app esiste smetterebbe di avere una risposta leggibile.
    * Lo accende chi sta per comprare.
    *
-   * Acceso, è un vincolo **duro**: nessun mazzo consegnato lo supera. Vedi
-   * `SpesaDellaRicerca` per quel che la ricerca racconta di sé quando lo fa.
+   * Acceso, è un vincolo **duro**: nessun mazzo consegnato lo supera. E perché
+   * quella frase voglia dire qualcosa, ne serve una seconda accanto — nessun
+   * mazzo consegnato contiene una carta di cui l'app **non sa il prezzo**
+   * (ticket 34). Un prezzo che non si conosce non sta né dentro né fuori dal
+   * tetto: contarlo zero farebbe entrare gratis proprio le carte che un listino
+   * non ce l'hanno, e la lista uscirebbe dal negozio con un numero scritto sotto
+   * che nessuno può mantenere.
+   *
+   * Vale anche per i **pezzi della combo**, che nel mazzo entrano senza passare
+   * dal prezzo (`riempi`): sono la ragione per cui quel mazzo esiste e non si
+   * contrattano, ma un tetto acceso sopra una combo che non si sa contare non
+   * costruisce niente e lo dice — con dentro i nomi, così che si sappia se
+   * spegnere il tetto o cambiare pezzo. Toglierli di mezzo in silenzio sarebbe
+   * una combo smontata di nascosto, che è la cosa che quel patto vieta.
+   *
+   * Vedi `SpesaDellaRicerca` per quel che la ricerca racconta di sé quando lo fa.
    */
   tettoDiSpesa: number | null;
   /**
@@ -295,6 +309,12 @@ export type MazzoCostruito = {
    * Quanto costa comprare **questo** mazzo, terre comprese, ai prezzi delle
    * stampe che il pool ha scelto: una stima al ribasso, e va detto ovunque si
    * mostri (`mazzo/spesa.ts`). Le carte senza listino non lo alzano.
+   *
+   * **Col tetto acceso è un totale e non un minimo**, e non per fortuna: un
+   * mazzo con dentro una carta che l'app non sa prezzare non si consegna affatto
+   * (`Richiesta.tettoDiSpesa`), quindi qui non ne arriva nessuno. A tetto spento
+   * la promessa non c'è e il numero resta quel che è sempre stato — la stima al
+   * ribasso che l'avviso dichiara.
    */
   spesa: number;
 };
@@ -680,6 +700,40 @@ export function costruisciMazzo(
     }
   }
 
+  // I pezzi della combo che l'app **non sa contare**, e il tetto è acceso.
+  //
+  // Sono l'unica strada per cui una carta senza listino può entrare in un mazzo:
+  // tutte le altre passano da `comprabile`, che col tetto acceso le lascia
+  // fuori. I pezzi no, di proposito — `riempi` li mette dentro senza chiedere il
+  // prezzo, perché sono la ragione per cui questo mazzo esiste — e da lì il
+  // tetto saltava in silenzio (ticket 34).
+  //
+  // Il no si dà **qui**, prima di cercare, e non alla fine: alla fine
+  // arriverebbe come «nessun mazzo sta dentro il tetto», con accanto il prezzo
+  // di un mazzo che sotto il tetto ci stava — un numero che darebbe da alzare un
+  // tetto già abbastanza alto, cioè un consiglio che non porta da nessuna parte.
+  // E arriverebbe dopo aver speso tutto il tempo concesso per dire una cosa che
+  // si sapeva prima di cominciare.
+  //
+  // I nomi ci sono perché il no dev'essere agibile: le strade sono due — il
+  // tetto o quel pezzo — e senza sapere **quale** pezzo non si può prendere né
+  // l'una né l'altra.
+  if (tetto !== null) {
+    const senzaListino = comboRisolta.pezzi.filter((carta) => prezzoDiUnaCopia(carta) === null);
+    if (senzaListino.length > 0) {
+      const quali = elenco(senzaListino.map((carta) => carta.nome));
+      const uno = senzaListino.length === 1;
+      const soggetto = uno ? `${quali} non ha listino` : `${quali} non hanno listino`;
+      return niente(
+        "niente-da-costruire",
+        `${soggetto}, e col tetto acceso l'app non consegna un mazzo di cui non sa dire il prezzo. ` +
+          `${uno ? "È un pezzo" : "Sono pezzi"} della combo, e i pezzi entrano al massimo delle copie senza passare dal prezzo: ` +
+          `smontarli per far tornare il conto sarebbe smontare la combo di nascosto. ` +
+          `Spegni il tetto, oppure togli dalla combo ${uno ? "quella carta" : "le carte"} che non si sa contare.`,
+      );
+    }
+  }
+
   const risolto = risolviTema(tema, pool);
 
   /**
@@ -743,7 +797,9 @@ export function costruisciMazzo(
       partite: 1,
       budgetPerLeTerre: 0,
     }).base;
-    return prezzoDelMazzo(base.terre);
+    // Il solo minimo: le terre candidate col tetto acceso hanno tutte un
+    // listino, e una riserva non è un mazzo da consegnare.
+    return contoDelMazzo(base.terre).minimo;
   }
 
   /* --- La ricerca ------------------------------------------------------- */
@@ -775,7 +831,7 @@ export function costruisciMazzo(
     // qui sopra un pavimento e non una stima — la base non deve indovinare
     // quanto le tocca, glielo si dice.
     const perLeTerre =
-      portafoglio === null ? null : Math.max(0, portafoglio.tetto - prezzoDelMazzo(carte));
+      portafoglio === null ? null : Math.max(0, portafoglio.tetto - contoDelMazzo(carte).minimo);
     const valutato = valutaMazzo(carte, terreDelPool, {
       seme: richiesta.seme,
       // Le terre non si contrattano qui: il numero viene dalla curva, e i posti
@@ -795,13 +851,17 @@ export function costruisciMazzo(
     // Le terre di questo formato non sono un contorno da pochi centesimi — su
     // trentasette terre trentadue non sono base — e un tetto che le ignorasse
     // sarebbe un tetto che non tiene.
-    const spesa = prezzoDelMazzo(carte) + prezzoDelMazzo(valutato.base.terre);
+    // E quel che non si sa pagare viene via con loro, invece di restare
+    // indietro come uno zero: `spesa` da sola non saprebbe di essere monca, e
+    // chi la confronta col tetto non avrebbe modo di accorgersene.
+    const conto = contoDelMazzo([...carte, ...valutato.base.terre]);
     return {
       carte,
       valutato,
       purezza: pura,
       potenza,
-      spesa,
+      spesa: conto.minimo,
+      incontabili: conto.incontabili,
       totale: potenza + peso * pura,
     };
   };
@@ -823,6 +883,22 @@ export function costruisciMazzo(
     tetto === null || spesa <= tetto
       ? 0
       : PESO_DELLO_SFORAMENTO * (1 + peso) * ((spesa - tetto) / Math.max(tetto, PARI));
+
+  /**
+   * Se un mazzo si può consegnare a chi ha acceso il tetto: sta dentro il
+   * numero chiesto, **e** l'app sa contarlo tutto.
+   *
+   * Le due domande sono una funzione sola perché sono una promessa sola
+   * (`Richiesta.tettoDiSpesa`), e scritte in due posti diversi prima o poi
+   * diventano due promesse. La seconda non è una cintura in più sulla prima: un
+   * mazzo con dentro una carta senza listino **passa** la prima, perché quella
+   * carta pesa zero, ed è esattamente così che il tetto saltava (ticket 34).
+   *
+   * A tetto spento non c'è niente da chiedere: è il prezzo a non avere voce in
+   * capitolo, e una carta senza listino è una carta come le altre.
+   */
+  const dentroIlTetto = (misurato: { spesa: number; incontabili: readonly Carta[] }): boolean =>
+    tetto === null || (misurato.spesa <= tetto && misurato.incontabili.length === 0);
 
   /**
    * Una ricerca intera con **un** peso: le partenze, gli scambi, e il mazzo
@@ -849,10 +925,24 @@ export function costruisciMazzo(
     const valuta = (selezione: Selezione, posti: number): { voto: number; dentro: boolean } => {
       valutazioni += 1;
       const misurato = punteggioDi(selezione, posti, peso, taratura.partiteInRicerca);
-      spesaPiuBassa = Math.min(spesaPiuBassa, misurato.spesa);
+      // Il meno caro che si sia visto si conta solo sui mazzi che si **sanno**
+      // contare: il minimo di un mazzo monco è più basso del suo prezzo, e
+      // finirebbe dentro un consiglio — «alzando il tetto fin lì può bastare» —
+      // che con quel numero non basterebbe mai.
+      //
+      // Chi legge `spesaPiuBassa` dà per scontato che restare a infinito voglia
+      // dire «il tempo è finito prima di misurare qualcosa», e questa riga è la
+      // seconda strada per restarci. Oggi non si percorre: la guardia sui pezzi
+      // senza listino ha già detto di no molto prima di arrivare qui, ed è
+      // l'unico modo in cui una carta incontabile entra in un mazzo. Se un
+      // giorno se ne aprisse un secondo, è di qui che passerebbe, ed è là sotto
+      // che si vedrebbe — come una frase sul tempo al posto di quella giusta.
+      if (misurato.incontabili.length === 0) {
+        spesaPiuBassa = Math.min(spesaPiuBassa, misurato.spesa);
+      }
       return {
         voto: misurato.totale - penalitaDiSpesa(misurato.spesa, peso),
-        dentro: tetto === null || misurato.spesa <= tetto,
+        dentro: dentroIlTetto(misurato),
       };
     };
 
@@ -973,7 +1063,7 @@ export function costruisciMazzo(
     // promessa dell'utente e non una conseguenza da dedurre — il giorno che la
     // base di terre dipendesse anche da altro, questo sarebbe il posto in cui
     // accorgersene invece di consegnare un mazzo fuori dal tetto.
-    if (tetto !== null && finale.spesa > tetto) return null;
+    if (!dentroIlTetto(finale)) return null;
     return {
       carte: [...finale.carte].sort(
         (a, b) =>
@@ -1032,6 +1122,9 @@ export function costruisciMazzo(
    */
   const nessunoDentroIlTetto = (quanto: number): string => {
     const testa = `Nessun mazzo sta dentro ${euro(quanto)}, e sopra il tetto chiesto non se ne consegna nessuno`;
+    // Infinito vuol dire che nessun mazzo è stato misurato, e l'unica ragione
+    // per cui può succedere è il tempo scaduto. Vedi `valuta`, che è l'altro
+    // posto da cui questo numero potrebbe restare fermo.
     if (!Number.isFinite(spesaPiuBassa)) {
       return `${testa}: il tempo concesso è finito prima che la ricerca ne misurasse anche uno solo, quindi non c'è nemmeno un numero da cui partire. Riprova con più tempo.`;
     }
@@ -1297,6 +1390,11 @@ function riempi(
   // un'altra domanda. Se sfondano il tetto lo sfondano, e il mazzo non si
   // consegna: il no arriva dopo, con dentro il perché, invece di una combo
   // smontata di nascosto.
+  //
+  // «Dopo» però vale per i pezzi **cari**, non per quelli che un listino non ce
+  // l'hanno: quel `?? 0` qui sotto è un pezzo che non paga niente, e un no dato
+  // a valle su un conto che li conta zero non arriverebbe mai (ticket 34). Il
+  // caso lo intercetta `costruisciMazzo` prima di cercare, e qui non ci arriva.
   for (const carta of obbligate) {
     const copie = Math.min(copieAlMassimo(carta), posti - messe);
     if (copie <= 0) continue;

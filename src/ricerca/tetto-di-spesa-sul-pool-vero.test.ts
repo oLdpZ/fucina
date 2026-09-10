@@ -7,7 +7,7 @@ import { COMBO_VUOTA } from "../combo/combo.js";
 import { interpretaPool } from "../dati/carica-pool.js";
 import type { Carta } from "../dati/pool.js";
 import { analizzaBaseDiTerre } from "../mazzo/base-di-terre.js";
-import { prezzoDelMazzo } from "../mazzo/spesa.js";
+import { contoDelMazzo } from "../mazzo/spesa.js";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import { costruisciMazzo, type Opzioni, type Richiesta } from "./costruisci.js";
 
@@ -71,7 +71,7 @@ function conTetto(tettoDiSpesa: number) {
 }
 
 const costo = (mazzo: { carte: readonly { carta: Carta; copie: number }[]; terre: readonly { carta: Carta; copie: number }[] }) =>
-  prezzoDelMazzo(mazzo.carte) + prezzoDelMazzo(mazzo.terre);
+  contoDelMazzo([...mazzo.carte, ...mazzo.terre]).minimo;
 
 /**
  * I tetti provati stanno **a cavallo della soglia** che rompeva tutto: uno
@@ -123,9 +123,9 @@ describe("la base di terre dentro un budget, sul pool vero", () => {
     mazzo: readonly { carta: Carta; copie: number }[],
     budget: number | null,
   ) =>
-    prezzoDelMazzo(
+    contoDelMazzo(
       analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute: 22, budget }).terre,
-    );
+    ).minimo;
 
   it("nel pool esiste almeno una terra non base più economica di ogni terra base", () => {
     // Se un giorno non ci fosse più, il test qui sotto diventerebbe una

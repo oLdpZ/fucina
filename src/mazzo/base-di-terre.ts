@@ -41,7 +41,7 @@ import type { Carta, ColoreMana, Tag } from "../dati/pool.js";
 import { copieAlMassimo } from "./copie.js";
 import { simboliDiColore } from "./costo.js";
 import { probabilitaDiLanciare, type GruppoDiTerre, type Pip } from "./probabilita.js";
-import { prezzoDelMazzo, prezzoDiUnaCopia } from "./spesa.js";
+import { contoDelMazzo, prezzoDiUnaCopia } from "./spesa.js";
 import {
   COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA,
   DIMENSIONE_MAZZO,
@@ -605,7 +605,12 @@ function scendiNelBudget(
   const rinunce = new Map<string, RinunciaDelBudget>();
 
   for (;;) {
-    const costo = prezzoDelMazzo([...rimaste, ...basi(restanti)]);
+    // Il solo minimo, e basta: qui si confrontano fra loro due basi di terre, e
+    // le terre che arrivano fin qui sono già passate da `terreCandidate`, che
+    // col tetto acceso quelle senza listino le ha lasciate fuori. Non c'è
+    // niente di incontabile da propagare, e il tetto vero lo tiene comunque il
+    // conto sul mazzo intero.
+    const costo = contoDelMazzo([...rimaste, ...basi(restanti)]).minimo;
     if (costo <= budget) break;
 
     // Si prova a togliere una copia per ogni terra rimasta e si guarda quanto
@@ -619,7 +624,7 @@ function scendiNelBudget(
       const voce = rimaste[i]!;
       if (voce.copie <= 0) continue;
       voce.copie -= 1;
-      const prova = prezzoDelMazzo([...rimaste, ...basi(restanti + 1)]);
+      const prova = contoDelMazzo([...rimaste, ...basi(restanti + 1)]).minimo;
       voce.copie += 1;
       if (prova < costoDopo || (prova === costoDopo && peggiore >= 0)) {
         costoDopo = prova;

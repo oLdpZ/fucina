@@ -9,7 +9,7 @@ import {
   AVVISO_STIMA_AL_RIBASSO,
   descriviLaStampa,
   listaDellaSpesa,
-  prezzoDelMazzo,
+  contoDelMazzo,
   prezzoDiUnaCopia,
 } from "./spesa.js";
 
@@ -49,17 +49,51 @@ describe("il conto di un mazzo", () => {
   it("somma le copie, non le carte", () => {
     const mazzo = [a("Goblin Chieftain", 2, 4), a("Skirk Prospector", 0.5, 2)];
 
-    expect(prezzoDelMazzo(mazzo)).toBeCloseTo(9, 6);
+    expect(contoDelMazzo(mazzo).minimo).toBeCloseTo(9, 6);
   });
 
   it("conta solo quel che ha un prezzo, invece di far finta che il resto sia gratis", () => {
     const mazzo = [a("Goblin Chieftain", 2, 4), a("Skirk Prospector", null, 4)];
 
-    expect(prezzoDelMazzo(mazzo)).toBeCloseTo(8, 6);
+    expect(contoDelMazzo(mazzo).minimo).toBeCloseTo(8, 6);
   });
 
   it("di un mazzo vuoto è zero", () => {
-    expect(prezzoDelMazzo([])).toBe(0);
+    expect(contoDelMazzo([]).minimo).toBe(0);
+  });
+
+  it("porta con sé le carte che non sa contare, invece di lasciarle sparire", () => {
+    // È la metà che mancava (ticket 34). Il minimo da solo non sa di essere un
+    // minimo, e chi lo confrontava col tetto di spesa non poteva accorgersene:
+    // una carta senza listino pesava zero, il conto tornava, e il mazzo usciva
+    // con un prezzo scritto sotto che nessuno poteva mantenere.
+    const mazzo = [a("Goblin Chieftain", 2, 4), a("Skirk Prospector", null, 4)];
+
+    expect(contoDelMazzo(mazzo).incontabili.map((carta) => carta.nome)).toEqual([
+      "Skirk Prospector",
+    ]);
+  });
+
+  it("di un mazzo che sa contare tutto non nomina nessuno", () => {
+    // Vuoto è la notizia buona: lì il minimo è il prezzo, e si può confrontare
+    // con un tetto senza mentire.
+    expect(contoDelMazzo([a("Goblin Chieftain", 2, 4)]).incontabili).toEqual([]);
+  });
+
+  it("non nomina una carta di cui il mazzo tiene zero copie", () => {
+    // `scendiNelBudget` chiama di qui con le voci già scese a zero, una alla
+    // volta, per vedere quanto costerebbe la base senza. Zero copie non sono
+    // una carta nel mazzo, e chi leggesse `incontabili` da lì rifiuterebbe un
+    // mazzo per una carta che non contiene.
+    expect(contoDelMazzo([a("Goblin Chieftain", null, 0)]).incontabili).toEqual([]);
+  });
+
+  it("la stessa carta in due voci si nomina una volta sola", () => {
+    // Come in `listaDellaSpesa`: due righe da comprare per una carta sola
+    // direbbero che le carte incontabili sono il doppio di quante sono.
+    const mazzo = [a("Goblin Chieftain", null, 2), a("Goblin Chieftain", null, 2)];
+
+    expect(contoDelMazzo(mazzo).incontabili).toHaveLength(1);
   });
 });
 

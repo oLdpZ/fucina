@@ -29,7 +29,7 @@
 
 import type { Carta } from "../dati/pool.js";
 import type { CopieDiCarta } from "./base-di-terre.js";
-import { comprabile, prezzoDelMazzo } from "./spesa.js";
+import { comprabile, contoDelMazzo } from "./spesa.js";
 import { escluso, type Tema } from "../tema/tema.js";
 
 /**
@@ -77,7 +77,19 @@ export function budgetPerLeTerre(
   tettoDiSpesa: number | null,
 ): number | null {
   if (tettoDiSpesa === null) return null;
-  return Math.max(0, tettoDiSpesa - prezzoDelMazzo(mazzo));
+  // Il solo minimo, e una carta senza listino conta zero: dentro la ricerca è
+  // innocuo — un mazzo che non si sa contare non si consegna comunque
+  // (`Richiesta.tettoDiSpesa`), e prima di arrivare qui è già stato rifiutato.
+  //
+  // **Fuori dalla ricerca no**, e va detto invece che lasciato credere: le due
+  // schermate che riaprono un mazzo salvato chiamano di qui senza che nessuna
+  // ricerca giri più, e su un mazzo che il pool di oggi non sa più prezzare
+  // tutto darebbero alle terre un budget più largo del vero — sotto una riga
+  // che dice che il tetto vale ancora. È lo stesso guasto del ticket 34 sulla
+  // strada che quel ticket non guardava, ed è la sua coda: chiede di decidere
+  // che cosa sia un tetto «ancora in vigore» sopra un mazzo diventato
+  // incontabile, che è una domanda sul mazzo salvato e non sulla ricerca.
+  return Math.max(0, tettoDiSpesa - contoDelMazzo(mazzo).minimo);
 }
 
 /**

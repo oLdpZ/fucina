@@ -24,7 +24,7 @@ import { probabilitaDiAssemblarne } from "../mazzo/probabilita.js";
 import { COPIE_MASSIME, DIMENSIONE_MAZZO } from "../mazzo/taratura.js";
 import { escluso, FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre } from "../mazzo/base-di-terre.js";
-import { comprabile, prezzoDelMazzo } from "../mazzo/spesa.js";
+import { comprabile, contoDelMazzo } from "../mazzo/spesa.js";
 import { costruisciMazzo, type Frontiera, type Opzioni, type Richiesta } from "./costruisci.js";
 import { PESI_DELLA_PUREZZA } from "./taratura.js";
 
@@ -797,7 +797,7 @@ describe("il tetto di spesa", () => {
   const costo = (frontiera: Frontiera, quale = 0): number => {
     const mazzo = frontiera.mazzi[quale];
     expect(mazzo).toBeDefined();
-    return prezzoDelMazzo([...mazzo!.carte, ...mazzo!.terre]);
+    return contoDelMazzo([...mazzo!.carte, ...mazzo!.terre]).minimo;
   };
 
   const nomi = (frontiera: Frontiera): string[] =>
@@ -877,6 +877,76 @@ describe("il tetto di spesa", () => {
     expect(nomi(frontiera)).not.toContain("Vile Extraction");
   });
 
+  /**
+   * Lo stesso pool con una carta a cui **nessuna copia ammessa ha listino**.
+   *
+   * Si fabbrica qui invece di aggiungerne una al pool finto: la carta senza
+   * prezzo dev'essere una carta che il tema vuole davvero, e quale sia il tema
+   * lo decide il test. Nel pool vero il caso è quello di due carte bianche che
+   * una combo bianca vuole, e questa è la sua forma inventata.
+   */
+  const poolSenzaListinoSu = (nome: string): readonly Carta[] =>
+    POOL.map((carta) =>
+      carta.nome === nome
+        ? { ...carta, prezzo: { ...carta.prezzo, euro: null, stampa: null } }
+        : carta,
+    );
+
+  /** Il pezzo di combo che il tema nero vuole, e di cui il test toglie il prezzo. */
+  const SENZA_LISTINO = "Vile Extraction";
+
+  it("acceso su una combo che non si sa contare, non consegna niente e dice quale pezzo", () => {
+    // È la strada da cui il tetto saltava: i pezzi della combo entrano senza
+    // passare dal prezzo — è il patto, e resta — e un pezzo senza listino veniva
+    // contato zero. Il mazzo usciva col tetto rispettato sulla carta e otto
+    // copie di prezzo ignoto dentro.
+    const frontiera = costruisciMazzo(
+      richiesta({ tema: NERO, combo: [SENZA_LISTINO], tettoDiSpesa: 30 }),
+      poolSenzaListinoSu(SENZA_LISTINO),
+      SVELTA,
+    );
+
+    expect(frontiera.esito).toBe("niente-da-costruire");
+    expect(frontiera.mazzi).toEqual([]);
+    // Il no dev'essere agibile: senza il nome non si sa se spegnere il tetto o
+    // cambiare pezzo, che sono le due sole strade.
+    expect(frontiera.motivo).toContain(SENZA_LISTINO);
+  });
+
+  it("spento, quello stesso pezzo entra e il mazzo si consegna", () => {
+    // La metà che rende vera la prima: a dire di no è il **tetto**, non la
+    // carta mancante né la combo. Senza questa, il test qui sopra sarebbe verde
+    // anche su un motore che una combo così non la costruisce mai.
+    const frontiera = costruisciMazzo(
+      richiesta({ tema: NERO, combo: [SENZA_LISTINO], tettoDiSpesa: null }),
+      poolSenzaListinoSu(SENZA_LISTINO),
+      SVELTA,
+    );
+
+    // Quale dei due esiti «costruito» esca lo decide il tema, non il prezzo: qui
+    // conta che un mazzo ci sia, e che il pezzo ci sia dentro.
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
+    expect(nomi(frontiera)).toContain(SENZA_LISTINO);
+  });
+
+  it("acceso, nessun mazzo consegnato contiene una carta di cui non si sa il prezzo", () => {
+    // La promessa intera, letta su tutta la frontiera: `spesa` è un totale e non
+    // un minimo esattamente perché questo elenco è vuoto. E con essa cade la
+    // contraddizione che si leggeva nella stessa schermata — `senzaPrezzo` che
+    // dichiara di aver lasciato fuori una carta che era nel mazzo consegnato.
+    for (const combo of [COMBO_VUOTA, [SENZA_LISTINO]]) {
+      const frontiera = costruisciMazzo(
+        richiesta({ tema: NERO, combo, tettoDiSpesa: 30 }),
+        poolSenzaListinoSu(SENZA_LISTINO),
+        SVELTA,
+      );
+      const incontabili = tutteLeVoci(frontiera)
+        .filter((voce) => voce.carta.prezzo.euro === null)
+        .map((voce) => voce.carta.nome);
+      expect({ combo, incontabili }).toEqual({ combo, incontabili: [] });
+    }
+  });
+
   it("acceso, il mazzo resta di sessanta carte: il tetto non lo lascia monco", () => {
     expect(carteTotali(costruisci({ tema: NERO, tettoDiSpesa: 30 }))).toBe(DIMENSIONE_MAZZO);
   });
@@ -906,10 +976,10 @@ describe("il tetto di spesa", () => {
     );
     const rifatta = analizzaBaseDiTerre(mazzo.carte, terreInMano, {
       terreVolute: mazzo.base.numeroTerre,
-      budget: Math.max(0, 30 - prezzoDelMazzo(mazzo.carte)),
+      budget: Math.max(0, 30 - contoDelMazzo(mazzo.carte).minimo),
     });
 
-    expect(prezzoDelMazzo([...mazzo.carte, ...rifatta.terre])).toBeCloseTo(mazzo.spesa, 6);
+    expect(contoDelMazzo([...mazzo.carte, ...rifatta.terre]).minimo).toBeCloseTo(mazzo.spesa, 6);
   });
 
   it("con un tetto stretto consegna un mazzo intero oppure niente, mai un mazzo corto", () => {
