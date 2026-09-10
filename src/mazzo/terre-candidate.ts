@@ -79,3 +79,55 @@ export function budgetPerLeTerre(
   if (tettoDiSpesa === null) return null;
   return Math.max(0, tettoDiSpesa - prezzoDelMazzo(mazzo));
 }
+
+/**
+ * Quanto due temi differiscono **sulle terre**: quello con cui un mazzo è stato
+ * costruito e quello dichiarato adesso nei Vincoli (ticket 31).
+ *
+ * Sta qui e non nelle due schermate che lo mostrano per la ragione per cui esiste
+ * questo file: la stessa domanda a cui rispondevano tre posti diversi si scrive
+ * una volta sola. Il conto era già stato copiato in `Mazzo.tsx` e in
+ * `MazziSalvati.tsx`, che è esattamente la strada da cui, dopo il ticket 19, la
+ * lista per l'arbitro elencava terre che il mazzo mostrato non conteneva.
+ *
+ * `stessaBase` è la domanda vera — «cambia qualcosa, a rifarle col tema di
+ * adesso?» — e si risponde sull'**insieme** delle terre, non sul loro numero:
+ * due temi che ne ammettono altrettante ma non le stesse scelgono basi diverse.
+ * I conti accanto sono quelli che la frase mette dentro di sé, perché una frase
+ * senza numeri è un'opinione.
+ *
+ * Il prezzo qui non entra: la domanda è che cosa il **tema** lascia passare, e
+ * del tetto parla la frase accanto.
+ */
+export type ConfrontoFraTemi = {
+  /** Quante terre ammette il tema con cui il mazzo è stato costruito. */
+  terreAmmesse: number;
+  /** Quante terre ha il formato in tutto, prima di qualunque esclusione. */
+  terreDelFormato: number;
+  /** Quante ne ammetterebbe il tema dichiarato adesso. */
+  terreColTemaDiAdesso: number;
+  /** Quante ne ammette il primo che il secondo non ammette. */
+  terreSoloSue: number;
+  /** Se i due temi ammettono esattamente le stesse terre. */
+  stessaBase: boolean;
+};
+
+export function confrontoFraTemiSulleTerre(
+  carte: readonly Carta[],
+  temaDelMazzo: Tema,
+  temaDeiVincoli: Tema,
+): ConfrontoFraTemi {
+  const sue = terrePermesseDalTema(carte, temaDelMazzo);
+  const adesso = terrePermesseDalTema(carte, temaDeiVincoli);
+  const nomiDiAdesso = new Set(adesso.map((carta) => carta.nome));
+  const terreSoloSue = sue.filter((carta) => !nomiDiAdesso.has(carta.nome)).length;
+  return {
+    terreAmmesse: sue.length,
+    terreDelFormato: carte.filter((carta) => carta.terra !== null).length,
+    terreColTemaDiAdesso: adesso.length,
+    terreSoloSue,
+    // Stesso numero **e** nessuna che stia solo di qua: due insiemi finiti di
+    // pari cardinalità in cui il primo non ha estranei sono lo stesso insieme.
+    stessaBase: sue.length === adesso.length && terreSoloSue === 0,
+  };
+}

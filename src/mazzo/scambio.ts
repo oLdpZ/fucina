@@ -24,9 +24,33 @@
  * appartiene il mazzo. Il primo non cresce per il secondo — due righe in più che
  * un'app vecchia semplicemente non guarda non le impediscono di leggere la
  * lista, e alzare il numero le farebbe rifiutare mazzi che sa leggere benissimo.
+ *
+ * ## Il tema e il tetto (ticket 31)
+ *
+ * Il mazzo salvato porta il tema e il tetto sotto cui le sue terre sono state
+ * scelte, e questo testo porta **gli stessi campi**: senza, un mazzo esportato e
+ * reimportato li perderebbe per strada, cioè si riaprirebbe con le terre di
+ * qualcun altro — il guasto del ticket 31 spostato di una porta.
+ *
+ * Il numero di formato **non cresce** nemmeno per loro, per la stessa ragione di
+ * un momento fa: un'app vecchia che non guarda quelle righe legge comunque la
+ * lista intera, e alzare il numero la farebbe rifiutare in blocco un mazzo che
+ * sa leggere. Perde il tema, com'era prima di questo ticket — che è meno di
+ * quel che perderebbe rifiutando tutto.
+ *
+ * Il tetto sta in una riga che si legge a occhio. Il tema **no**: è un oggetto
+ * con dentro sei filtri, una carta-seme e gli allargamenti accettati, e non c'è
+ * modo di renderlo in prosa senza scriverne un secondo lettore da tenere in
+ * passo col primo — dove il prezzo di un passo mancato è una base di terre
+ * sbagliata in silenzio, cioè esattamente il guasto che si sta chiudendo. Va
+ * quindi in una riga sola di JSON, che si vede e si può cancellare a mano. Se
+ * arriva rotta ci si ferma **dicendolo**, e dicendo che togliendo quella riga la
+ * lista si importa lo stesso: un tema letto a metà è peggio di nessun tema.
  */
 
 import { interpretaIdentita, type IdentitaDiFormato } from "../dati/ambito.js";
+import { interpretaTema } from "../tema/interpreta.js";
+import { temaDichiarato, type Tema } from "../tema/tema.js";
 import {
   interpretaContenuto,
   type ContenutoMazzo,
@@ -51,6 +75,13 @@ const RICHIESTA_A_MANO = "costruito a mano dal catalogo";
 const RIGA_FORMATO = "Formato";
 const RIGA_IMPRONTA = "Impronta del formato";
 const TERRE_DALLA_CURVA = "decise dalla curva del mazzo";
+/**
+ * L'unità sta nel **nome** della riga e non accanto al numero: il numero lo
+ * rilegge una macchina, e «30,00 €» a virgola italiana contro «30.00» a punto
+ * inglese è un modo per far cambiare tetto a un mazzo passando una frontiera.
+ */
+const RIGA_TETTO = "Tetto di spesa in euro";
+const RIGA_TEMA = "Tema";
 
 /** Il mazzo come testo: la lista, la richiesta, e di che dati era fatto. */
 export function scriviScambio(mazzo: ContenutoMazzo): string {
@@ -76,6 +107,13 @@ export function scriviScambio(mazzo: ContenutoMazzo): string {
         ? TERRE_DALLA_CURVA
         : `${mazzo.richiesta.terreVolute} scelte a mano`
     }`,
+    // Sotto quali vincoli le terre di questo mazzo sono state scelte. Righe che
+    // ci sono solo quando c'è qualcosa da dire: un mazzo messo insieme a mano
+    // senza tema e senza tetto non deve dichiarare due assenze.
+    ...(mazzo.richiesta.tetto === undefined ? [] : [`${RIGA_TETTO}: ${mazzo.richiesta.tetto}`]),
+    ...(mazzo.richiesta.tema === undefined
+      ? []
+      : [`${RIGA_TEMA}: ${JSON.stringify(mazzo.richiesta.tema)}`]),
     "",
     `Carte (${copie} copie, ${mazzo.carte.length} diverse):`,
     ...mazzo.carte.map((voce) => `${voce.copie} ${voce.nome}`),
@@ -178,12 +216,87 @@ function leggiRichiesta(voci: ReadonlyMap<string, string>): Richiesta | undefine
   }
 
   const terre = voci.get("Terre") ?? TERRE_DALLA_CURVA;
-  if (terre === TERRE_DALLA_CURVA) return { origine: "a-mano", terreVolute: null };
+  const terreVolute = terre === TERRE_DALLA_CURVA ? null : leggiTerreAMano(terre);
+
+  // I due campi facoltativi si scrivono solo se ci sono: assenti valgono
+  // assenti, e `exactOptionalPropertyTypes` distingue le due cose. Un mazzo che
+  // dicesse «tema: nessuno» direbbe qualcosa che nessuno ha mai scritto.
+  const tetto = leggiTetto(voci.get(RIGA_TETTO));
+  const tema = leggiTema(voci.get(RIGA_TEMA));
+  return {
+    origine: "a-mano",
+    terreVolute,
+    ...(tema === undefined ? {} : { tema }),
+    ...(tetto === undefined ? {} : { tetto }),
+  };
+}
+
+function leggiTerreAMano(terre: string): number {
   const aMano = terre.match(TERRE_A_MANO);
   if (!aMano) {
     throw new Error(`Le terre di questo mazzo non si capiscono: «${terre}».`);
   }
-  return { origine: "a-mano", terreVolute: Number(aMano[1]) };
+  return Number(aMano[1]);
+}
+
+/**
+ * Il tetto di spesa, dalla riga che lo dichiara.
+ *
+ * Assente è un mazzo che nessun tetto ha prodotto — o un testo scritto prima
+ * che l'app lo scrivesse — e si legge lo stesso. Presente e non una cifra, no:
+ * prenderlo per «nessun tetto» rimetterebbe nella base proprio le terre che quel
+ * tetto aveva lasciato fuori, ed è il genere di silenzio che il ticket 31 toglie
+ * di mezzo.
+ */
+function leggiTetto(riga: string | undefined): number | undefined {
+  if (riga === undefined) return undefined;
+  const tetto = Number(riga);
+  if (riga.trim() === "" || !Number.isFinite(tetto) || tetto < 0) {
+    throw new Error(
+      `Il tetto di spesa di questo mazzo non è una cifra da spendere: «${riga}». ` +
+        `Togli la riga «${RIGA_TETTO}» per importare la lista senza tetto.`,
+    );
+  }
+  return tetto;
+}
+
+/**
+ * Il tema, dalla riga di JSON che lo porta.
+ *
+ * Due guai diversi e due frasi diverse: la riga **non si legge** — tagliata o
+ * mandata a capo da un programma di posta — oppure si legge e non è un tema, e
+ * lo dice `interpretaTema` con la sua ragione. In tutti e due i casi ci si
+ * ferma: un tema letto a metà rifà in silenzio una base di terre che nessuno ha
+ * chiesto, che è il guasto per cui questo campo esiste. E in tutti e due i casi
+ * si dice come importare comunque la lista, perché la lista è intera.
+ */
+function leggiTema(riga: string | undefined): Tema | undefined {
+  if (riga === undefined) return undefined;
+
+  let letto: unknown;
+  try {
+    letto = JSON.parse(riga);
+  } catch {
+    throw new Error(
+      `Il tema di questo mazzo è arrivato a pezzi: la riga «${RIGA_TEMA}» non si legge, ` +
+        "forse è stata mandata a capo per strada. Togli quella riga per importare la lista " +
+        "senza il tema con cui il mazzo era stato costruito.",
+    );
+  }
+
+  const tema = interpretaTema(letto);
+  // Un tema che non dichiara niente non è un tema, e l'app non ne scrive mai
+  // uno: se la riga c'è e non contiene un tema, il testo è stato messo insieme
+  // a mano o maltrattato, e leggerlo come «nessun vincolo» sarebbe il guasto
+  // del ticket 31 rientrato dalla porta di servizio — le terre rifatte in
+  // silenzio col tema di chi importa. Ci si ferma, come per la riga illeggibile.
+  if (tema === undefined || !temaDichiarato(tema)) {
+    throw new Error(
+      `La riga «${RIGA_TEMA}» di questo mazzo non contiene un tema. ` +
+        "Toglila per importare la lista senza il tema con cui il mazzo era stato costruito.",
+    );
+  }
+  return tema;
 }
 
 /**

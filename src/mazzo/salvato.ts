@@ -20,9 +20,21 @@
  * Le terre non si salvano: le sceglie l'app dalla curva del mazzo (ticket 06),
  * e ricalcolarle sui dati di oggi è più giusto che ripescare quelle di ieri.
  * Della base si salva la sola cosa che l'utente ha deciso: quante terre voleva.
+ *
+ * Ricalcolarle però vuol dire ricalcolarle **con che cosa**, e per una versione
+ * intera dell'app la risposta è stata «con quel che c'è adesso»: il tema di
+ * adesso, il tetto di adesso. Fra due schermate della stessa sessione era la
+ * stessa cosa; fra due sessioni no — chi salvava un mazzo dicendo «niente nero»
+ * e lo riapriva dopo aver cambiato tema si ritrovava le paludi, senza un avviso
+ * e senza modo di accorgersene. Perciò la richiesta salvata porta anche **il
+ * tema e il tetto** con cui il mazzo è stato costruito (ticket 31): non per
+ * rimetterli in vigore nell'app, ma per restare attaccati a quel mazzo e
+ * rifargli le sue terre. Chi li riceve è `mazzo/in-vigore.ts`.
  */
 
 import { identitaSeSiLegge, type IdentitaDiFormato } from "../dati/ambito.js";
+import { temaSeSiLegge } from "../tema/interpreta.js";
+import type { Tema } from "../tema/tema.js";
 import { DIMENSIONE_MAZZO } from "./taratura.js";
 
 /** Una carta del mazzo, per nome, e quante copie. */
@@ -31,15 +43,46 @@ export type VoceSalvata = { nome: string; copie: number };
 /**
  * Che cosa ha prodotto il mazzo.
  *
- * Oggi c'è una sola origine — messo insieme a mano dal catalogo — perché il
- * motore non esiste ancora. Quando esisterà (ticket 08-13) questa unione
- * cresce di un ramo, con il tema, il seme e il tetto di spesa dentro; il
+ * Oggi c'è una sola **origine** — messo insieme a mano dal catalogo — e la
+ * cosa da non confondere è che l'origine non è la richiesta: il tema e il tetto
+ * qui sotto ci sono già, e ci sono per tutti i mazzi, perché dicono sotto quale
+ * vincolo le terre di questo mazzo sono state scelte e non chi lo ha messo
+ * insieme. Il giorno in cui il motore avrà la sua origine, questa unione cresce
+ * di un ramo con dentro quel che è davvero suo — il seme, gli orologi — e il
  * formato di scambio porta un numero di formato proprio per quel giorno.
  */
 export type Richiesta = {
   origine: "a-mano";
   /** Le terre chieste a mano; `null` quando le decide la curva del mazzo. */
   terreVolute: number | null;
+  /**
+   * Il tema sotto il quale la base di terre di questo mazzo è stata decisa
+   * (ticket 31).
+   *
+   * Sta nella richiesta e non accanto alle carte perché è **una richiesta**: è
+   * la domanda a cui questo mazzo è la risposta. Sta qui anche se l'origine
+   * resta una sola, perché quel che registra non è chi ha messo insieme il
+   * mazzo ma sotto quale vincolo le sue terre sono state scelte — e quel
+   * vincolo è un fatto del mazzo, non del suo autore. Il giorno che l'origine
+   * del motore arriverà, arriverà con il seme e con gli orologi, non con
+   * questo: questo c'è già.
+   *
+   * **Manca** nei mazzi salvati prima che l'app lo scrivesse, e non è un
+   * guasto: quei mazzi si aprono lo stesso, e le loro terre si rifanno col tema
+   * di adesso — che è quel che facevano tutti prima di questo ticket. Chi li
+   * apre lo sa, perché la schermata non dichiara nulla su come sono state
+   * scelte.
+   */
+  tema?: Tema | undefined;
+  /**
+   * Il tetto di spesa in vigore su questo mazzo quando è stato salvato, in
+   * euro; assente quando nessun tetto lo ha prodotto.
+   *
+   * È il tetto **in vigore sul mazzo** (`tettoInVigore`) e mai l'interruttore
+   * della schermata di costruzione: quello dice che cosa l'utente sta chiedendo
+   * adesso al motore, non con che cifra il mazzo che sta salvando è nato.
+   */
+  tetto?: number | undefined;
 };
 
 /** Il mazzo come si scambia: tutto tranne il posto che occupa nel deposito. */
@@ -174,7 +217,34 @@ function interpretaRichiesta(dati: unknown): Richiesta {
   if (terreVolute !== null && (!interoPositivo(terreVolute) || terreVolute === 0)) {
     throw new Error("Le terre chieste da questo mazzo non sono un numero di terre.");
   }
-  return { origine, terreVolute: terreVolute as number | null };
+  const { tema, tetto } = dati as { tema?: unknown; tetto?: unknown };
+  return {
+    origine,
+    terreVolute: terreVolute as number | null,
+    // Letti **con indulgenza**, per la stessa ragione del formato di gioco qui
+    // sopra: di qui passa anche il deposito, chi lo rilegge lascia fuori
+    // dall'elenco i mazzi che non si leggono, e un tema scritto a metà farebbe
+    // sparire il mazzo intero senza dirlo a nessuno. Un mazzo che non sa più
+    // dire come sono state scelte le sue terre è un mazzo che si vede, si apre
+    // e si risalva; un mazzo scomparso in silenzio non è niente di tutto ciò.
+    // Il testo che arriva da fuori è severo dove deve, cioè prima di qui.
+    tema: temaSeSiLegge(tema),
+    tetto: tettoSeSiLegge(tetto),
+  };
+}
+
+/**
+ * Il tetto riletto: una cifra da spendere, o niente.
+ *
+ * Zero **è** un tetto e non l'assenza di uno, come già in `in-vigore.ts`: zero
+ * euro è una richiesta legittima — «solo carte senza prezzo» — e leggerla come
+ * «nessun tetto» la tradirebbe in silenzio, riaprendo il mazzo con dentro
+ * proprio le terre che quella richiesta escludeva. «Nessun tetto» è l'assenza
+ * del campo, che è un'altra cosa e si scrive in un altro modo.
+ */
+function tettoSeSiLegge(dati: unknown): number | undefined {
+  if (typeof dati !== "number" || !Number.isFinite(dati) || dati < 0) return undefined;
+  return dati;
 }
 
 function interpretaCarte(dati: unknown): VoceSalvata[] {

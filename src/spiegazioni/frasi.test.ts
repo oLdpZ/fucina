@@ -46,6 +46,8 @@ import {
   frasePerLeRinunceDelBudget,
   frasePerIlTettoInVigore,
   frasePerIlTettoSuQuelCheEsce,
+  frasePerIlTemaInVigore,
+  frasePerIlTemaSuQuelCheEsce,
 } from "./frasi.js";
 
 describe("come si scrivono i numeri", () => {
@@ -600,6 +602,17 @@ describe("il tetto in vigore sul mazzo in mano", () => {
     expect(frasePerIlTettoInVigore({ tetto: 30 })).toContain("che il tema permette");
   });
 
+  it("col tema del mazzo in vigore non promette una base che nessun tasto produce", () => {
+    // Il solo comando che leva il tetto scioglie il mazzo da tutti e due i
+    // vincoli insieme: promettere che la base «si rifà sulle terre che il tema
+    // permette» sarebbe promettere quel che non succede, perché quel tema se ne
+    // va con lui. La frase dice che valgono insieme, e tace sul resto.
+    const frase = frasePerIlTettoInVigore({ tetto: 30, conIlSuoTema: true });
+
+    expect(frase).toContain("si levano insieme");
+    expect(frase).not.toMatch(/la base si rifà/u);
+  });
+
   it("su quel che esce dice la cifra e dove si leva", () => {
     const frase = frasePerIlTettoSuQuelCheEsce({ tetto: 30 });
     expect(frase).toContain("30,00 €");
@@ -744,5 +757,64 @@ describe("la corsa contro un orologio", () => {
 
     expect(frase).toContain("tutte le volte");
     expect(frase).not.toContain("le altre");
+  });
+});
+
+/**
+ * Ticket 31: il tema con cui un mazzo è stato costruito resta attaccato a quel
+ * mazzo e ne sceglie le terre. Va dichiarato mentre vale, come il tetto — e con
+ * dei numeri dentro, perché una frase senza numeri è un'opinione.
+ */
+describe("il tema che sceglie le terre del mazzo in mano", () => {
+  it("dice quante terre ammette, e quante ne ammetterebbe quello di adesso", () => {
+    const frase = frasePerIlTemaInVigore({
+      terreAmmesse: 12,
+      terreDelFormato: 37,
+      terreColTemaDiAdesso: 30,
+      terreSoloSue: 0,
+    });
+
+    expect(frase).toContain("12");
+    expect(frase).toContain("37");
+    expect(frase).toContain("30");
+  });
+
+  it("un tema che non esclude nessuna terra non dice «12 delle 12»", () => {
+    const frase = frasePerIlTemaInVigore({
+      terreAmmesse: 37,
+      terreDelFormato: 37,
+      terreColTemaDiAdesso: 12,
+      terreSoloSue: 25,
+    });
+
+    expect(frase).toContain("non ne esclude nessuna delle 37");
+    expect(frase).not.toMatch(/37 delle 37/u);
+  });
+
+  it("a conti pari dice quante non sono le stesse, invece di ripetere il numero", () => {
+    // Due temi possono ammettere altrettante terre senza ammettere le stesse:
+    // la frase che si fermasse ai totali direbbe «28… e ne avrebbe 28», cioè un
+    // avviso i cui numeri non mostrano niente da avvisare.
+    const frase = frasePerIlTemaInVigore({
+      terreAmmesse: 28,
+      terreDelFormato: 40,
+      terreColTemaDiAdesso: 28,
+      terreSoloSue: 5,
+    });
+
+    expect(frase).toContain("5 terre");
+    expect(frase).not.toMatch(/ne avrebbe 28/u);
+  });
+
+  it("su quel che esce dice gli stessi numeri e dove si cambia", () => {
+    const frase = frasePerIlTemaSuQuelCheEsce({
+      terreAmmesse: 12,
+      terreDelFormato: 37,
+      terreColTemaDiAdesso: 30,
+      terreSoloSue: 0,
+    });
+
+    expect(frase).toContain("12");
+    expect(frase).toContain("Mazzo");
   });
 });

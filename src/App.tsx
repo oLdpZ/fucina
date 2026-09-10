@@ -25,12 +25,17 @@ import type { Carta, Pool } from "./dati/pool.js";
 import { FILTRI_VUOTI, type Filtri } from "./catalogo/filtri.js";
 import type { CopieDiCarta } from "./mazzo/base-di-terre.js";
 import { copieMassime } from "./mazzo/copie.js";
-import { tettoInVigore, type MazzoConsegnato } from "./mazzo/tetto-in-vigore.js";
+import {
+  temaInVigore,
+  tettoInVigore,
+  vincoliDiUnMazzoRiaperto,
+  type MazzoConsegnato,
+} from "./mazzo/in-vigore.js";
 import { DIMENSIONE_MAZZO, TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
 import type { MazzoSalvato } from "./mazzo/salvato.js";
 import { usaMotore } from "./ricerca/usa-motore.js";
 import { COMBO_VUOTA, type Combo as CarteDellaCombo } from "./combo/combo.js";
-import { TEMA_VUOTO, type Tema } from "./tema/tema.js";
+import { temaDichiarato, TEMA_VUOTO, type Tema } from "./tema/tema.js";
 import { NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 
 /**
@@ -123,24 +128,26 @@ export function App() {
    */
   const [tettoDiSpesa, setTettoDiSpesa] = useState<number | null>(null);
   /**
-   * Il mazzo che il motore ha consegnato: il tetto con cui l'ha costruito, e le
-   * carte che ci ha messo.
+   * Il mazzo consegnato: i vincoli sotto cui le sue terre sono state scelte —
+   * il tetto e il tema — e le carte che ci stavano dentro.
    *
-   * Il tetto non è `tettoDiSpesa`, ed è tutta la differenza: la schermata del
-   * mazzo si rifà la base di terre da sola, e per ritrovare quella che il
-   * motore aveva scelto deve filtrare le terre col tetto di **allora**. Col
-   * tetto di adesso, chi costruisce a 30 euro e poi spegne l'interruttore si
+   * Quei due non sono `tettoDiSpesa` e `tema`, ed è tutta la differenza: la
+   * schermata del mazzo si rifà la base di terre da sola, e per ritrovare
+   * quella di allora deve filtrare le terre coi vincoli di **allora**. Coi
+   * vincoli di adesso, chi costruisce a 30 euro e poi spegne l'interruttore si
    * vedrebbe cambiare la base e il conto sotto le mani, senza aver toccato il
-   * mazzo — e chi accende un tetto su un mazzo messo insieme a mano se ne
-   * vedrebbe sparire le terre senza listino, che nessuno gli aveva detto di
-   * togliere.
+   * mazzo; chi accende un tetto su un mazzo messo insieme a mano se ne vedrebbe
+   * sparire le terre senza listino; e chi salva un mazzo dicendo «niente nero»,
+   * cambia tema e lo riapre se lo ritroverebbe pieno di paludi (ticket 31).
    *
-   * Accanto al tetto ci sono le carte perché il tetto **non vale per sempre**:
-   * vale finché il mazzo in mano è ancora quello consegnato, e per saperlo
-   * bisogna avere con che confrontarlo (`tettoInVigore`, ticket 21).
+   * Accanto ai vincoli ci sono le carte perché i vincoli **non valgono per
+   * sempre**: valgono finché il mazzo in mano è ancora quello consegnato, e per
+   * saperlo bisogna avere con che confrontarlo (`in-vigore.ts`, ticket 21).
    *
-   * `null` per i mazzi messi insieme a mano e per quelli riaperti dai salvati:
-   * nessun tetto li ha prodotti, e nessuno se ne applica.
+   * `null` per i mazzi messi insieme a mano dal catalogo: nessuna richiesta li
+   * ha prodotti, e nessuna se ne applica. I mazzi **riaperti** dai salvati
+   * invece ne hanno una — quella con cui erano stati costruiti — e la ritrovano
+   * qui: rimettere in mano il mazzo com'era, non rimettere l'app com'era.
    */
   const [consegnato, setConsegnato] = useState<MazzoConsegnato | null>(null);
   /**
@@ -308,13 +315,33 @@ export function App() {
   );
 
   /**
-   * Levare il tetto al mazzo che si ha in mano, senza toccarne le carte: è la
-   * seconda metà del ticket 21, e la ragione per cui la prima può permettersi
-   * di essere severa. Chi vuole tenere il mazzo com'è e vedere la base rifatta
-   * su tutte le terre lo dice qui, invece di doverlo ottenere di sponda
-   * cambiando una carta e rimettendola.
+   * Il tema che sceglie **adesso** le terre del mazzo in mano: quello con cui è
+   * stato costruito finché è ancora quel mazzo, e quello dichiarato nei Vincoli
+   * appena non lo è più — o quando nessuno lo ha costruito (ticket 31).
+   *
+   * La manopola dei Vincoli non si tocca mai: è la decisione del ticket. Chi
+   * riapre un mazzo salvato ritrova il mazzo com'era, non l'app com'era, e la
+   * schermata del tema resta quella che stava guardando.
    */
-  const togliIlTetto = () => setConsegnato(null);
+  const temaDelMazzo = useMemo(
+    () => temaInVigore(consegnato, copiePerNome),
+    [consegnato, copiePerNome],
+  );
+  const temaDelMazzoInMano = temaDelMazzo ?? tema;
+
+  /**
+   * Slegare il mazzo che si ha in mano dai vincoli con cui è nato, senza
+   * toccarne le carte: è la seconda metà del ticket 21, e la ragione per cui la
+   * prima può permettersi di essere severa. Chi vuole tenere il mazzo com'è e
+   * vedere la base rifatta coi vincoli di adesso lo dice qui, invece di doverlo
+   * ottenere di sponda cambiando una carta e rimettendola.
+   *
+   * Se ne vanno **insieme**, tetto e tema, per la ragione scritta in
+   * `in-vigore.ts`: sono un fatto solo — sotto che cosa questo mazzo è stato
+   * costruito — e staccarne metà lascerebbe una base filtrata da metà della
+   * richiesta di allora e da metà di quella di adesso.
+   */
+  const sciogliIVincoli = () => setConsegnato(null);
 
   const cambiaCopie = (carta: Carta, delta: number) => {
     setCopiePerNome((prima) => {
@@ -377,10 +404,14 @@ export function App() {
     }
     setCopiePerNome(copie);
     cambiaTerre(salvato.richiesta.terreVolute);
-    // Un mazzo riaperto non porta con sé nessun tetto: la richiesta salvata non
-    // lo scrive ancora (`mazzo/salvato.ts`), e inventarne uno vorrebbe dire
-    // togliergli delle terre per una cifra che nessuno ha chiesto.
-    setConsegnato(null);
+    // I vincoli con cui il mazzo era stato costruito tornano **attaccati a
+    // lui**, non nelle manopole (ticket 31): sono quelli che gli rifanno le sue
+    // terre, e sono anche quelli che se ne andranno da soli appena una carta
+    // cambia. Un mazzo salvato prima di questo cambio non ne porta nessuno, e
+    // non è un guasto: le sue terre si rifanno con quel che c'è adesso, come
+    // facevano tutte prima — con la differenza che adesso, non dichiarando
+    // niente, la schermata non dice il falso su come sono state scelte.
+    setConsegnato(vincoliDiUnMazzoRiaperto(salvato.richiesta, copie));
     setAperto({ id: salvato.id, nome: salvato.nome, salvatoIl: salvato.salvatoIl });
     // Se c'è qualcosa da dire, si resta dove la frase si legge: portare
     // l'utente al mazzo con un messaggio alle spalle vorrebbe dire non dirglielo
@@ -406,16 +437,33 @@ export function App() {
     const copie = new Map(carte.map((voce) => [voce.carta.nome, voce.copie]));
     setCopiePerNome(copie);
     cambiaTerre(terre);
-    // Il tetto viaggia col mazzo, non con l'interruttore: da qui in poi questo
-    // mazzo è «quello costruito a tanti euro», e resta tale anche se
-    // l'interruttore cambia idea. Resta tale finché resta **questo** mazzo:
-    // le carte partono di qui insieme al tetto proprio per poterlo dire
-    // (`tettoInVigore`).
+    // Il tetto **e il tema** viaggiano col mazzo, non con le manopole: da qui in
+    // poi questo mazzo è «quello costruito a tanti euro sotto quel tema», e
+    // resta tale anche se le manopole cambiano idea. Resta tale finché resta
+    // **questo** mazzo: le carte partono di qui insieme ai vincoli proprio per
+    // poterlo dire (`in-vigore.ts`).
+    //
+    // Il tema si fotografa qui anche quando il tetto è spento, ed è il ticket
+    // 31: prima, senza tetto, il mazzo consegnato non veniva registrato affatto
+    // e le sue terre finivano per essere scelte dalla manopola dei Vincoli —
+    // cioè da quel che l'utente sta chiedendo adesso, non da quel che aveva
+    // chiesto quando il mazzo è nato.
+    //
     // Le copie si fotografano in una mappa **sua**: quella dello stato può
     // cambiare padrone, e una fotografia che fosse lo stesso oggetto
-    // confronterebbe il mazzo con se stesso — cioè non staccherebbe il tetto
-    // mai più, che è esattamente il difetto per cui esiste `tettoInVigore`.
-    setConsegnato(tetto === null ? null : { tetto, copie: new Map(copie) });
+    // confronterebbe il mazzo con se stesso — cioè non staccherebbe i vincoli
+    // mai più, che è esattamente il difetto per cui esiste `in-vigore.ts`.
+    //
+    // Un tema che non dichiara niente si registra come **nessun tema**, e non
+    // come un tema vuoto: `temaDichiarato` è la definizione dell'app, e un
+    // mazzo salvato non ha modo di scrivere la differenza fra «costruito senza
+    // vincoli» e «salvato prima che l'app scrivesse il tema». Registrandolo qui
+    // come tema vero, lo stesso mazzo si comporterebbe in un modo prima di
+    // essere salvato e in un altro dopo essere stato riaperto — e due regole
+    // per lo stesso mazzo sono peggio di una regola sola un po' larga. La
+    // regola sola: chi non ha dichiarato niente prende le terre che il tema di
+    // adesso permette, come è sempre stato.
+    setConsegnato({ tetto, tema: temaDichiarato(tema) ? tema : null, copie: new Map(copie) });
     setAperto(null);
     setPagina("mazzo");
   };
@@ -513,7 +561,8 @@ export function App() {
         ) : pagina === "salvati" ? (
           <MazziSalvati
             pool={pool}
-            tema={tema}
+            tema={temaDelMazzoInMano}
+            temaDeiVincoli={tema}
             tettoDiSpesa={tettoDelMazzoInMano}
             formato={ambito}
             mazzo={mazzo}
@@ -525,14 +574,16 @@ export function App() {
         ) : (
           <SchermataMazzo
             pool={pool}
-            tema={tema}
+            tema={temaDelMazzoInMano}
+            temaDeiVincoli={tema}
+            temaDelMazzo={temaDelMazzo}
             mazzo={mazzo}
             copiePerNome={copiePerNome}
             cambiaCopie={cambiaCopie}
             terreVolute={terreVolute}
             cambiaTerre={cambiaTerre}
             tettoDiSpesa={tettoDelMazzoInMano}
-            togliIlTetto={togliIlTetto}
+            sciogliIVincoli={sciogliIVincoli}
           />
         )}
       </main>
@@ -565,16 +616,23 @@ export function App() {
 function SchermataMazzo({
   pool,
   tema,
+  temaDeiVincoli,
+  temaDelMazzo,
   mazzo,
   copiePerNome,
   cambiaCopie,
   terreVolute,
   cambiaTerre,
   tettoDiSpesa,
-  togliIlTetto,
+  sciogliIVincoli,
 }: {
   pool: Pool;
+  /** Il tema che sceglie le terre di questo mazzo, che non è per forza l'altro. */
   tema: Tema;
+  /** Il tema dichiarato adesso nei Vincoli: serve a dire di quanto differiscono. */
+  temaDeiVincoli: Tema;
+  /** Se un tema è attaccato a questo mazzo, e quale; `null` se decide la manopola. */
+  temaDelMazzo: Tema | null;
   mazzo: readonly CopieDiCarta[];
   copiePerNome: ReadonlyMap<string, number>;
   cambiaCopie: (carta: Carta, delta: number) => void;
@@ -582,8 +640,8 @@ function SchermataMazzo({
   cambiaTerre: (quante: number | null) => void;
   /** Il tetto di spesa, che vale anche sulle terre che la schermata sceglie. */
   tettoDiSpesa: number | null;
-  /** Levare il tetto a questo mazzo, senza toccarne le carte (ticket 21). */
-  togliIlTetto: () => void;
+  /** Slegare questo mazzo dai vincoli con cui è nato (ticket 21, poi 31). */
+  sciogliIVincoli: () => void;
 }) {
   const [aperta, setAperta] = useState<Carta | null>(null);
 
@@ -601,12 +659,14 @@ function SchermataMazzo({
       <Mazzo
         pool={pool}
         tema={tema}
+        temaDeiVincoli={temaDeiVincoli}
+        temaDelMazzo={temaDelMazzo}
         mazzo={mazzo}
         cambiaCopie={cambiaCopie}
         terreVolute={terreVolute}
         cambiaTerre={cambiaTerre}
         tettoDiSpesa={tettoDiSpesa}
-        togliIlTetto={togliIlTetto}
+        sciogliIVincoli={sciogliIVincoli}
         apri={setAperta}
       />
       {aperta ? (

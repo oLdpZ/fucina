@@ -15,11 +15,16 @@ import type { IdentitaDiFormato } from "../dati/ambito.js";
 import { dataInItaliano } from "../dati/carica-pool.js";
 import { dimenticaMazzo, elencaMazziSalvati, salvaMazzo } from "../dati/mazzi-salvati.js";
 import type { Pool } from "../dati/pool.js";
-import { budgetPerLeTerre, terreCandidate } from "../mazzo/terre-candidate.js";
-import type { Tema } from "../tema/tema.js";
+import {
+  budgetPerLeTerre,
+  confrontoFraTemiSulleTerre,
+  terreCandidate,
+} from "../mazzo/terre-candidate.js";
+import { temaDichiarato, type Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { leggiScambio, listaDaTorneo, scriviScambio } from "../mazzo/scambio.js";
 import {
+  frasePerIlTemaSuQuelCheEsce,
   frasePerIlTettoSuQuelCheEsce,
   frasePerLeTerreScartate,
 } from "../spiegazioni/frasi.js";
@@ -42,6 +47,7 @@ export type TerreScartate = readonly { nome: string; copie: number }[];
 export function MazziSalvati({
   pool,
   tema,
+  temaDeiVincoli,
   tettoDiSpesa,
   formato,
   mazzo,
@@ -62,6 +68,12 @@ export function MazziSalvati({
    * ha l'altra.
    */
   tema: Tema;
+  /**
+   * Il tema dichiarato **adesso** nei Vincoli, che qui non filtra niente: serve
+   * solo a dire di quanto le terre di queste liste differiscono da quelle che
+   * il tema di adesso sceglierebbe, e a tacere quando non differiscono affatto.
+   */
+  temaDeiVincoli: Tema;
   tettoDiSpesa: number | null;
   /**
    * Il gioco che si sta giocando. Entra da fuori e non si legge qui: il mazzo
@@ -133,7 +145,18 @@ export function MazziSalvati({
       nome: scelto === "" ? "Mazzo senza nome" : scelto,
       salvatoIl,
       datiDel: pool.generatoIl,
-      richiesta: { origine: "a-mano", terreVolute },
+      // Sotto quali vincoli le terre di questo mazzo sono state scelte
+      // (ticket 31). Sono quelli **in vigore sul mazzo** e non le manopole: la
+      // schermata li riceve già così, ed è la stessa cifra e lo stesso tema con
+      // cui ha appena scritto le due liste qui sotto. Scriverli è quel che
+      // permette a chi lo riaprirà — fra una settimana, dopo aver cambiato tema
+      // dieci volte — di ritrovare queste terre e non altre.
+      richiesta: {
+        origine: "a-mano",
+        terreVolute,
+        ...(temaDichiarato(tema) ? { tema } : {}),
+        ...(tettoDiSpesa === null ? {} : { tetto: tettoDiSpesa }),
+      },
       // Di che gioco è questo mazzo. Un mazzo salvato dura più a lungo del
       // formato che l'ha prodotto — il documento si corregge — e senza questa
       // riga, il giorno che il formato cambia, il mazzo si riaprirebbe mezzo
@@ -162,6 +185,16 @@ export function MazziSalvati({
     [pool, tema, tettoDiSpesa],
   );
   const budget = useMemo(() => budgetPerLeTerre(mazzo, tettoDiSpesa), [mazzo, tettoDiSpesa]);
+  /**
+   * Lo stesso confronto della schermata del mazzo, con **la stessa funzione**:
+   * le due schermate devono dire di queste terre le stesse cose, e riscriverlo
+   * qui sarebbe la copia da cui, dopo il ticket 19, la lista per l'arbitro
+   * elencava terre che il mazzo mostrato non conteneva.
+   */
+  const terreDiDueTemi = useMemo(
+    () => confrontoFraTemiSulleTerre(pool.carte, tema, temaDeiVincoli),
+    [pool, tema, temaDeiVincoli],
+  );
   const daTorneo = useMemo(() => {
     if (mazzo.length === 0) return "";
     // Lo stesso budget della schermata del mazzo: è quella che mostra al
@@ -333,10 +366,19 @@ export function MazziSalvati({
             invisibile di prima, spostata di una schermata.
           */}
           {tettoDiSpesa !== null ? (
-            <p class="nota tetto-in-vigore">
+            <p class="nota vincoli-in-vigore">
               {frasePerIlTettoSuQuelCheEsce({ tetto: tettoDiSpesa })}
             </p>
           ) : null}
+          {/*
+            E lo stesso per il tema (ticket 31), che sulle terre viene **prima**
+            del prezzo: un foglio per l'arbitro con una base decisa da un vincolo
+            che nella pagina non compare è la stessa cifra invisibile di prima,
+            spostata da un filtro all'altro.
+          */}
+          {terreDiDueTemi.stessaBase ? null : (
+            <p class="nota vincoli-in-vigore">{frasePerIlTemaSuQuelCheEsce(terreDiDueTemi)}</p>
+          )}
           <Testo
             titolo="Il mazzo da mandare a un amico"
             spiegazione="Contiene la lista e la richiesta che l’ha prodotta: chi lo importa

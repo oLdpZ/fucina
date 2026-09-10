@@ -6,6 +6,7 @@ import {
   nuovoId,
   type MazzoSalvato,
 } from "./salvato.js";
+import { FILTRO_TEMA_VUOTO, TEMA_VUOTO } from "../tema/tema.js";
 
 /**
  * Ticket 07: un mazzo salvato porta con sé **la richiesta che lo ha generato**,
@@ -113,5 +114,77 @@ describe("il formato che ha prodotto il mazzo", () => {
 
     expect(storto.formato).toBeUndefined();
     expect(storto.carte).toEqual(SALVATO.carte);
+  });
+});
+
+describe("il tema e il tetto con cui il mazzo è stato costruito", () => {
+  const TEMA = {
+    inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Goblin"] },
+    seme: null,
+    esclusioni: { ...FILTRO_TEMA_VUOTO, colori: ["B"] as const },
+    allargamenti: [],
+  };
+
+  it("si rileggono com'erano: sono quel che rifà le stesse terre di allora", () => {
+    const letto = interpretaMazzoSalvato(
+      structuredClone({ ...SALVATO, richiesta: { ...SALVATO.richiesta, tema: TEMA, tetto: 30 } }),
+    );
+
+    expect(letto.richiesta.tema).toEqual(TEMA);
+    expect(letto.richiesta.tetto).toBe(30);
+  });
+
+  it("mancano, senza guasti, nei mazzi salvati prima di questo cambio", () => {
+    // La casella del ticket 31: chi ha già dei mazzi sul telefono se li ritrova
+    // tutti, e l'assenza di questi due campi non è un guasto — è un mazzo che
+    // non dichiara come sono state scelte le sue terre, e si dice a chi lo apre.
+    const letto = interpretaMazzoSalvato(structuredClone(SALVATO));
+
+    expect(letto.richiesta.tema).toBeUndefined();
+    expect(letto.richiesta.tetto).toBeUndefined();
+    expect(letto.carte).toEqual(SALVATO.carte);
+  });
+
+  it("scritti storti valgono assenti, e non si portano via il mazzo intero", () => {
+    const storto = interpretaMazzoSalvato({
+      ...structuredClone(SALVATO),
+      richiesta: {
+        ...SALVATO.richiesta,
+        tema: { esclusioni: { colori: ["Nero"] } },
+        tetto: "trenta euro",
+      },
+    });
+
+    expect(storto.richiesta.tema).toBeUndefined();
+    expect(storto.richiesta.tetto).toBeUndefined();
+    expect(storto.carte).toEqual(SALVATO.carte);
+  });
+
+  it("un tetto che non è una cifra da spendere vale assente", () => {
+    for (const tetto of [-5, Number.NaN, "trenta"]) {
+      const letto = interpretaMazzoSalvato({
+        ...structuredClone(SALVATO),
+        richiesta: { ...SALVATO.richiesta, tetto },
+      });
+      expect(letto.richiesta.tetto).toBeUndefined();
+    }
+  });
+
+  it("il tetto zero si rilegge come tetto: è «solo carte senza prezzo», non «nessun tetto»", () => {
+    const letto = interpretaMazzoSalvato({
+      ...structuredClone(SALVATO),
+      richiesta: { ...SALVATO.richiesta, tetto: 0 },
+    });
+
+    expect(letto.richiesta.tetto).toBe(0);
+  });
+
+  it("un tema che non dichiara niente non è un tema, e non si rilegge come tale", () => {
+    const letto = interpretaMazzoSalvato({
+      ...structuredClone(SALVATO),
+      richiesta: { ...SALVATO.richiesta, tema: TEMA_VUOTO },
+    });
+
+    expect(letto.richiesta.tema).toBeUndefined();
   });
 });

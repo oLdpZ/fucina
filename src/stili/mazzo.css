@@ -144,7 +144,7 @@
   max-width: var(--larghezza-colonna);
 }
 
-/* --- il tetto in vigore --- */
+/* --- i vincoli in vigore sul mazzo che si ha in mano --- */
 
 /*
   Stessa forma del «torna» della manopola, e per la stessa ragione: si legge
@@ -153,7 +153,16 @@
   un'app da telefono (Q20), e un tasto alto quanto una riga di testo lì non si
   prende.
 */
-.tetto-in-vigore .togli-tetto {
+/*
+  Le due frasi — il tetto e il tema — stanno una sotto l'altra e staccate: sono
+  due vincoli diversi sulla stessa base, e appiccicate si leggerebbero come un
+  paragrafo solo in cui non si capisce più quale numero appartenga a quale.
+*/
+.vincoli-in-vigore .spiegazione + .spiegazione {
+  margin-top: calc(var(--passo) * 2);
+}
+
+.vincoli-in-vigore .togli-tetto {
   display: block;
   padding: calc(var(--passo) * 2) 0;
   min-height: 44px;

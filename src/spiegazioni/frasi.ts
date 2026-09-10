@@ -384,6 +384,19 @@ export function frasePerLeRinunceDelBudget(grezzi: GrezziDelleRinunce): string {
 export type GrezziDelTettoInVigore = {
   /** Il tetto con cui il mazzo in mano è stato costruito, in euro. */
   tetto: number;
+  /**
+   * Se sul mazzo in mano è in vigore anche **il tema con cui è stato
+   * costruito** (ticket 31).
+   *
+   * Cambia una sola cosa, ed è la coda della frase: quel che succede levando il
+   * tetto. Il solo comando che lo leva scioglie il mazzo da **tutti e due** i
+   * vincoli insieme — è un fatto solo, e `in-vigore.ts` dice perché — quindi la
+   * base non si rifà affatto «sulle terre che il tema permette»: si rifà su
+   * quelle che permette il tema dichiarato adesso, che è un altro. Promettere
+   * la prima cosa sarebbe promettere quel che non succede; la frase perciò tace
+   * e lascia dirlo a quella accanto, che quel tema lo conta.
+   */
+  conIlSuoTema?: boolean;
 };
 
 /**
@@ -402,13 +415,107 @@ export type GrezziDelTettoInVigore = {
  */
 export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string {
   return (
-    `Questo mazzo l'ha costruito il motore con un tetto di ${decimale(grezzi.tetto)} €, ` +
+    `Questo mazzo è stato costruito con un tetto di ${decimale(grezzi.tetto)} €, ` +
     "e il tetto vale ancora: le terre qui sotto sono scelte per starci dentro. " +
     // «Che il tema permette» e non «del pool»: le esclusioni del tema valgono
     // sulle terre prima del prezzo, e chi ha detto «niente verde» non vedrebbe
     // comparire una foresta nemmeno a tetto levato. Promettergliela sarebbe
     // inventare, che è la cosa che questo file non fa.
-    "Togliendolo, la base si rifà su tutte le terre che il tema permette."
+    (grezzi.conIlSuoTema === true
+      ? "Anche il tema con cui è stato costruito vale ancora, e si levano insieme."
+      : "Togliendolo, la base si rifà su tutte le terre che il tema permette.")
+  );
+}
+
+/* --- Il tema che sceglie le terre del mazzo che si ha in mano -------------- */
+
+export type GrezziDelTemaInVigore = {
+  /** Quante terre del formato ammette il tema con cui il mazzo è stato fatto. */
+  terreAmmesse: number;
+  /** Quante terre ha il formato in tutto, prima di qualunque esclusione. */
+  terreDelFormato: number;
+  /** Quante ne ammetterebbe il tema dichiarato adesso nei Vincoli. */
+  terreColTemaDiAdesso: number;
+  /**
+   * Quante ne ammette il tema del mazzo che quello di adesso non ammette.
+   *
+   * Serve al caso in cui i due conti coincidono: due temi possono ammettere
+   * altrettante terre senza ammettere **le stesse**, e la frase che si limitasse
+   * ai totali direbbe «ne ammette 28 delle 40; col tema di adesso ne avrebbe 28»
+   * — un avviso i cui numeri non mostrano nessuna differenza, cioè un avviso che
+   * insegna a non leggere gli avvisi. Questo è il numero che la differenza ce
+   * l'ha dentro.
+   */
+  terreSoloSue: number;
+};
+
+/**
+ * Che le terre del mazzo che si guarda le sceglie **il tema con cui è stato
+ * costruito**, e non quello dichiarato adesso (ticket 31).
+ *
+ * È la seconda metà della dichiarazione cominciata col tetto (ticket 21), e
+ * chiude lo stesso difetto un passo più in là: la base di terre si filtra con le
+ * esclusioni del tema prima ancora che col prezzo, e finché quel tema veniva
+ * letto dalla manopola dei Vincoli, un mazzo salvato dicendo «niente nero» si
+ * riapriva pieno di paludi — senza un avviso, perché la schermata mostrava la
+ * base che aveva appena ricalcolato e non aveva modo di sapere che non era
+ * quella di prima.
+ *
+ * I numeri sono due terre contate sullo stesso pool, e servono a rendere la
+ * differenza guardabile invece che da credere sulla parola: quante ne ammette il
+ * tema di quel mazzo, e quante ne ammetterebbe quello di adesso. Chi legge può
+ * contarle nell'elenco qui sotto e ritrovarle.
+ *
+ * **Quando dirla non lo decide questa frase**: la decide chi la chiama, e la
+ * decide su quei due numeri — se i due temi ammettono le stesse terre, la base
+ * è la stessa e non c'è niente da dichiarare.
+ */
+export function frasePerIlTemaInVigore(grezzi: GrezziDelTemaInVigore): string {
+  return (
+    `Le terre qui sotto le sceglie il tema con cui questo mazzo è stato costruito: ${quanteAmmette(grezzi)}. ` +
+    `${confrontoColTemaDiAdesso(grezzi)}`
+  );
+}
+
+/** «ne ammette 25 delle 33 del formato», o la variante che non dice «33 delle 33». */
+function quanteAmmette(grezzi: GrezziDelTemaInVigore): string {
+  return grezzi.terreAmmesse === grezzi.terreDelFormato
+    ? `non ne esclude nessuna delle ${grezzi.terreDelFormato} del formato`
+    : `ne ammette ${grezzi.terreAmmesse} delle ${grezzi.terreDelFormato} del formato`;
+}
+
+/**
+ * Il confronto col tema di adesso, in una forma che mostra sempre la differenza.
+ *
+ * A conti diversi basta il secondo totale. A conti uguali no — sarebbero due
+ * volte lo stesso numero — e allora si dice **quante non sono le stesse**, che è
+ * la differenza vera e l'unica ragione per cui l'avviso compare.
+ */
+function confrontoColTemaDiAdesso(grezzi: GrezziDelTemaInVigore): string {
+  if (grezzi.terreAmmesse !== grezzi.terreColTemaDiAdesso) {
+    return `Col tema dichiarato adesso ne avrebbe ${grezzi.terreColTemaDiAdesso}.`;
+  }
+  const una = grezzi.terreSoloSue === 1;
+  return (
+    `Il tema dichiarato adesso ne ammetterebbe altrettante, ma ${terre(grezzi.terreSoloSue)} ` +
+    `di queste ${una ? "non sarebbe" : "non sarebbero"} fra quelle.`
+  );
+}
+
+/**
+ * La stessa cosa, dove il mazzo non si tocca ma si **scrive**: la lista per
+ * l'arbitro e il testo da mandare a un amico.
+ *
+ * Vale la ragione già scritta per il tetto qui sotto: quelle due liste elencano
+ * terre scelte da un vincolo che in questa pagina non compare, e senza una riga
+ * che lo dica il foglio uscirebbe deciso da qualcosa di invisibile. Il vincolo
+ * qui non si leva — si leva dove il mazzo si tocca, e la frase dice dove.
+ */
+export function frasePerIlTemaSuQuelCheEsce(grezzi: GrezziDelTemaInVigore): string {
+  return (
+    `Le terre di queste liste le sceglie il tema con cui questo mazzo è stato costruito: ` +
+    `${quanteAmmette(grezzi)}. ${confrontoColTemaDiAdesso(grezzi)} ` +
+    "Si cambia dalla schermata «Mazzo»."
   );
 }
 
@@ -428,7 +535,12 @@ export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string 
 export function frasePerIlTettoSuQuelCheEsce(grezzi: GrezziDelTettoInVigore): string {
   return (
     `Le terre di queste liste stanno dentro il tetto di ${decimale(grezzi.tetto)} € ` +
-    "con cui il motore ha costruito questo mazzo. Si leva dalla schermata «Mazzo»."
+    // «È stato costruito» e non «l'ha costruito il motore»: da quando un mazzo
+    // riaperto si riporta dietro il tetto con cui era stato salvato (ticket
+    // 31), quella cifra può benissimo appartenere a un mazzo messo insieme a
+    // mano, e nominare il motore sarebbe raccontare una storia che non c'è
+    // stata.
+    "con cui questo mazzo è stato costruito. Si leva dalla schermata «Mazzo»."
   );
 }
 

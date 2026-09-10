@@ -31,8 +31,16 @@ import type { Carta, ColoreMana, Pool } from "../dati/pool.js";
 import type { Tema } from "../tema/tema.js";
 import { CostoDiMana } from "./CostoDiMana.js";
 import { ListaDellaSpesa } from "./ListaDellaSpesa.js";
-import { budgetPerLeTerre, terreCandidate } from "../mazzo/terre-candidate.js";
-import { frasePerIlTettoInVigore, frasePerLeRinunceDelBudget } from "../spiegazioni/frasi.js";
+import {
+  budgetPerLeTerre,
+  confrontoFraTemiSulleTerre,
+  terreCandidate,
+} from "../mazzo/terre-candidate.js";
+import {
+  frasePerIlTemaInVigore,
+  frasePerIlTettoInVigore,
+  frasePerLeRinunceDelBudget,
+} from "../spiegazioni/frasi.js";
 
 const PERCENTUALE = new Intl.NumberFormat("it-IT", {
   style: "percent",
@@ -52,25 +60,57 @@ const NOME_COLORE: Record<ColoreMana, string> = {
 export function Mazzo({
   pool,
   tema,
+  temaDeiVincoli,
+  temaDelMazzo,
   mazzo,
   cambiaCopie,
   terreVolute,
   cambiaTerre,
   tettoDiSpesa,
-  togliIlTetto,
+  sciogliIVincoli,
   apri,
 }: {
   pool: Pool;
-  /** Il tema serve qui per una cosa sola: le sue **esclusioni**. */
+  /**
+   * Il tema che sceglie le terre di **questo** mazzo, e serve qui per una cosa
+   * sola: le sue **esclusioni**.
+   *
+   * Non è per forza quello dichiarato nei Vincoli: un mazzo costruito o riaperto
+   * si porta dietro il tema sotto cui è nato, e sono le sue esclusioni a
+   * decidere la base finché quel mazzo resta quel mazzo (`in-vigore.ts`,
+   * ticket 31).
+   */
   tema: Tema;
+  /**
+   * Il tema dichiarato **adesso** nei Vincoli.
+   *
+   * Non filtra niente: serve a dire di quanto le due basi differirebbero, e a
+   * tacere quando non differiscono affatto. Senza di lui la schermata potrebbe
+   * solo dire «le terre sono quelle di un altro tema» senza saper dire quanto —
+   * cioè una frase senza numeri dentro, che questa app non scrive.
+   */
+  temaDeiVincoli: Tema;
+  /**
+   * Se un tema **è** attaccato a questo mazzo, e quale; `null` quando le sue
+   * terre le decide la manopola dei Vincoli.
+   *
+   * Non serve a filtrare — a quello serve `tema`, che quando questo è `null` è
+   * già il tema dei Vincoli — ma a dire la verità sul tasto: sciogliere i
+   * vincoli leva anche il tema, e un tasto che dicesse solo «Togli il tetto»
+   * mentre ne stacca due direbbe una cosa più piccola di quella che fa.
+   */
+  temaDelMazzo: Tema | null;
   mazzo: readonly CopieDiCarta[];
   cambiaCopie: (carta: Carta, delta: number) => void;
   terreVolute: number | null;
   cambiaTerre: (quante: number | null) => void;
   /** Il tetto di spesa, `null` quando è spento: vale anche sulle terre. */
   tettoDiSpesa: number | null;
-  /** Levare il tetto a questo mazzo, senza toccarne le carte (ticket 21). */
-  togliIlTetto: () => void;
+  /**
+   * Slegare questo mazzo dai vincoli con cui è nato — il tetto e il tema —
+   * senza toccarne le carte (ticket 21, poi ticket 31).
+   */
+  sciogliIVincoli: () => void;
   apri: (carta: Carta) => void;
 }) {
   // Le esclusioni del tema valgono anche per le terre, e valgono **qui** come
@@ -96,6 +136,18 @@ export function Mazzo({
    * elencherebbe terre che il conto in fondo non copre.
    */
   const budget = useMemo(() => budgetPerLeTerre(mazzo, tettoDiSpesa), [mazzo, tettoDiSpesa]);
+  /**
+   * Di quanto il tema di questo mazzo e quello dei Vincoli differiscono sulle
+   * terre: i numeri della frase, e la risposta a **se dirla**.
+   *
+   * Il conto sta in `terre-candidate.ts` e non qui: la schermata dei salvati fa
+   * la stessa domanda per le liste che scrive, e due copie della stessa
+   * risposta sono la strada da cui il ticket 19 è arrivato.
+   */
+  const terreDiDueTemi = useMemo(
+    () => confrontoFraTemiSulleTerre(pool.carte, tema, temaDeiVincoli),
+    [pool, tema, temaDeiVincoli],
+  );
   const base = useMemo(
     () => analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute, budget }),
     [mazzo, terreDelPool, terreVolute, budget],
@@ -176,16 +228,37 @@ export function Mazzo({
           accanto è quel che rende accettabile la regola severa che stacca il
           tetto alla prima carta cambiata: chi lo vuole via lo dice qui.
         */}
-        {tettoDiSpesa !== null ? (
-          <div class="tetto-in-vigore">
-            <p class="spiegazione">{frasePerIlTettoInVigore({ tetto: tettoDiSpesa })}</p>
+        {tettoDiSpesa !== null || !terreDiDueTemi.stessaBase ? (
+          <div class="vincoli-in-vigore">
+            {tettoDiSpesa !== null ? (
+              <p class="spiegazione">
+                {frasePerIlTettoInVigore({
+                  tetto: tettoDiSpesa,
+                  conIlSuoTema: temaDelMazzo !== null,
+                })}
+              </p>
+            ) : null}
+            {/*
+              Il tema si dichiara solo quando cambia davvero la base (ticket 31):
+              due temi che ammettono le stesse terre scelgono le stesse terre, e
+              un avviso su una base identica sarebbe rumore che insegna a non
+              leggere gli avvisi.
+            */}
+            {terreDiDueTemi.stessaBase ? null : (
+              <p class="spiegazione">{frasePerIlTemaInVigore(terreDiDueTemi)}</p>
+            )}
             {/*
               Il tasto sta su una riga sua e non in mezzo alla frase: dentro il
               testo sarebbe alto quanto una riga, e questa è un'app da telefono
               (Q20) dove sotto il dito ci vogliono i suoi millimetri.
+
+              Uno solo per tutti e due i vincoli, perché uno solo è il fatto che
+              tolgono di mezzo: che questo mazzo è quello costruito così. Due
+              tasti direbbero che si possono staccare separatamente, e non si
+              può — la ragione sta in `in-vigore.ts`.
             */}
-            <button type="button" class="togli-tetto" onClick={togliIlTetto}>
-              Togli il tetto
+            <button type="button" class="togli-tetto" onClick={sciogliIVincoli}>
+              {temaDelMazzo === null ? "Togli il tetto" : "Rifà le terre coi vincoli di adesso"}
             </button>
           </div>
         ) : null}
