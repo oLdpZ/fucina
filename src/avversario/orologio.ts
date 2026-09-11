@@ -95,6 +95,94 @@ export function interpretaOrologi(dati: unknown): Orologio[] {
   return letti;
 }
 
+/**
+ * Come `interpretaOrologi`, ma una voce storta vale come assente.
+ *
+ * È la lettura giusta per il **deposito del dispositivo**, dove gli orologi
+ * sono già dell'utente: sono l'unica cosa che l'app conserva e che nessuno può
+ * ricostruire al posto suo — il meta del suo negozio, mazzo per mazzo. Là
+ * dentro una riga scritta a metà — un mazzo appena aggiunto a cui non ha ancora
+ * dato un nome, una scrittura interrotta, spazio recuperato dal browser — non
+ * deve poter far sparire le altre undici. Si perde **una voce, non l'elenco**:
+ * è la stessa lezione di `identitaSeSiLegge`, che sta accanto a
+ * `interpretaIdentita` per la stessa ragione (ticket 35).
+ *
+ * Chi non si legge cade, e cadono anche i doppioni — si tiene il **primo**, che
+ * è quello su cui l'utente aveva già deciso — e le voci oltre il massimo. Quel
+ * che resta è esattamente quel che il lettore severo accetterebbe: una voce
+ * senza nome non entra nella corsa nemmeno da qui, e ADR-0002 resta in piedi.
+ *
+ * `undefined` non è l'elenco vuoto, e la distinzione regge tutta la riapertura:
+ * l'elenco vuoto è «non voglio correre contro nessuno», `undefined` è «non si è
+ * capito niente di quel che c'è scritto», e solo il secondo fa tornare il file
+ * del manutentore.
+ *
+ * Per un testo arrivato da fuori vale l'altra, quella severa: là il file non è
+ * ancora di nessuno, ed è il momento di dire quale riga guardare.
+ */
+export function orologiCheSiLeggono(dati: unknown): Orologio[] | undefined {
+  if (!Array.isArray(dati)) return undefined;
+  return vaglia(dati).tenuti;
+}
+
+/**
+ * Quali righe non entrano nel deposito, e **perché**, riga per riga.
+ *
+ * È la seconda metà della promessa del ticket 35. La prima è che una riga
+ * storta non porti via le altre; questa è che non se ne vada in silenzio: la
+ * schermata mostra quel che l'utente ha in mano, il deposito tiene quel che si
+ * rilegge, e finché le due cose differiscono l'utente deve poterlo leggere sotto
+ * la riga che sta scrivendo. «Un mazzo scomparso in silenzio è la cosa che il
+ * progetto ha promesso di non fare», e una riga che si salva a metà è lo stesso
+ * silenzio più piccolo.
+ *
+ * Le ragioni sono quelle che il lettore severo scriverebbe: sono già frasi per
+ * una persona che ha la riga davanti, ed è esattamente chi le leggerà.
+ */
+export function righeCheNonSiConservano(dati: readonly unknown[]): Map<number, string> {
+  return vaglia(dati).scarti;
+}
+
+/** La setacciatura, una volta sola: che cosa resta e che cosa cade, e perché. */
+function vaglia(dati: readonly unknown[]): {
+  tenuti: Orologio[];
+  scarti: Map<number, string>;
+} {
+  const tenuti: Orologio[] = [];
+  const scarti = new Map<number, string>();
+  // Il nome com'è scritto **nella riga tenuta**, non nella riga che cade: chi
+  // legge deve poter andare a cercare l'altra, e «MONO ROSSO» non la trova.
+  const nomi = new Map<string, string>();
+
+  for (const [indice, voce] of dati.entries()) {
+    if (tenuti.length >= OROLOGI_MASSIMI) {
+      scarti.set(
+        indice,
+        `Gli orologi che si tengono sono ${OROLOGI_MASSIMI}: questa riga non si salva.`,
+      );
+      continue;
+    }
+
+    let letto: Orologio;
+    try {
+      letto = interpretaOrologio(voce, indice);
+    } catch (guaio) {
+      scarti.set(indice, guaio instanceof Error ? guaio.message : "Questa riga non si legge.");
+      continue;
+    }
+
+    const chiave = letto.nome.toLowerCase();
+    const gia = nomi.get(chiave);
+    if (gia !== undefined) {
+      scarti.set(indice, `Un altro mazzo si chiama già «${gia}»: questa riga non si salva.`);
+      continue;
+    }
+    nomi.set(chiave, letto.nome);
+    tenuti.push(letto);
+  }
+  return { tenuti, scarti };
+}
+
 function interpretaOrologio(dati: unknown, indice: number): Orologio {
   const dove = `L'orologio numero ${indice + 1}`;
   if (typeof dati !== "object" || dati === null || Array.isArray(dati)) {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { caricaOrologiDiPartenza } from "./avversario/carica-orologi.js";
-import type { Orologio } from "./avversario/orologio.js";
+import { orologiCheSiLeggono, type Orologio } from "./avversario/orologio.js";
 import { Avversario } from "./componenti/Avversario.js";
 import { Catalogo } from "./componenti/Catalogo.js";
 import { Combo } from "./componenti/Combo.js";
@@ -165,6 +165,13 @@ export function App() {
    */
   const [orologi, setOrologi] = useState<readonly Orologio[]>([]);
   /**
+   * L'utente ha già messo mano agli orologi in questa sessione?
+   *
+   * Serve a una cosa sola: che l'apertura, che arriva dopo un `fetch` e quindi
+   * tardi, non passi sopra a quel che l'utente ha scritto nel frattempo.
+   */
+  const orologiScrittiAMano = useRef(false);
+  /**
    * Il motore vive qui e non nella schermata da cui lo si accende: le pagine
    * si smontano passando da una all'altra, e una ricerca che vivesse dentro la
    * pagina morirebbe andando a controllare una carta nel catalogo — cioè
@@ -236,10 +243,15 @@ export function App() {
     let vivo = true;
     void leggiOrologiSalvati()
       .then(async (suoi) => {
-        if (!vivo) return;
+        if (!vivo || orologiScrittiAMano.current) return;
         if (suoi !== null) return setOrologi(suoi);
         const diPartenza = await caricaOrologiDiPartenza();
-        if (vivo) setOrologi(diPartenza);
+        // Il file del manutentore arriva da un `fetch`, e alla prima apertura
+        // quell'attesa è lunga abbastanza perché l'utente apra il pannello e
+        // scriva. Quel che ha scritto vince sempre: senza questa guardia il
+        // file di cortesia gli passava sopra, e il tasto successivo salvava la
+        // sostituzione (ticket 35).
+        if (vivo && !orologiScrittiAMano.current) setOrologi(diPartenza);
       })
       // Gli orologi che non si caricano non fermano l'app: senza, la corsa
       // semplicemente non si corre, e tutto il resto funziona intero.
@@ -249,14 +261,25 @@ export function App() {
     };
   }, []);
 
-  /** Gli orologi cambiati si salvano subito: non c'è un bottone «salva». */
+  /**
+   * Gli orologi cambiati si salvano subito: non c'è un bottone «salva».
+   *
+   * Nel deposito va solo quel che si rileggerà. Un mazzo appena aggiunto non ha
+   * ancora un nome — lo scrive l'utente, ed è giusto così — ma un orologio
+   * senza nome è una riga che si sta scrivendo, non una decisione: vive nello
+   * stato della schermata e nel deposito entra quando un nome ce l'ha
+   * (ticket 35). Salvare uno stato che non si rilegge era la causa; il lettore
+   * indulgente di `leggiOrologiSalvati` è il rimedio per i depositi già rovinati.
+   */
   const cambiaOrologi = (nuovi: readonly Orologio[]) => {
+    orologiScrittiAMano.current = true;
     setOrologi(nuovi);
-    void salvaOrologi(nuovi);
+    void salvaOrologi(orologiCheSiLeggono(nuovi) ?? []);
   };
 
   /** Rimette i mazzi di partenza, dimenticando quel che l'utente aveva scritto. */
   const ripristinaOrologi = () => {
+    orologiScrittiAMano.current = true;
     void dimenticaOrologi()
       .then(() => caricaOrologiDiPartenza())
       .then(setOrologi)

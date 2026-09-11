@@ -9,7 +9,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import { interpretaOrologi, OROLOGI_MASSIMI, TURNO_DI_CHIUSURA_MASSIMO } from "./orologio.js";
+import {
+  interpretaOrologi,
+  OROLOGI_MASSIMI,
+  orologiCheSiLeggono,
+  righeCheNonSiConservano,
+  TURNO_DI_CHIUSURA_MASSIMO,
+} from "./orologio.js";
 
 const BUONO = {
   nome: "Mono rosso",
@@ -96,5 +102,86 @@ describe("la lettura degli orologi", () => {
   it("rifiuta qualcosa che non è nemmeno un elenco", () => {
     expect(() => interpretaOrologi(BUONO)).toThrow(/elenco/);
     expect(() => interpretaOrologi(null)).toThrow(/elenco/);
+  });
+});
+
+/**
+ * Il lettore indulgente, che sta accanto a quello severo come
+ * `identitaSeSiLegge` sta accanto a `interpretaIdentita`.
+ *
+ * Là dentro gli orologi sono **già dell'utente**: una voce storta è una riga
+ * scritta a metà, e non deve poter portarsi via le altre undici che nessuno
+ * può ricostruire al posto suo (ticket 35).
+ */
+describe("gli orologi che si leggono", () => {
+  it("tiene le voci che si leggono e lascia cadere quella storta", () => {
+    const { nome: _, ...senzaNome } = BUONO;
+    const altro = { ...BUONO, nome: "Il mazzo dell'Abyss" };
+
+    expect(orologiCheSiLeggono([BUONO, senzaNome, altro])).toEqual([
+      interpretaOrologi([BUONO])[0],
+      interpretaOrologi([altro])[0],
+    ]);
+  });
+
+  it("di due orologi con lo stesso nome tiene il primo", () => {
+    // Il secondo è quello che l'utente sta ancora scrivendo: il primo è quello
+    // su cui aveva già deciso.
+    expect(orologiCheSiLeggono([BUONO, { ...BUONO, turnoDiChiusura: 7 }])).toEqual([
+      interpretaOrologi([BUONO])[0],
+    ]);
+  });
+
+  it("tiene i primi e lascia cadere quelli di troppo", () => {
+    const tanti = Array.from({ length: OROLOGI_MASSIMI + 2 }, (_, i) => ({
+      ...BUONO,
+      nome: `Mazzo ${i}`,
+    }));
+    const tenuti = orologiCheSiLeggono(tanti);
+    expect(tenuti).toHaveLength(OROLOGI_MASSIMI);
+    expect(tenuti?.[0]?.nome).toBe("Mazzo 0");
+  });
+
+  it("distingue l'elenco vuoto da quel che elenco non è", () => {
+    // È la distinzione su cui sta in piedi tutta la riapertura: l'elenco vuoto
+    // è «non voglio correre contro nessuno», e va rispettato; `undefined` è
+    // «non ha mai deciso», e allora si mostra il file del manutentore.
+    expect(orologiCheSiLeggono([])).toEqual([]);
+    expect(orologiCheSiLeggono(BUONO)).toBeUndefined();
+    expect(orologiCheSiLeggono(null)).toBeUndefined();
+  });
+
+  it("un orologio senza nome continua a non entrare nella corsa", () => {
+    const { nome: _, ...senzaNome } = BUONO;
+    expect(orologiCheSiLeggono([senzaNome])).toEqual([]);
+  });
+});
+
+describe("le righe che non si conservano", () => {
+  it("non ne trova nessuna in un elenco che si legge tutto", () => {
+    expect(righeCheNonSiConservano([BUONO, { ...BUONO, nome: "Altro" }]).size).toBe(0);
+  });
+
+  it("dice di una riga senza nome perché non si salva, nominando la riga", () => {
+    const { nome: _, ...senzaNome } = BUONO;
+    const guai = righeCheNonSiConservano([BUONO, senzaNome]);
+    expect(guai.get(1)).toMatch(/nome/);
+    expect(guai.has(0)).toBe(false);
+  });
+
+  it("dice del doppione, e lo dice del secondo e non del primo", () => {
+    const guai = righeCheNonSiConservano([BUONO, { ...BUONO, nome: "MONO ROSSO" }]);
+    expect(guai.get(1)).toMatch(/Mono rosso/);
+    expect(guai.has(0)).toBe(false);
+  });
+
+  it("dice delle righe oltre il massimo", () => {
+    const tanti = Array.from({ length: OROLOGI_MASSIMI + 1 }, (_, i) => ({
+      ...BUONO,
+      nome: `Mazzo ${i}`,
+    }));
+    expect(righeCheNonSiConservano(tanti).get(OROLOGI_MASSIMI)).toMatch(
+      new RegExp(String(OROLOGI_MASSIMI)),
+    );
   });
 });

@@ -25,6 +25,7 @@ import {
   type Orologio,
 } from "../avversario/orologio.js";
 import { PATTO_DELLA_CORSA } from "../spiegazioni/frasi.js";
+import { interoScritto } from "./casella-numerica.js";
 
 /** Un orologio appena aggiunto: numeri plausibili da correggere, non zeri. */
 const NUOVO: Orologio = {
@@ -172,6 +173,10 @@ export function Avversario({
  * prendersela da una casella che l'utente sta ancora svuotando vorrebbe dire
  * mettergli in bocca una cosa che non ha detto. Finché non c'è un numero, resta
  * l'ultimo valido.
+ *
+ * La promessa la mantiene `interoScritto`, che guarda il testo prima del
+ * numero: scritta qui dentro con `Number(...)` diceva il contrario di quel che
+ * prometteva per tutte le caselle con `minimo` zero (ticket 36).
  */
 function Numero({
   etichetta,
@@ -196,9 +201,18 @@ function Numero({
         max={massimo}
         step={1}
         onInput={(evento) => {
-          const letto = Number(evento.currentTarget.value);
-          if (!Number.isInteger(letto) || letto < minimo || letto > massimo) return;
+          const letto = interoScritto(evento.currentTarget.value, { minimo, massimo });
+          if (letto === undefined) return;
           cambia(letto);
+        }}
+        onBlur={(evento) => {
+          // Quel che si vede e quel che vale devono essere lo stesso numero.
+          // Rifiutare in silenzio non basta: senza `cambia` non c'è nessun
+          // ridisegno, e la casella resterebbe a mostrare il «70» battuto in un
+          // campo che arriva a 60 mentre la corsa si corre sul 7. È la stessa
+          // cura che `TettoDiSpesa` mette sul suo campo, per la stessa ragione.
+          const campo = evento.currentTarget;
+          if (campo.value !== String(valore)) campo.value = String(valore);
         }}
       />
     </label>

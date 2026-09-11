@@ -86,6 +86,14 @@ Gli orologi li scrive **soprattutto l'utente**: il meta del suo negozio non è i
 meta di internet, e chi ci gioca il venerdì sa quali mazzi incontra. Il file del
 manutentore serve solo perché la prima schermata non sia vuota.
 
+Sono anche **l'unica cosa che l'utente scrive a mano e che l'app conserva**, e
+quindi l'unica che nessuno può ricostruire al posto suo. Per questo si leggono
+in due modi: severo per un file arrivato da fuori — che dice quale riga
+guardare — e **indulgente** per il deposito del dispositivo, dove una voce
+storta cade da sola e le altre restano. Un orologio senza nome non entra nella
+corsa in nessuno dei due (ADR-0002), ma nel deposito non si porta più via
+l'elenco.
+
 ## Corsa
 
 **Il confronto fra il mazzo e un orologio**: chi chiude per primo, e che cosa

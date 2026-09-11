@@ -12,7 +12,7 @@
  * (storia 19). Chi chiama riceve `null` o `false`, mai un'eccezione.
  */
 
-import { interpretaOrologi, type Orologio } from "../avversario/orologio.js";
+import { orologiCheSiLeggono, type Orologio } from "../avversario/orologio.js";
 import { interpretaPool } from "./carica-pool.js";
 import type { Pool } from "./pool.js";
 
@@ -167,18 +167,25 @@ export async function dimenticaPool(): Promise<void> {
  * Si ri-controlla quel che si rilegge, come per il pool: un elenco troncato dal
  * browser che recupera spazio metterebbe nel punteggio una corsa contro un
  * avversario mezzo scritto.
+ *
+ * Ma si ri-controlla **voce per voce**, col lettore indulgente. Questi sono
+ * gli unici dati che l'app conserva e che nessuno può ricostruire al posto
+ * dell'utente, e prima del ticket 35 una riga storta se li portava via tutti:
+ * il lettore severo sollevava, il `catch` chiamava `dimenticaOrologi()`, e chi
+ * aveva premuto «Aggiungi un mazzo» senza dare un nome al terzo riapriva l'app
+ * trovandoci i mazzi del manutentore. Adesso si perde quella voce e restano le
+ * altre — e non si cancella niente: dati che non si sono saputi leggere restano
+ * dove sono, perché cancellarli è la decisione più drastica che questo codice
+ * possa prendere e non la prende in silenzio.
  */
 export async function leggiOrologiSalvati(): Promise<Orologio[] | null> {
   const letto = await transazione<unknown>(SCAFFALE, "readonly", (scaffale) =>
     scaffale.get(CHIAVE_OROLOGI),
   );
   if (letto === null || letto === undefined) return null;
-  try {
-    return interpretaOrologi(letto);
-  } catch {
-    void dimenticaOrologi();
-    return null;
-  }
+  // Quel che elenco non è vale come «non ha mai deciso»: là non c'è nessuna
+  // voce da tenere, e il file del manutentore è meglio di una schermata vuota.
+  return orologiCheSiLeggono(letto) ?? null;
 }
 
 /** Tiene da parte gli orologi dell'utente. `false` se non si è potuto. */
