@@ -76,7 +76,7 @@ import {
   type CopieDiCarta,
 } from "../mazzo/base-di-terre.js";
 import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
-import { comprabile, contoDelMazzo, prezzoDiUnaCopia } from "../mazzo/spesa.js";
+import { comprabile, contoDelMazzo, nonSupera, prezzoDiUnaCopia } from "../mazzo/spesa.js";
 import { terreCandidate, terrePermesseDalTema } from "../mazzo/terre-candidate.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
@@ -374,7 +374,19 @@ export function orologioDiSistema(): number {
   return typeof performance === "undefined" ? Date.now() : performance.now();
 }
 
-/** Sotto questa differenza due mazzi si dicono pari, e lo scambio non si tiene. */
+/**
+ * Sotto questa differenza due **punteggi** si dicono pari, e lo scambio non si
+ * tiene.
+ *
+ * Vale per i voti della ricerca, che sono numeri astratti senza unità. Le cifre
+ * in euro hanno la loro tolleranza e la loro ragione, e stanno coi prezzi
+ * (`nonSupera`, in `mazzo/spesa.ts`): un miliardesimo su un prezzo non vuol
+ * dire niente, e un mezzo centesimo su un punteggio nemmeno.
+ *
+ * L'eccezione è `penalitaDiSpesa`, che se ne serve come **divisore minimo** per
+ * non dividere per un tetto a zero. Lì non confronta niente: è solo il numero
+ * positivo più piccolo che il file abbia già.
+ */
 const PARI = 1e-9;
 
 /**
@@ -705,7 +717,7 @@ export function costruisciMazzo(
   // spento. Resta il confronto, che invece del prezzo parla davvero.
   if (spesaDichiarata !== null) {
     const { tetto: chiesto, minimo } = spesaDichiarata;
-    if (minimo !== null && minimo > chiesto) {
+    if (minimo !== null && !nonSupera(minimo, chiesto)) {
       return niente(
         "niente-da-costruire",
         `Dentro ${euro(chiesto)} un mazzo non si fa: le sessanta carte meno care che restano ne costano ${euro(minimo)}.`,
@@ -893,7 +905,7 @@ export function costruisciMazzo(
    * resterebbe in testa a una ricerca che non può consegnarlo.
    */
   const penalitaDiSpesa = (spesa: number, peso: number): number =>
-    tetto === null || spesa <= tetto
+    tetto === null || nonSupera(spesa, tetto)
       ? 0
       : PESO_DELLO_SFORAMENTO * (1 + peso) * ((spesa - tetto) / Math.max(tetto, PARI));
 
@@ -909,9 +921,14 @@ export function costruisciMazzo(
    *
    * A tetto spento non c'è niente da chiedere: è il prezzo a non avere voce in
    * capitolo, e una carta senza listino è una carta come le altre.
+   *
+   * «Dentro» è `nonSupera` e non `<=`: il prezzo di un mazzo è una somma di
+   * sessanta decimali, e chi riscrive nella casella la cifra che l'app gli
+   * mostra deve riavere il mazzo che quella cifra la portava. La ragione per
+   * esteso, e l'euro che la misura, stanno coi prezzi.
    */
   const dentroIlTetto = (misurato: { spesa: number; incontabili: readonly Carta[] }): boolean =>
-    tetto === null || (misurato.spesa <= tetto && misurato.incontabili.length === 0);
+    tetto === null || (nonSupera(misurato.spesa, tetto) && misurato.incontabili.length === 0);
 
   /**
    * Una ricerca intera con **un** peso: le partenze, gli scambi, e il mazzo
@@ -1661,7 +1678,7 @@ function conLoScambio(
     const attuale = prezzoDellaSelezione(selezione);
     const nuovo =
       attuale - (prezzoDiUnaCopia(esce.carta) ?? 0) + (prezzoDiUnaCopia(scambio.dentro) ?? 0);
-    if (nuovo > tettoPerLeCarte(portafoglio) && nuovo > attuale) return null;
+    if (!nonSupera(nuovo, tettoPerLeCarte(portafoglio)) && nuovo > attuale) return null;
   }
 
   const dopo: Selezione = new Map(selezione);

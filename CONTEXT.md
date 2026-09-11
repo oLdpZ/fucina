@@ -443,6 +443,15 @@ l'app dice quante sono di ciascuna: quelle che da sole costano più del tetto, e
 quelle che un **listino non ce l'hanno** — col tetto acceso l'app promette un
 conto, e non può promettere quel che non sa contare.
 
+Duro al **centesimo**, che è la cifra in cui il tetto si scrive e si legge. Il
+prezzo di un mazzo è la somma di sessanta decimali, un numero che in binario non
+torna mai esatto, e all'app tocca mostrarlo arrotondato: chi rilegge «233,25 €»
+e riscrive quella cifra nella casella sta chiedendo **quel mazzo lì**, e deve
+riaverlo. Perciò il confronto perdona mezzo centesimo — quanto un arrotondamento
+al centesimo può spostare — e non un soldo di più. La strada scartata era
+arrotondare la spesa dentro il motore: darebbe due arrotondamenti che possono
+divergere, cioè lo stesso difetto più difficile da vedere.
+
 Anche la **base di terre** lo rispetta, e non lo subisce: le si dice quanto è
 rimasto dopo le carte, e lei sceglie la base più forte che ci sta. Quando i
 soldi finiscono se ne va la copia che costa di più — non prima le terre di

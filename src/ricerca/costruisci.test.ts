@@ -24,7 +24,7 @@ import { probabilitaDiAssemblarne } from "../mazzo/probabilita.js";
 import { COPIE_MASSIME, DIMENSIONE_MAZZO } from "../mazzo/taratura.js";
 import { escluso, FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre } from "../mazzo/base-di-terre.js";
-import { comprabile, contoDelMazzo } from "../mazzo/spesa.js";
+import { comprabile, contoDelMazzo, PARI_IN_EURO } from "../mazzo/spesa.js";
 import { costruisciMazzo, type Frontiera, type Opzioni, type Richiesta } from "./costruisci.js";
 import { PESI_DELLA_PUREZZA } from "./taratura.js";
 
@@ -884,7 +884,12 @@ describe("il tetto di spesa", () => {
 
     expect(frontiera.mazzi.length).toBeGreaterThan(0);
     for (let i = 0; i < frontiera.mazzi.length; i++) {
-      expect(costo(frontiera, i)).toBeLessThanOrEqual(30);
+      // Il mezzo centesimo è dentro l'attesa perché è dentro la promessa: il
+      // prezzo di un mazzo è una somma di sessanta decimali, e il tetto perdona
+      // quanto un arrotondamento al centesimo può spostare, non un euro
+      // (`nonSupera`). Scritto qui `30` secco, questa riga chiederebbe al motore
+      // una precisione che il binario non ha.
+      expect(costo(frontiera, i)).toBeLessThanOrEqual(30 + PARI_IN_EURO);
     }
   });
 
@@ -1053,7 +1058,7 @@ describe("il tetto di spesa", () => {
         const mazzo = frontiera.mazzi[i]!;
         const copie = [...mazzo.carte, ...mazzo.terre].reduce((s, v) => s + v.copie, 0);
         expect({ tetto, copie }).toEqual({ tetto, copie: DIMENSIONE_MAZZO });
-        expect(mazzo.spesa).toBeLessThanOrEqual(tetto);
+        expect(mazzo.spesa).toBeLessThanOrEqual(tetto + PARI_IN_EURO);
       }
     }
   });
@@ -1120,6 +1125,75 @@ describe("il tetto di spesa", () => {
     }));
 
     expect(stretti.filter((prova) => prova.fatto).length).toBeGreaterThanOrEqual(4);
+  });
+
+  /** La cifra come l'app la scrive: due decimali, ed è quella che si rilegge. */
+  const mostrata = (quanti: number): number => Number(quanti.toFixed(2));
+
+  it("un tetto scritto com'è mostrato riconsegna il mazzo che quella cifra la portava", () => {
+    // La manopola del ticket 09 serve a **decidere**, e una decisione che non
+    // si può eseguire riscrivendo il numero che si legge non è una manopola.
+    // Il mazzo costa la somma di sessanta decimali — un numero che in binario
+    // non torna mai — e l'app ne mostra la cifra arrotondata al centesimo. Chi
+    // la ricopia nella casella del tetto sta chiedendo quel mazzo lì, e il
+    // confronto nudo gli rispondeva di no.
+    let provati = 0;
+
+    for (const tetto of [6, 18]) {
+      const largo = costruisci({ tema: NERO, tettoDiSpesa: tetto });
+      if (largo.mazzi.length === 0) continue;
+
+      const speso = costo(largo);
+      const scritto = mostrata(speso);
+      // I conti che tornano esatti non provano niente: qui si cercano quelli
+      // che in binario costano **più** della cifra con cui si mostrano, che
+      // sono i soli su cui il tetto sbagliava.
+      if (speso <= scritto) continue;
+      provati += 1;
+
+      const riscritto = costruisci({ tema: NERO, tettoDiSpesa: scritto });
+      expect({ tetto, mazzi: riscritto.mazzi.length > 0 }).toEqual({ tetto, mazzi: true });
+      expect(lista(riscritto), `tetto ${tetto} riscritto ${scritto}`).toBe(lista(largo));
+    }
+
+    // Senza questa riga il test sarebbe verde anche su un pool in cui nessuna
+    // somma si discosta dalla sua cifra, cioè su un motore rotto.
+    expect(provati).toBeGreaterThan(0);
+  });
+
+  it("la frase del pavimento non stampa due volte la stessa cifra", () => {
+    // «Dentro 30,00 € un mazzo non si fa: le sessanta carte meno care ne
+    // costano 30,00 €.» È il genere di riga che fa sembrare rotto un motore che
+    // sta solo contando in binario.
+    //
+    // Quel che si prova qui è la **frase**, non la misura della tolleranza: lo
+    // scarto che il pool finto produce è di pochi quadrilionesimi, e un
+    // perdono molto più piccolo di mezzo centesimo basterebbe a farlo sparire.
+    // Perché mezzo centesimo e non meno lo dicono i test di `nonSupera`, dove
+    // la ragione è in euro e si può leggere.
+    const pavimento = costruisci({ tema: NERO, tettoDiSpesa: 3 }).spesa?.minimo;
+    expect(pavimento).toBeDefined();
+
+    const scritto = mostrata(pavimento!);
+    // La guardia: se il pavimento si mostrasse esatto non ci sarebbe niente da
+    // provare, e questo test sarebbe una formalità verde.
+    expect(pavimento!).toBeGreaterThan(scritto);
+
+    const cifra = (quanti: number): string =>
+      new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(quanti);
+    const quanteVolte = (dove: string, quale: string): number => dove.split(quale).length - 1;
+
+    expect(quanteVolte(costruisci({ tema: NERO, tettoDiSpesa: scritto }).motivo, cifra(scritto))).toBe(
+      1,
+    );
+
+    // L'altra metà, senza la quale la prima sarebbe verde anche su un motore
+    // che la frase del pavimento non la dice mai: sotto il pavimento vero il no
+    // arriva subito, e porta **due cifre diverse**.
+    const sotto = costruisci({ tema: NERO, tettoDiSpesa: mostrata(pavimento! / 2) });
+    expect(sotto.mazzi).toHaveLength(0);
+    expect(quanteVolte(sotto.motivo, cifra(pavimento!))).toBe(1);
+    expect(quanteVolte(sotto.motivo, cifra(mostrata(pavimento! / 2)))).toBe(1);
   });
 
   it("resta ripetibile: stesso tetto e stesso seme, stessa frontiera", () => {

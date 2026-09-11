@@ -7,7 +7,7 @@ import { COMBO_VUOTA } from "../combo/combo.js";
 import { interpretaPool } from "../dati/carica-pool.js";
 import type { Carta } from "../dati/pool.js";
 import { analizzaBaseDiTerre } from "../mazzo/base-di-terre.js";
-import { contoDelMazzo } from "../mazzo/spesa.js";
+import { contoDelMazzo, PARI_IN_EURO } from "../mazzo/spesa.js";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import { costruisciMazzo, type Opzioni, type Richiesta } from "./costruisci.js";
 
@@ -185,7 +185,11 @@ describe("il tetto di spesa sul pool vero", () => {
     // sola cosa che rende il tetto una risposta e non un suggerimento.
     for (const { tetto, esito } of corse) {
       for (const mazzo of esito.mazzi) {
-        expect(costo(mazzo), `tetto ${tetto}`).toBeLessThanOrEqual(tetto);
+        // Il mezzo centesimo del ticket 41: il tetto perdona quanto un
+        // arrotondamento al centesimo può spostare, perché è al centesimo che
+        // il prezzo si mostra e si riscrive. Un euro no, e quel che questa riga
+        // continua a vietare è quello.
+        expect(costo(mazzo), `tetto ${tetto}`).toBeLessThanOrEqual(tetto + PARI_IN_EURO);
       }
     }
   });

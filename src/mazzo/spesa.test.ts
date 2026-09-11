@@ -10,6 +10,7 @@ import {
   descriviLaStampa,
   listaDellaSpesa,
   contoDelMazzo,
+  nonSupera,
   prezzoDiUnaCopia,
 } from "./spesa.js";
 
@@ -331,5 +332,35 @@ describe("l'avviso che accompagna ogni prezzo", () => {
     // promessa più forte di quella di prima, e va detta per quella che è.
     expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/listino/i);
     expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/copi/i);
+  });
+});
+
+describe("quando una spesa sta dentro una cifra chiesta", () => {
+  /**
+   * La cifra che l'utente legge e riscrive: due decimali, come la mostra
+   * ogni schermata dell'app.
+   */
+  const mostrata = (quanti: number): number => Number(quanti.toFixed(2));
+
+  it("ci sta un conto che in binario non torna, e a occhio è lo stesso numero", () => {
+    // Il caso vero: un mazzo costa la somma di sessanta decimali, l'app ne
+    // mostra «233,25 €», e chi riscrive quella cifra nella casella del tetto
+    // deve riavere quel mazzo. Il confronto nudo rispondeva di no.
+    const conto = 0.1 + 0.2;
+
+    expect(conto).toBeGreaterThan(mostrata(conto));
+    expect(nonSupera(conto, mostrata(conto))).toBe(true);
+  });
+
+  it("non ci sta un centesimo in più, che è una differenza vera", () => {
+    // Il perdono vale mezzo centesimo, cioè quanto un prezzo può discostarsi
+    // dalla cifra che lo mostra. Un centesimo intero è un prezzo diverso, e un
+    // tetto che lo lasciasse passare non sarebbe più il tetto chiesto.
+    expect(nonSupera(30.01, 30)).toBe(false);
+  });
+
+  it("ci sta, come sempre, quel che costa meno", () => {
+    expect(nonSupera(29, 30)).toBe(true);
+    expect(nonSupera(30, 30)).toBe(true);
   });
 });

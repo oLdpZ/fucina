@@ -41,7 +41,7 @@ import type { Carta, ColoreMana, Tag } from "../dati/pool.js";
 import { copieAlMassimo } from "./copie.js";
 import { simboliDiColore } from "./costo.js";
 import { probabilitaDiLanciare, type GruppoDiTerre, type Pip } from "./probabilita.js";
-import { contoDelMazzo, prezzoDiUnaCopia } from "./spesa.js";
+import { contoDelMazzo, nonSupera, prezzoDiUnaCopia } from "./spesa.js";
 import {
   COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA,
   DIMENSIONE_MAZZO,
@@ -645,7 +645,11 @@ function scendiNelBudget(
     // niente di incontabile da propagare, e il tetto vero lo tiene comunque il
     // conto sul mazzo intero.
     const costo = contoDelMazzo([...rimaste, ...basi(restanti)]).minimo;
-    if (costo <= budget) break;
+    // Mezzo centesimo di perdono, come ovunque una somma in euro si confronti
+    // con una cifra chiesta (`nonSupera`). Senza, la base rinuncerebbe a una
+    // terra per un miliardesimo — e la rinuncia non resta qui dentro: l'utente
+    // se la legge scritta, con dentro il nome della terra che non ha avuto.
+    if (nonSupera(costo, budget)) break;
 
     // Si prova a togliere una copia per ogni terra rimasta e si guarda quanto
     // verrebbe a costare la base **intera**, terra base di rimpiazzo compresa.

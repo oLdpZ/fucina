@@ -36,6 +36,48 @@ export const AVVISO_STIMA_AL_RIBASSO =
   "Stima al ribasso: ogni prezzo è quello della copia più economica, fra quelle che il formato ammette, " +
   "che su Cardmarket un listino ce l'abbia. La copia che troverai da comprare può essere un'altra, e costare di più.";
 
+/**
+ * Sotto questa differenza due cifre in euro si dicono **la stessa cifra**:
+ * mezzo centesimo.
+ *
+ * Non è la tolleranza generica dei numeri con la virgola — quella vale un
+ * miliardesimo e sta nella ricerca, dove serve a confrontare due punteggi — ed
+ * è in euro apposta, perché in euro è la ragione.
+ *
+ * La ragione è questa. Il prezzo di un mazzo è la somma di sessanta decimali, e
+ * una somma di decimali in binario non torna mai esatta: un mazzo che costa
+ * 233,25 € il computer se lo ricorda come 233,25000000000006. All'utente si
+ * mostra sempre la cifra **arrotondata al centesimo** — è così che si scrive un
+ * prezzo — e chi legge «233,25 €» e riscrive quel numero nella casella del
+ * tetto sta chiedendo esattamente quel mazzo. Fra la cifra mostrata e il numero
+ * vero ci può stare al massimo **mezzo centesimo**, che è quanto un
+ * arrotondamento al centesimo può spostare: perdonare di meno vorrebbe dire
+ * rifiutare un mazzo a chi ha scritto il suo prezzo, perdonare di più vorrebbe
+ * dire consegnare un mazzo che costa un centesimo più del chiesto.
+ *
+ * Non si arrotonda invece la spesa dentro il motore, e sarebbe la scorciatoia:
+ * la cifra mostrata è già un arrotondamento, e arrotondare anche quella su cui
+ * si decide darebbe due arrotondamenti che possono divergere — lo stesso
+ * difetto, più difficile da vedere.
+ */
+export const PARI_IN_EURO = 0.005;
+
+/**
+ * `spesa` sta dentro `tetto`, perdonato quel mezzo centesimo?
+ *
+ * Sta qui, accanto ai prezzi, e non dentro chi confronta: il tetto lo
+ * interrogano la ricerca, la base di terre e ogni frase che ne parla, e tre
+ * copie della stessa domanda diventano prima o poi tre risposte.
+ *
+ * Serve dove una delle due parti è una **somma**: il prezzo di un mazzo, il
+ * conto di una base. Il prezzo di **una** copia non è una somma — arriva dal
+ * listino già scritto al centesimo — e lì il confronto nudo di `comprabile` è
+ * esatto per davvero.
+ */
+export function nonSupera(spesa: number, tetto: number): boolean {
+  return spesa <= tetto + PARI_IN_EURO;
+}
+
 /** Una riga della lista della spesa: una carta, le sue copie, e il suo conto. */
 export type VoceDiSpesa = {
   carta: Carta;
