@@ -21,6 +21,7 @@ import { useState } from "preact/hooks";
 
 import {
   OROLOGI_MASSIMI,
+  righeCheNonSiConservano,
   TURNO_DI_CHIUSURA_MASSIMO,
   type Orologio,
 } from "../avversario/orologio.js";
@@ -47,6 +48,11 @@ export function Avversario({
   ripristina: () => void;
 }) {
   const [aperto, setAperto] = useState(false);
+
+  // Nel deposito entra solo quel che si rilegge (ticket 35), e la differenza
+  // fra quel che si vede qui e quel che è salvato non deve restare un segreto:
+  // una riga che non si conserva lo dice sotto di sé, finché è così.
+  const nonSiConserva = righeCheNonSiConservano(orologi);
 
   const cambia = (indice: number, parti: Partial<Orologio>) => {
     cambiaOrologi(orologi.map((voce, i) => (i === indice ? { ...voce, ...parti } : voce)));
@@ -110,6 +116,9 @@ export function Avversario({
                   aria-label={`Perché del mazzo ${indice + 1}`}
                   onInput={(evento) => cambia(indice, { perche: evento.currentTarget.value })}
                 />
+                {nonSiConserva.has(indice) ? (
+                  <p class="nota-filtro">{nonSiConserva.get(indice)}</p>
+                ) : null}
                 <button
                   type="button"
                   class="togli"
