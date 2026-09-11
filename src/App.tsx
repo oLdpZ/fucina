@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { caricaOrologiDiPartenza } from "./avversario/carica-orologi.js";
+import { improntaDellaCorsa } from "./avversario/impronta-della-corsa.js";
 import { orologiCheSiLeggono, type Orologio } from "./avversario/orologio.js";
 import { Avversario } from "./componenti/Avversario.js";
 import { Catalogo } from "./componenti/Catalogo.js";
@@ -193,20 +194,54 @@ export function App() {
     [formato],
   );
 
-  // Un mazzo costruito per un tema — o per una combo — che nel frattempo è stato
-  // riscritto risponde a una domanda che non gli è più stata fatta: si butta,
-  // invece di restare lì col suo tasto «mettilo in mano» a dire una piccola bugia.
+  /**
+   * La corsa che gli orologi scritti adesso descrivono, ridotta a quel che ne
+   * fa domanda al mazzo (`impronta-della-corsa.ts`).
+   *
+   * Gli orologi non si possono mettere fra le dipendenze com'è: la schermata
+   * che li scrive rifà l'array a ogni tasto, e il mazzo costruito se ne
+   * andrebbe mentre si annota il «perché» di un avversario — una frase che il
+   * motore non legge. Che cosa sia una corsa diversa è dunque una regola, e sta
+   * dove la si può provare (ticket 37).
+   */
+  const corsa = useMemo(() => improntaDellaCorsa(orologi), [orologi]);
+
+  // Un mazzo costruito per un tema — o per una combo, o contro un meta — che nel
+  // frattempo è stato riscritto risponde a una domanda che non gli è più stata
+  // fatta: si butta, invece di restare lì col suo tasto «mettilo in mano» a dire
+  // una piccola bugia.
   const dimentica = motore.dimentica;
   useEffect(() => {
     dimentica();
     // `dimentica` cambia a ogni render — è ricostruita dal gancio — e metterla
     // fra le dipendenze vorrebbe dire buttare via il mazzo a ogni respiro
     // dell'app. Quel che deve far scattare l'oblio sono gli ingressi della
-    // richiesta — il tema, la combo e il tetto di spesa — e nient'altro. Un
-    // mazzo costruito con un tetto diverso da quello scritto adesso
-    // risponderebbe a una domanda che non gli è più stata fatta.
+    // richiesta — il tema, la combo, il tetto di spesa e gli orologi — e
+    // nient'altro. Un mazzo costruito con un tetto diverso da quello scritto
+    // adesso risponderebbe a una domanda che non gli è più stata fatta, e uno
+    // costruito contro un meta che l'utente ha appena riscritto pure: «Contro
+    // chi incontri» mostrerebbe gli esiti di una corsa che non si corre più, e
+    // la potenza porterebbe ancora dentro la sesta componente rinormalizzata su
+    // quella.
+    //
+    // All'apertura questo effetto scatta una volta a vuoto, e poi di nuovo
+    // quando arrivano gli orologi salvati o quelli del manutentore: in tutti e
+    // due i momenti non c'è ancora nessuna frontiera da buttare, perché per
+    // costruirne una l'utente deve prima dichiarare un tema — e se una corsa
+    // caricata tardi arrivasse davvero sopra un mazzo appena fatto, quel mazzo
+    // sarebbe stato costruito contro nessuno mentre adesso un meta c'è:
+    // buttarlo è di nuovo la risposta giusta.
+    //
+    // `dimentica` ferma anche una ricerca **in corso**, ed è la conseguenza che
+    // gli orologi allargano: il pannello dell'avversario sta sulla stessa
+    // schermata del tasto che costruisce, e correggere un numero mentre il
+    // motore lavora spegne il worker — «Sto costruendo…» torna «Costruisci il
+    // mazzo» e l'avanzamento sparisce, senza che nessuno dica niente. È voluto,
+    // perché quella ricerca sta rispondendo alla domanda di prima; che lo faccia
+    // in silenzio è un difetto suo, vecchio quanto il tema e il tetto, e va
+    // risolto una volta per tutti e quattro gli ingressi, non qui.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tema, combo, tettoDiSpesa]);
+  }, [tema, combo, tettoDiSpesa, corsa]);
 
   /** Il controllo di freschezza si fa una volta per apertura, non a ogni pool. */
   const giaControllato = useRef(false);
