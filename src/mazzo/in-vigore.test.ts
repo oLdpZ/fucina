@@ -167,6 +167,12 @@ describe("vincoliDaSalvare", () => {
   });
 
   it("un tetto senza tema scrive il solo tetto, e non inventa un tema", () => {
+    // Un mazzo con `tema: null` in vigore prende, **in mano**, le terre che il
+    // tema di adesso permette: è la regola con cui `App` lo consegna. Scrivere
+    // qui la manopola di questo istante gli congelerebbe addosso un tema che
+    // non ha mai dichiarato, e lo farebbe comportare in un modo prima del
+    // salvataggio e in un altro dopo. Esce il tetto, che è tutto quel che
+    // quel mazzo dichiara.
     expect(vincoliDaSalvare({ ...CONSEGNATO, tema: null }, INTATTO)).toEqual({ tetto: 30 });
   });
 

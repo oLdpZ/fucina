@@ -116,12 +116,12 @@ function stessoMazzo(uno: ReadonlyMap<string, number>, altro: ReadonlyMap<string
  * La richiesta che vale **adesso** sul mazzo in mano: quella sotto cui è stato
  * costruito finché è ancora quel mazzo, `null` appena non lo è più.
  *
- * È **la stessa regola** per il tetto e per il tema qui sotto, scritta una volta
- * sola: non che il confronto giri una volta per render — ognuno dei due lo
- * chiama per sé, e la mappa si percorre due volte — ma che non esista un secondo
- * posto in cui la risposta si possa scrivere diversa. Il confronto è puro e
- * costa quanto il mazzo è lungo, cioè niente: pagarlo due volte è il prezzo di
- * non poterlo sbagliare in due modi.
+ * È **la stessa regola** per il tetto, per il tema e per quel che si scrive nel
+ * file, scritta una volta sola: non che il confronto giri una volta per render
+ * — ognuno dei tre lo chiama per sé, e la mappa si percorre tre volte — ma che
+ * non esista un secondo posto in cui la risposta si possa scrivere diversa. Il
+ * confronto è puro e costa quanto il mazzo è lungo, cioè niente: pagarlo tre
+ * volte è il prezzo di non poterlo sbagliare in tre modi.
  *
  * `null` per i mazzi messi insieme a mano dal catalogo, che qui arrivano senza
  * nessun mazzo consegnato: nessuna richiesta li ha prodotti, e nessuna se ne
@@ -183,6 +183,24 @@ export function temaInVigore(
  * Un tema che non dichiara niente non è un tema e non si scrive: il testo da
  * mandare a un amico rifiuta la riga del tema quando non ne contiene uno
  * (`scambio.ts`), perché l'app non ne scrive mai uno.
+ *
+ * ## Un tetto senza tema esce così com'è, e non è metà richiesta
+ *
+ * Un mazzo può avere vincoli in vigore e `tema: null`: costruito a manopola del
+ * tema muta, o riaperto da un file che porta il solo tetto. Quel mazzo, **in
+ * mano**, prende le terre che il tema di adesso permette — è la regola scritta
+ * in `App` dove il mazzo si consegna, e vale perché un mazzo salvato non sa
+ * scrivere la differenza fra «costruito senza tema» e «salvato prima che l'app
+ * scrivesse il tema». Nel file esce dunque il solo tetto, ed è la stessa regola
+ * di prima e di dopo il salvataggio: le terre le decide il tema di adesso,
+ * ieri come domani.
+ *
+ * Il ripiego di prima scriveva lì la manopola di quell'istante, e con essa
+ * congelava per sempre un tema che quel mazzo non aveva mai dichiarato — cioè
+ * faceva comportare lo stesso mazzo in un modo prima del salvataggio e in un
+ * altro dopo. Quel che cade insieme, qui, è il **fatto** — «sotto che cosa
+ * questo mazzo è stato costruito» — e un mazzo che di quel fatto dichiara solo
+ * il tetto lo scrive tutto scrivendo il tetto.
  */
 export function vincoliDaSalvare(
   consegnato: MazzoConsegnato | null,
