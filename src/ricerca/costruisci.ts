@@ -69,12 +69,17 @@ import {
 } from "../combo/combo.js";
 import type { Orologio } from "../avversario/orologio.js";
 import type { Carta } from "../dati/pool.js";
-import { terreDallaCurva, type BaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
+import {
+  postiDiTerraRiempibili,
+  terreDallaCurva,
+  type BaseDiTerre,
+  type CopieDiCarta,
+} from "../mazzo/base-di-terre.js";
 import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
 import { comprabile, contoDelMazzo, prezzoDiUnaCopia } from "../mazzo/spesa.js";
 import { terreCandidate, terrePermesseDalTema } from "../mazzo/terre-candidate.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
-import { DIMENSIONE_MAZZO, TERRE_MASSIME, TERRE_MINIME } from "../mazzo/taratura.js";
+import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
 import { elenco, terre as terreDette } from "../spiegazioni/frasi.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
 import { POSTI_NON_TERRA } from "../tema/taratura.js";
@@ -673,7 +678,15 @@ export function costruisciMazzo(
   // mazzo costruito (ticket 33).
   const posti = postiRiempibili(giocabili, terreDelPool);
   if (posti.nonTerra + posti.terra < DIMENSIONE_MAZZO) {
-    const conto = `buone per ${posti.nonTerra} posti non-terra e ${posti.terra} di terre, e un mazzo ne chiede ${DIMENSIONE_MAZZO} in tutto.`;
+    // Quando i posti di terra sono zero **e le terre no**, il numero da solo si
+    // legge come una contraddizione: «dodici terre, buone per zero posti».
+    // Quel che manca ha un nome, e dirlo è la differenza fra un no e un no su
+    // cui si può agire — la base si riempie di terre base, e senza nemmeno una
+    // le terre a due colori non fanno una base da sole.
+    const conto =
+      posti.terra === 0 && terreDelPool.length > 0
+        ? `buone per ${posti.nonTerra} posti non-terra e ${posti.terra} di terre: fra quelle rimaste non c'è nessuna terra base, e la base di un mazzo si riempie con quelle. Un mazzo chiede ${DIMENSIONE_MAZZO} posti in tutto.`
+        : `buone per ${posti.nonTerra} posti non-terra e ${posti.terra} di terre, e un mazzo ne chiede ${DIMENSIONE_MAZZO} in tutto.`;
     return niente(
       "niente-da-costruire",
       tetto === null
@@ -1094,6 +1107,18 @@ export function costruisciMazzo(
   // lì, che è quel che il ticket chiede.
   const pesi = taratura.pesiDellaPurezza;
   const trovati: MazzoCostruito[] = [];
+  /**
+   * Le copie del mazzo più lungo che la ricerca ha prodotto **e scartato**
+   * perché corto, o `null` se non ne ha prodotto nessuno.
+   *
+   * È la rete all'uscita, ed è di proposito una rete e non un secondo conto: un
+   * `esito: "costruito"` con meno di `DIMENSIONE_MAZZO` copie è una bugia a
+   * prescindere da chi l'ha prodotta, e le guardie che stanno prima di cercare
+   * chiudono le strade che si conoscono. Questa chiude anche le altre — una
+   * volta la guardia dei posti e la base che le sceglie erano già divergite
+   * (ticket 39), e prima ancora i due conti delle terre (ticket 17).
+   */
+  let corto: number | null = null;
   laRicercaHaGirato = true;
   for (let passo = 0; passo < pesi.length; passo++) {
     const mazzo = cerca(pesi[passo]!, passo, pesi.length);
@@ -1102,8 +1127,14 @@ export function costruisciMazzo(
     // e non dentro `cerca`, tiene le due uscite di quella funzione libere di
     // restare due — nessuna selezione dentro il tetto, e la rivalutazione
     // piena che lo sfonda — senza doverle far convergere su un contatore.
-    if (mazzo !== null) trovati.push(mazzo);
-    else passiSenzaMazzo += 1;
+    if (mazzo === null) passiSenzaMazzo += 1;
+    else {
+      const copie = copieDelMazzo(mazzo);
+      // Non si consegna un mazzo che non si è contato. E non si conta nemmeno
+      // come «passo perso per il tetto»: il tetto non c'entra niente.
+      if (copie < DIMENSIONE_MAZZO) corto = Math.max(corto ?? 0, copie);
+      else trovati.push(mazzo);
+    }
     if (troncata) break;
   }
 
@@ -1139,9 +1170,17 @@ export function costruisciMazzo(
   if (primo === undefined) {
     return niente(
       "niente-da-costruire",
-      tetto === null
-        ? "La ricerca non ha potuto provare nemmeno un mazzo."
-        : nessunoDentroIlTetto(tetto),
+      corto !== null
+        ? // Col tetto acceso il numero del tetto resta accanto: gli altri passi
+          // della frontiera possono essere caduti per il prezzo, e senza «il
+          // meno caro che ho guardato costava tanto» chi legge non sa di
+          // quanto alzare. Le due cose sono vere insieme, e si dicono insieme.
+          `Con queste carte la ricerca arriva a ${corto} copie su ${DIMENSIONE_MAZZO}, e un mazzo corto non si consegna: ` +
+          `mancano le carte — o le terre — per finirlo.` +
+          (tetto === null ? "" : ` ${nessunoDentroIlTetto(tetto)}`)
+        : tetto === null
+          ? "La ricerca non ha potuto provare nemmeno un mazzo."
+          : nessunoDentroIlTetto(tetto),
     );
   }
 
@@ -1328,6 +1367,14 @@ function capienzaDi(carte: readonly Carta[]): number {
 }
 
 /**
+ * Le copie che un mazzo costruito porta davvero: carte e terre insieme, come si
+ * conta una lista prima di darla all'arbitro.
+ */
+function copieDelMazzo(mazzo: MazzoCostruito): number {
+  return [...mazzo.carte, ...mazzo.terre].reduce((somma, voce) => somma + voce.copie, 0);
+}
+
+/**
  * I posti che queste carte sanno riempire, contati **dalle due parti che un
  * mazzo tiene separate**: i posti non-terra e quelli di terra.
  *
@@ -1352,10 +1399,13 @@ function postiRiempibili(
   giocabili: readonly Carta[],
   terre: readonly Carta[],
 ): { nonTerra: number; terra: number } {
-  const copieDelleTerre = terre.reduce((somma, carta) => somma + copieMassime(carta), 0);
   return {
     nonTerra: Math.min(capienzaDi(giocabili), DIMENSIONE_MAZZO - TERRE_MINIME),
-    terra: Math.min(copieDelleTerre, TERRE_MASSIME),
+    // La domanda sulle terre la fa **la base**, e non questa funzione: quante
+    // copie il pool concede non è quel che la base ne farà. Senza nemmeno una
+    // terra base la base esce con zero terre, non con «meno terre», e contare
+    // le copie diceva `TERRE_MASSIME` sopra una base che non si fa (ticket 39).
+    terra: postiDiTerraRiempibili(terre),
   };
 }
 

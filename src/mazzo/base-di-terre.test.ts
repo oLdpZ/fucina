@@ -10,12 +10,17 @@ import { describe, expect, it } from "vitest";
 
 import { TERRE_FINTE } from "../catalogo/pool-finto.js";
 import type { Carta, Tag } from "../dati/pool.js";
-import { analizzaBaseDiTerre, type CopieDiCarta } from "./base-di-terre.js";
+import {
+  analizzaBaseDiTerre,
+  postiDiTerraRiempibili,
+  type CopieDiCarta,
+} from "./base-di-terre.js";
 import { leggiTettoDiCopie } from "./copie.js";
 import {
   COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA,
   PERDITA_MASSIMA_PER_I_COLORI,
   TERRE_DI_UTILITA_MASSIME,
+  TERRE_MASSIME,
   TERRE_SENZA_MANA_MASSIME,
 } from "./taratura.js";
 
@@ -209,6 +214,38 @@ describe("quali terre", () => {
       if (voce.carta.tipi.includes("Basic")) continue;
       expect(voce.copie).toBeLessThanOrEqual(4);
     }
+  });
+});
+
+describe("i posti di terra: il conto e la base non possono divergere", () => {
+  // Due conti delle terre che si scoprono diversi sono già costati due ticket
+  // (17 e 39): chi conta i posti prima di cercare e chi poi le sceglie devono
+  // rispondere lo stesso, e qui si verifica sulla cucitura, non sul sorgente.
+  const NERO_E_ROSSO = mazzo(["Nera", "{1}{B}", 2, 16], ["Rossa", "{1}{R}", 2, 16]);
+
+  function terreScelte(terreDelPool: readonly Carta[], terreVolute: number): number {
+    return analizzaBaseDiTerre(NERO_E_ROSSO, terreDelPool, {
+      terreVolute,
+      budget: null,
+    }).terre.reduce((somma, voce) => somma + voce.copie, 0);
+  }
+
+  it("senza nessuna terra base i posti sono zero, e la base ne fa zero", () => {
+    const senzaBasi = TERRE_FINTE.filter((carta) => !carta.tipi.includes("Basic"));
+
+    expect(postiDiTerraRiempibili(senzaBasi)).toBe(0);
+    expect(terreScelte(senzaBasi, 24)).toBe(0);
+  });
+
+  it("con una terra base sola i posti sono tutti, e la base li riempie tutti", () => {
+    const unaSola = TERRE_FINTE.filter(
+      (carta) => !carta.tipi.includes("Basic") || carta.nome === "Swamp",
+    );
+
+    expect(postiDiTerraRiempibili(unaSola)).toBe(TERRE_MASSIME);
+    // Fino al massimo che l'app mette: le terre base non hanno tetto di copie,
+    // ed è la ragione per cui il conto è «zero oppure tutti» e non una somma.
+    expect(terreScelte(unaSola, TERRE_MASSIME)).toBe(TERRE_MASSIME);
   });
 });
 

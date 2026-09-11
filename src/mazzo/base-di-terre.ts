@@ -319,6 +319,47 @@ export function terreDallaCurva(costoMedio: number): number {
 }
 
 /**
+ * Le terre **base** del pool, una per colore prodotto: la prima che si incontra
+ * vince, che fra due Paludi non c'è scelta da fare.
+ *
+ * Sta qui, in una funzione sola, perché due posti la chiedono e devono
+ * chiederla allo stesso modo: `scegliTerre`, che da questa mappa riempie la
+ * base, e `postiDiTerraRiempibili`, che prima di cercare dice quanti posti di
+ * terra questo pool sa fare. Erano due conti diversi, e il ticket 17 aveva già
+ * mostrato dove porta: uno diceva di sì e l'altro faceva zero (ticket 39).
+ */
+function basiPerColore(terreDelPool: readonly Carta[]): Map<ColoreMana, Carta> {
+  const base = new Map<ColoreMana, Carta>();
+  for (const carta of terreDelPool) {
+    const terra = carta.terra;
+    if (terra === null || !carta.tipi.includes("Basic")) continue;
+    if (terra.coloriProdotti.length !== 1) continue;
+    const colore = terra.coloriProdotti[0]!;
+    if (!base.has(colore)) base.set(colore, carta);
+  }
+  return base;
+}
+
+/**
+ * Quanti posti di terra questo pool sa davvero riempire.
+ *
+ * La risposta è **zero oppure tutti**, e non è una semplificazione: è quel che
+ * `scegliTerre` fa, detto in un numero. Senza nemmeno una terra base che faccia
+ * un colore da sola esce con zero terre — mai con «meno terre» — e con una sola
+ * le riempie tutte, perché `riempiConLeBasi` non chiede alle terre base quante
+ * copie concedono: un tetto di copie non ce l'hanno, e la quota che tocca a
+ * ogni colore entra intera.
+ *
+ * Contare invece le copie che il pool concede sarebbe una domanda **parente**,
+ * e le domande parenti divergono: la prima volta la guardia diceva
+ * `TERRE_MASSIME` sopra una base che non si faceva (ticket 39), e la volta
+ * prima erano i due conti delle terre a non tornare (ticket 17).
+ */
+export function postiDiTerraRiempibili(terreDelPool: readonly Carta[]): number {
+  return basiPerColore(terreDelPool).size === 0 ? 0 : TERRE_MASSIME;
+}
+
+/**
  * La scelta delle terre: prima quelle a due colori che il mazzo chiede davvero,
  * poi le terre base a riempire.
  */
@@ -343,14 +384,7 @@ function scegliTerre(
   };
   if (numeroTerre <= 0) return niente;
 
-  const base = new Map<ColoreMana, Carta>();
-  for (const carta of terreDelPool) {
-    const terra = carta.terra;
-    if (terra === null || !carta.tipi.includes("Basic")) continue;
-    if (terra.coloriProdotti.length !== 1) continue;
-    const colore = terra.coloriProdotti[0]!;
-    if (!base.has(colore)) base.set(colore, carta);
-  }
+  const base = basiPerColore(terreDelPool);
 
   // Un mazzo senza nessun simbolo colorato (o un mazzo ancora vuoto) non ha un
   // colore da servire: gli si dà la terra incolore, o la prima base che c'è.

@@ -511,8 +511,10 @@ describe("i temi degeneri, che devono dare un esito e mai un crollo", () => {
     // quella strada la ricerca proseguiva e consegnava trentanove carte
     // chiamandole un mazzo costruito. Contare le copie non è una domanda sul
     // prezzo, e si fa sempre.
-    // Dieci carte da quattro copie e una terra da quattro: quarantaquattro
-    // posti, che bastano ai trentatré non-terra e non bastano a un mazzo.
+    // Dieci carte da quattro copie e una terra a due colori: quaranta posti
+    // non-terra, che bastano ai trentatré del verdetto e non bastano a un
+    // mazzo. Le terre base restano fuori dal pool apposta, ed è anche la
+    // ragione per cui i posti di terra sono zero (ticket 39).
     const frontiera = costruisciMazzo(richiesta(), poolMinuscolo(10), SVELTA);
 
     expect(frontiera.esito).toBe("niente-da-costruire");
@@ -527,14 +529,68 @@ describe("i temi degeneri, che devono dare un esito e mai un crollo", () => {
   it("i posti non-terra che avanzano non tappano il buco delle terre", () => {
     // Le copie disponibili non si sommano e basta: le due parti di un mazzo non
     // si sostituiscono a vicenda. Quattordici carte giocabili da quattro copie
-    // e una terra da quattro fanno sessanta copie in tutto — e un mazzo non
-    // prende più di quaranta carte non-terra, perché alle terre ne restano
-    // venti. Le sedici copie che avanzano non sono terre, e il mazzo resta
-    // corto: sommando si diceva «sessanta ci sono» sopra trentotto carte.
+    // fanno cinquantasei copie — e un mazzo non ne prende più di quaranta,
+    // perché alle terre ne restano venti. Le sedici che avanzano non sono
+    // terre: sommando si diceva «sessanta ci sono» sopra trentotto carte.
+    //
+    // Il conto si legge dal **numero nel no**, e non dall'esito: qui le terre
+    // base non ci sono e i posti di terra sono zero comunque (ticket 39), così
+    // l'esito da solo non distinguerebbe più quaranta da cinquantasei.
     const frontiera = costruisciMazzo(richiesta(), poolMinuscolo(14), SVELTA);
 
     expect(frontiera.esito).toBe("niente-da-costruire");
     expect(frontiera.mazzi).toHaveLength(0);
+    expect(frontiera.motivo).toContain("40 posti non-terra");
+    expect(frontiera.motivo).not.toContain("56 posti non-terra");
+  });
+
+  it("un tema che esclude tutte le terre base non consegna un mazzo senza terre", () => {
+    // La guardia dei posti contava **le copie di terra che il pool concede**, e
+    // le terre base non hanno tetto di copie: bastava che ne sopravvivesse una
+    // perché il conto arrivasse al massimo. Ma `scegliTerre` è tutto-o-niente —
+    // senza nessuna terra base esce con zero terre, mai con «meno terre» — e
+    // dalle due cose insieme usciva un mazzo da trentotto carte e nessuna
+    // terra, dato per costruito. Il conto dei posti deve fare la stessa domanda
+    // che la base si farà dopo (ticket 39).
+    const senzaBase = tema({
+      inclusioni: GOBLIN.inclusioni,
+      esclusioni: { ...FILTRO_TEMA_VUOTO, tipi: ["Basic"] },
+    });
+    const frontiera = costruisci({ tema: senzaBase });
+
+    expect(frontiera.esito).toBe("niente-da-costruire");
+    expect(frontiera.mazzi).toHaveLength(0);
+    // E il no porta dentro il conto: quante terre il pool rimasto sa fare.
+    expect(frontiera.motivo).toContain("0 di terre");
+    // Col nome di quel che manca, se no «dodici terre buone per zero posti» si
+    // legge come una contraddizione su cui non si può agire.
+    expect(frontiera.motivo).toContain("terra base");
+  });
+
+  it("nessun mazzo consegnato porta meno di sessanta copie, comunque sia stato trovato", () => {
+    // La rete all'uscita: `esito: "costruito"` con meno di `DIMENSIONE_MAZZO`
+    // copie è una bugia a prescindere da chi l'ha prodotta, e chiude anche le
+    // strade che oggi non si vedono (ticket 39).
+    const temi: Tema[] = [
+      GOBLIN,
+      NERO,
+      tema({ inclusioni: GOBLIN.inclusioni, esclusioni: { ...FILTRO_TEMA_VUOTO, tipi: ["Basic"] } }),
+      tema({
+        inclusioni: GOBLIN.inclusioni,
+        esclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Plains", "Island", "Swamp", "Mountain", "Forest"] },
+      }),
+    ];
+
+    for (const quale of temi) {
+      const frontiera = costruisci({ tema: quale });
+      for (const mazzo of frontiera.mazzi) {
+        const copie = [...mazzo.carte, ...mazzo.terre].reduce(
+          (somma, voce) => somma + voce.copie,
+          0,
+        );
+        expect(copie).toBe(DIMENSIONE_MAZZO);
+      }
+    }
   });
 
   it("senza tema non si costruisce niente, e non è un guasto", () => {
