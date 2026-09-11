@@ -53,7 +53,7 @@
  * mai stata chiesta da nessuno.
  */
 
-import type { Tema } from "../tema/tema.js";
+import { temaDichiarato, type Tema } from "../tema/tema.js";
 import type { Richiesta } from "./salvato.js";
 
 /**
@@ -161,6 +161,40 @@ export function temaInVigore(
   inMano: ReadonlyMap<string, number>,
 ): Tema | null {
   return richiestaInVigore(consegnato, inMano)?.tema ?? null;
+}
+
+/**
+ * I vincoli che un mazzo **salvato** si porta dietro nel file: il verso di
+ * uscita della stessa regola, e non una seconda (ticket 40).
+ *
+ * Chi salva non può usare quel che la schermata usa per **mostrare** le terre.
+ * Là il ripiego sulla manopola è giusto — le liste in pagina sono state scritte
+ * con quella, e mostrarne altre sarebbe peggio — ma qui no: «su questo mazzo
+ * non c'è nessun vincolo in vigore» deve restare assenza anche nel file, o un
+ * mazzo slegato apposta con «Rifà le terre coi vincoli di adesso» si
+ * riaprirebbe legato a un tema che non ha mai avuto, e un mazzo montato a mano
+ * dal catalogo si porterebbe via le manopole di quel momento.
+ *
+ * Tema e tetto escono **insieme** o non escono, dallo stesso confronto e da una
+ * chiamata sola, per la ragione di sempre: sono un fatto solo. Metà scritta nel
+ * file e metà no rifarebbe, alla riapertura, una base filtrata da metà della
+ * richiesta di allora e da metà di quella di adesso.
+ *
+ * Un tema che non dichiara niente non è un tema e non si scrive: il testo da
+ * mandare a un amico rifiuta la riga del tema quando non ne contiene uno
+ * (`scambio.ts`), perché l'app non ne scrive mai uno.
+ */
+export function vincoliDaSalvare(
+  consegnato: MazzoConsegnato | null,
+  inMano: ReadonlyMap<string, number>,
+): { tema?: Tema; tetto?: number } {
+  const richiesta = richiestaInVigore(consegnato, inMano);
+  if (richiesta === null) return {};
+  const { tema, tetto } = richiesta;
+  return {
+    ...(tema !== null && temaDichiarato(tema) ? { tema } : {}),
+    ...(tetto === null ? {} : { tetto }),
+  };
 }
 
 /**

@@ -29,6 +29,7 @@ import { copieMassime } from "./mazzo/copie.js";
 import {
   temaInVigore,
   tettoInVigore,
+  vincoliDaSalvare,
   vincoliDiUnMazzoRiaperto,
   type MazzoConsegnato,
 } from "./mazzo/in-vigore.js";
@@ -388,6 +389,25 @@ export function App() {
   const temaDelMazzoInMano = temaDelMazzo ?? tema;
 
   /**
+   * I vincoli che il mazzo in mano scrive **nel file** quando lo si salva
+   * (ticket 40).
+   *
+   * Non sono `temaDelMazzoInMano` e `tettoDelMazzoInMano`: quelli rispondono a
+   * «con che cosa si mostrano le terre di questo mazzo», e per rispondere il
+   * tema ripiega sulla manopola dei Vincoli quando sul mazzo non ce n'è uno in
+   * vigore — giusto lì, perché è con la manopola che le liste in pagina sono
+   * appena state scritte. Nel file no: là l'assenza deve restare assenza, o un
+   * mazzo slegato con «Rifà le terre coi vincoli di adesso» si riaprirebbe
+   * legato, e lo scioglimento non sopravviverebbe a un salvataggio.
+   *
+   * Le due domande vogliono due valori, e questo è quello che va a chi salva.
+   */
+  const vincoliDelMazzo = useMemo(
+    () => vincoliDaSalvare(consegnato, copiePerNome),
+    [consegnato, copiePerNome],
+  );
+
+  /**
    * Slegare il mazzo che si ha in mano dai vincoli con cui è nato, senza
    * toccarne le carte: è la seconda metà del ticket 21, e la ragione per cui la
    * prima può permettersi di essere severa. Chi vuole tenere il mazzo com'è e
@@ -622,6 +642,7 @@ export function App() {
             tema={temaDelMazzoInMano}
             temaDeiVincoli={tema}
             tettoDiSpesa={tettoDelMazzoInMano}
+            vincoliDelMazzo={vincoliDelMazzo}
             formato={ambito}
             mazzo={mazzo}
             terreVolute={terreVolute}

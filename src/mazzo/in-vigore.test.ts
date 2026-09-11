@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { temaInVigore, tettoInVigore } from "./in-vigore.js";
-import { FILTRO_TEMA_VUOTO, type Tema } from "../tema/tema.js";
+import { temaInVigore, tettoInVigore, vincoliDaSalvare } from "./in-vigore.js";
+import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 
 const copie = (voci: Record<string, number>) => new Map(Object.entries(voci));
 
@@ -133,5 +133,46 @@ describe("temaInVigore", () => {
     const toccato = copie({ "Serra Angel": 4 });
     expect(tettoInVigore(CONSEGNATO, toccato)).toBeNull();
     expect(temaInVigore(CONSEGNATO, toccato)).toBeNull();
+  });
+});
+
+/**
+ * Ticket 40: quel che si **scrive nel file** quando si salva. Non è una terza
+ * regola: è la stessa, letta in uscita invece che in lettura — un mazzo scrive
+ * i vincoli che ha addosso, e uno che non ne ha addosso non scrive quelli che
+ * le manopole avevano in quel momento.
+ */
+describe("vincoliDaSalvare", () => {
+  const INTATTO = copie({ "Serra Angel": 4, "Swords to Plowshares": 3 });
+
+  it("il mazzo ancora intatto scrive il tema e il tetto con cui è nato", () => {
+    expect(vincoliDaSalvare(CONSEGNATO, INTATTO)).toEqual({ tema: SENZA_NERO, tetto: 30 });
+  });
+
+  it("il mazzo slegato dai vincoli non scrive niente: è quel che vuol dire slegato", () => {
+    expect(vincoliDaSalvare(null, INTATTO)).toEqual({});
+  });
+
+  it("il mazzo messo insieme a mano dal catalogo non scrive niente", () => {
+    expect(vincoliDaSalvare(null, copie({ "Serra Angel": 4 }))).toEqual({});
+  });
+
+  it("una carta cambiata a mano toglie dal file tutti e due i vincoli, non uno", () => {
+    const toccato = copie({ "Serra Angel": 3, "Swords to Plowshares": 3 });
+    expect(vincoliDaSalvare(CONSEGNATO, toccato)).toEqual({});
+  });
+
+  it("lo zero è un tetto e si scrive: «solo carte senza prezzo» è una richiesta", () => {
+    expect(vincoliDaSalvare({ ...CONSEGNATO, tetto: 0 }, INTATTO).tetto).toBe(0);
+  });
+
+  it("un tetto senza tema scrive il solo tetto, e non inventa un tema", () => {
+    expect(vincoliDaSalvare({ ...CONSEGNATO, tema: null }, INTATTO)).toEqual({ tetto: 30 });
+  });
+
+  it("un tema che non dichiara niente non è un tema, e nel file non ci va", () => {
+    // Il testo da mandare a un amico rifiuta la riga del tema quando non
+    // contiene un tema (`scambio.ts`): l'app non ne scrive mai uno.
+    expect(vincoliDaSalvare({ ...CONSEGNATO, tema: TEMA_VUOTO }, INTATTO)).toEqual({ tetto: 30 });
   });
 });

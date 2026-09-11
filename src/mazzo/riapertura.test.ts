@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { temaInVigore, tettoInVigore, vincoliDiUnMazzoRiaperto } from "./in-vigore.js";
+import {
+  temaInVigore,
+  tettoInVigore,
+  vincoliDaSalvare,
+  vincoliDiUnMazzoRiaperto,
+} from "./in-vigore.js";
 import { interpretaMazzoSalvato, type MazzoSalvato } from "./salvato.js";
 import { budgetPerLeTerre, terreCandidate } from "./terre-candidate.js";
 import type { CopieDiCarta } from "./base-di-terre.js";
@@ -205,5 +210,71 @@ describe("un mazzo salvato sotto un tetto, riaperto dopo che una carta ha perso 
     const temaDelMazzo = temaInVigore(consegnato, copie) ?? TUTTO;
     const terre = terreCandidate(OGGI, temaDelMazzo, tettoInVigore(consegnato, copie));
     expect(terre.map((c) => c.nome)).toEqual(["Mountain"]);
+  });
+});
+
+/**
+ * Ticket 40, e di nuovo il giro intero: si costruisce un mazzo sotto un tema e
+ * un tetto, si preme «Rifà le terre coi vincoli di adesso» per slegarlo
+ * apposta, lo si salva — e riaprendolo è **ancora slegato**.
+ *
+ * Il guasto stava fra due pezzi che da soli avevano ragione: `in-vigore.ts`
+ * sapeva dire che su quel mazzo non c'era più nessun vincolo, e la schermata
+ * dei salvati sapeva scrivere nel file i vincoli che riceveva — ma quel che
+ * riceveva era il ripiego sulla manopola, buono per **mostrare** le terre e
+ * falso per **scriverle**. Lo scioglimento non sopravviveva a un salvataggio.
+ */
+describe("un mazzo slegato dai vincoli e poi salvato", () => {
+  const CONSEGNATO_SENZA_NERO = {
+    tetto: 30,
+    tema: SENZA_NERO,
+    copie: new Map([["Goblin", 4]]),
+  };
+
+  /** Quel che `App` e la schermata dei salvati fanno salvando, in fila. */
+  const salva = (consegnato: typeof CONSEGNATO_SENZA_NERO | null, copie: Map<string, number>) => ({
+    ...SALVATO_SENZA_NERO,
+    id: "quattro",
+    richiesta: {
+      origine: "a-mano" as const,
+      terreVolute: 22,
+      ...vincoliDaSalvare(consegnato, copie),
+    },
+    carte: [...copie].map(([nome, quante]) => ({ nome, copie: quante })),
+  });
+
+  it("si riapre ancora slegato: le terre le decide il tema di adesso", () => {
+    const inMano = new Map([["Goblin", 4]]);
+    // «Rifà le terre coi vincoli di adesso»: i vincoli se ne vanno insieme.
+    const salvato = salva(null, inMano);
+
+    expect(salvato.richiesta).not.toHaveProperty("tema");
+    expect(salvato.richiesta).not.toHaveProperty("tetto");
+
+    const { copie, consegnato } = riapri(interpretaMazzoSalvato(structuredClone(salvato)));
+    expect(consegnato).toBeNull();
+    const temaDelMazzo = temaInVigore(consegnato, copie) ?? TUTTO;
+    expect(terreCandidate(POOL, temaDelMazzo, null).map((c) => c.nome)).toEqual(["Swamp"]);
+  });
+
+  it("un mazzo montato a mano dal catalogo non si porta via le manopole di quel momento", () => {
+    const salvato = salva(null, new Map([["Goblin", 4]]));
+    expect(salvato.richiesta).toEqual({ origine: "a-mano", terreVolute: 22 });
+  });
+
+  it("un mazzo costruito dal motore e salvato intatto si porta dietro i suoi vincoli", () => {
+    const salvato = salva(CONSEGNATO_SENZA_NERO, new Map([["Goblin", 4]]));
+
+    expect(salvato.richiesta).toEqual({
+      origine: "a-mano",
+      terreVolute: 22,
+      tema: SENZA_NERO,
+      tetto: 30,
+    });
+
+    const { copie, consegnato } = riapri(interpretaMazzoSalvato(structuredClone(salvato)));
+    expect(tettoInVigore(consegnato, copie)).toBe(30);
+    const temaDelMazzo = temaInVigore(consegnato, copie) ?? TUTTO;
+    expect(terreCandidate(POOL, temaDelMazzo, null).map((c) => c.nome)).toEqual(["Mountain"]);
   });
 });

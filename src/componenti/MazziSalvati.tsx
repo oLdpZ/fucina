@@ -20,7 +20,7 @@ import {
   confrontoFraTemiSulleTerre,
   terreCandidate,
 } from "../mazzo/terre-candidate.js";
-import { temaDichiarato, type Tema } from "../tema/tema.js";
+import type { Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { leggiScambio, listaDaTorneo, scriviScambio } from "../mazzo/scambio.js";
 import {
@@ -49,6 +49,7 @@ export function MazziSalvati({
   tema,
   temaDeiVincoli,
   tettoDiSpesa,
+  vincoliDelMazzo,
   formato,
   mazzo,
   terreVolute,
@@ -75,6 +76,22 @@ export function MazziSalvati({
    */
   temaDeiVincoli: Tema;
   tettoDiSpesa: number | null;
+  /**
+   * I vincoli che questo mazzo si porta dietro **nel file**, già pronti da
+   * scrivere: il tema e il tetto in vigore su di lui, assenti quando non ne ha
+   * (ticket 40).
+   *
+   * Non sono le due prop qui sopra e non si ricavano da loro. Quelle servono a
+   * mostrare le terre, e per mostrarle un mazzo senza vincoli ripiega su quel
+   * che dicono i Vincoli adesso — è con quello che questa schermata ha appena
+   * scritto le liste. Scrivere quel ripiego nel file darebbe a un mazzo slegato
+   * apposta, o montato a mano dal catalogo, un tema che non ha mai avuto.
+   *
+   * Arrivano in **un valore solo** perché sono un fatto solo: chi li prepara
+   * (`vincoliDaSalvare`) li mette o li toglie insieme, e di qui non c'è modo di
+   * scriverne metà.
+   */
+  vincoliDelMazzo: { tema?: Tema; tetto?: number };
   /**
    * Il gioco che si sta giocando. Entra da fuori e non si legge qui: il mazzo
    * che si salva e quello che si esporta devono dichiarare lo **stesso**
@@ -146,17 +163,13 @@ export function MazziSalvati({
       salvatoIl,
       datiDel: pool.generatoIl,
       // Sotto quali vincoli le terre di questo mazzo sono state scelte
-      // (ticket 31). Sono quelli **in vigore sul mazzo** e non le manopole: la
-      // schermata li riceve già così, ed è la stessa cifra e lo stesso tema con
-      // cui ha appena scritto le due liste qui sotto. Scriverli è quel che
-      // permette a chi lo riaprirà — fra una settimana, dopo aver cambiato tema
-      // dieci volte — di ritrovare queste terre e non altre.
-      richiesta: {
-        origine: "a-mano",
-        terreVolute,
-        ...(temaDichiarato(tema) ? { tema } : {}),
-        ...(tettoDiSpesa === null ? {} : { tetto: tettoDiSpesa }),
-      },
+      // (ticket 31). Sono quelli **in vigore sul mazzo** e non le manopole, e
+      // arrivano già decisi da fuori: scriverli è quel che permette a chi lo
+      // riaprirà — fra una settimana, dopo aver cambiato tema dieci volte — di
+      // ritrovare queste terre e non altre. Un mazzo che non ne ha non ne
+      // scrive, ed è altrettanto importante: è così che «Rifà le terre coi
+      // vincoli di adesso» sopravvive a un salvataggio (ticket 40).
+      richiesta: { origine: "a-mano", terreVolute, ...vincoliDelMazzo },
       // Di che gioco è questo mazzo. Un mazzo salvato dura più a lungo del
       // formato che l'ha prodotto — il documento si corregge — e senza questa
       // riga, il giorno che il formato cambia, il mazzo si riaprirebbe mezzo
