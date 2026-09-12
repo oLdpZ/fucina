@@ -905,6 +905,40 @@ export function frasePerLeTerreScartate(grezzi: GrezziDelleTerreScartate): strin
 }
 
 /**
+ * L'annuncio di un mazzo rimesso in mano, e le terre che quel gesto gli è
+ * costato.
+ *
+ * `annuncio` assente è il tasto dell'elenco: si riapre un mazzo e non c'è altro
+ * da dire che quel che si è perso per strada.
+ */
+export type GrezziDiQuelCheTornaInMano = GrezziDelleTerreScartate & {
+  readonly annuncio: string | null;
+};
+
+/**
+ * **Le due notizie di un mazzo rimesso in mano, in un messaggio solo.**
+ *
+ * Tre gesti rimettono un mazzo in mano — si importa, si riapre dall'elenco, si
+ * salva — e tutti e tre passano dalla riga che scarta le terre. Quel che
+ * cambia fra loro è solo se ci sia anche dell'altro da annunciare; la regola su
+ * *come* le due notizie stanno insieme è una, e sta qui perché nessuno dei tre
+ * se la riscriva a modo suo. Uno se l'era già scritta a modo suo: il
+ * salvataggio annunciava «è salvato» e delle terre buttate non diceva niente
+ * (ticket 48).
+ *
+ * L'annuncio viene **prima**: chi ha premuto un tasto sta aspettando di sapere
+ * com'è andata, e il prezzo si legge dopo aver saputo che il gesto è riuscito.
+ *
+ * Torna `null` quando non c'è niente da dire, che non è lo stesso di una riga
+ * vuota: un avviso che non avvisa di nulla insegna a saltare gli avvisi.
+ */
+export function fraseConLeTerreScartate(grezzi: GrezziDiQuelCheTornaInMano): string | null {
+  if (grezzi.terre.length === 0) return grezzi.annuncio;
+  const terre = frasePerLeTerreScartate({ terre: grezzi.terre });
+  return grezzi.annuncio === null ? terre : `${grezzi.annuncio} ${terre}`;
+}
+
+/**
  * I pezzi dichiarati, con **quante copie ciascuno ne entrerà davvero**: il
  * numero che il patto qui sotto promette.
  */

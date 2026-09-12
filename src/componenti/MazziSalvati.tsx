@@ -24,9 +24,9 @@ import type { Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
 import { leggiScambio, listaDaTorneo, scriviScambio } from "../mazzo/scambio.js";
 import {
+  fraseConLeTerreScartate,
   frasePerIlTemaSuQuelCheEsce,
   frasePerIlTettoSuQuelCheEsce,
-  frasePerLeTerreScartate,
 } from "../spiegazioni/frasi.js";
 import {
   nomePulito,
@@ -241,6 +241,23 @@ export function MazziSalvati({
     );
   }, [mazzo, terreDelPool, terreVolute, euroPerLeTerre, formato]);
 
+  /**
+   * Quel che un gesto ha fatto, e le terre che gli è costato: dette insieme.
+   *
+   * Ci passano **tutte** le strade che rimettono un mazzo in mano — si importa,
+   * si riapre dall'elenco, si salva — e non solo l'importazione: un mazzo
+   * arrivato da un amico resta nel deposito con le sue terre dentro, e
+   * riaprirlo le riperde uguale; un mazzo montato a mano dal catalogo le perde
+   * nell'istante in cui lo si salva. Tacerlo da qualche parte vorrebbe dire
+   * avvisare solo nei casi in cui il file è ancora intero.
+   *
+   * Quale delle due notizie si legga per prima non lo decide questa schermata:
+   * lo decide il modello di frase, che è lo stesso per tutti e tre.
+   */
+  const raccontaLeTerreScartate = (scartate: TerreScartate, annuncio: string | null): void => {
+    racconta(fraseConLeTerreScartate({ annuncio, terre: scartate }), null);
+  };
+
   const salva = async () => {
     // L'orologio si legge qui: è adesso che l'utente sta salvando.
     const daSalvare = componi(new Date().toISOString());
@@ -255,8 +272,16 @@ export function MazziSalvati({
       return;
     }
     setSalvati(await elencaMazziSalvati());
-    apriMazzo(salvato, false);
-    racconta(`«${salvato.nome}» è salvato su questo dispositivo.`, null);
+    // Anche salvare rimette il mazzo in mano, e anche qui le terre che il mazzo
+    // portava — quelle prese dal catalogo, che il catalogo non esclude —
+    // restano fuori. Prima questo ritorno si buttava e il messaggio se lo
+    // scriveva questa riga: si salvava con quattro Strip Mine dentro, il file
+    // le teneva, il mazzo in mano le perdeva in silenzio e il «Risalva»
+    // successivo scriveva il mazzo mozzato sopra quello buono (ticket 48).
+    raccontaLeTerreScartate(
+      apriMazzo(salvato, false),
+      `«${salvato.nome}» è salvato su questo dispositivo.`,
+    );
   };
 
   const cancella = async (salvato: MazzoSalvato) => {
@@ -291,27 +316,10 @@ export function MazziSalvati({
     // bottone «Risalva» punterebbe al mazzo dell'amico mentre in mano c'è il
     // proprio, e il primo salvataggio distruggerebbe quello appena arrivato.
     // Si resta però qui, dove c'è il messaggio da leggere.
-    const scartate = apriMazzo(salvato, false);
-    const annuncio = `«${salvato.nome}» è stato importato, ed è il mazzo che hai in mano.`;
-    racconta(
-      scartate.length === 0
-        ? annuncio
-        : `${annuncio} ${frasePerLeTerreScartate({ terre: scartate })}`,
-      null,
+    raccontaLeTerreScartate(
+      apriMazzo(salvato, false),
+      `«${salvato.nome}» è stato importato, ed è il mazzo che hai in mano.`,
     );
-  };
-
-  /**
-   * Le terre che una lista portava e che nell'elenco non entrano, dette a voce.
-   *
-   * Vale per **tutte** le strade che rimettono un mazzo in mano, non solo per
-   * l'importazione: un mazzo arrivato da un amico resta nel deposito con le sue
-   * terre dentro, e riaprirlo dall'elenco le riperde uguale. Tacerlo lì e dirlo
-   * qui vorrebbe dire avvisare solo nel caso in cui il file è ancora intero.
-   */
-  const raccontaLeTerreScartate = (scartate: TerreScartate): void => {
-    if (scartate.length === 0) return;
-    racconta(frasePerLeTerreScartate({ terre: scartate }), null);
   };
 
   return (
@@ -367,7 +375,7 @@ export function MazziSalvati({
                 <button
                   type="button"
                   class="nome-salvato"
-                  onClick={() => raccontaLeTerreScartate(apriMazzo(salvato, true))}
+                  onClick={() => raccontaLeTerreScartate(apriMazzo(salvato, true), null)}
                 >
                   <span class="nome">{salvato.nome}</span>
                   <span class="dettagli">

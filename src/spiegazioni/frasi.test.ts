@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import {
   carte,
   conArticolo,
+  fraseConLeTerreScartate,
   copie,
   decimale,
   elenco,
@@ -560,6 +561,49 @@ describe("le terre di un mazzo che arriva da fuori", () => {
     const frase = frasePerLeTerreScartate({ terre: [{ nome: "Labirinto", copie: 1 }] });
     expect(frase).toContain("La terra");
     expect(frase).toContain("non è quella che rimetto");
+  });
+});
+
+/**
+ * Ticket 48. Le tre strade che rimettono un mazzo in mano — l'importazione, il
+ * tasto dell'elenco, il salvataggio — scartano le stesse terre e devono dirlo
+ * **tutte e tre**. Finché ognuna si scriveva il messaggio per conto suo, una se
+ * lo dimenticava: il salvataggio riapriva il mazzo appena scritto, ne buttava le
+ * terre prese dal catalogo e annunciava soltanto «è salvato».
+ *
+ * La regola sta qui, in un posto solo, perché le tre chiamate la leggano uguale.
+ */
+describe("l'annuncio di un mazzo rimesso in mano, con le terre che ha perso", () => {
+  const UNA_TERRA = [{ nome: "Miniera a Nastro", copie: 4 }];
+
+  it("senza terre scartate resta l'annuncio e basta", () => {
+    expect(fraseConLeTerreScartate({ annuncio: "«Zoo» è salvato.", terre: [] })).toBe(
+      "«Zoo» è salvato.",
+    );
+  });
+
+  it("senza annuncio e senza terre non dice niente", () => {
+    // È il tasto dell'elenco quando non c'è nulla da raccontare: una riga vuota
+    // sopra la schermata sarebbe un avviso che avvisa di niente.
+    expect(fraseConLeTerreScartate({ annuncio: null, terre: [] })).toBeNull();
+  });
+
+  it("senza annuncio dice solo delle terre", () => {
+    const frase = fraseConLeTerreScartate({ annuncio: null, terre: UNA_TERRA });
+    expect(frase).toBe(frasePerLeTerreScartate({ terre: UNA_TERRA }));
+  });
+
+  it("dice prima quel che è successo e poi quel che è costato", () => {
+    // L'ordine non è un vezzo: chi ha premuto «Salva» sta aspettando di sapere
+    // se il mazzo è salvato, e la notizia delle terre si legge solo dopo averlo
+    // saputo.
+    const frase = fraseConLeTerreScartate({ annuncio: "«Zoo» è salvato.", terre: UNA_TERRA });
+    expect(frase).not.toBeNull();
+    expect(frase as string).toContain("«Zoo» è salvato.");
+    expect(frase as string).toContain("«Miniera a Nastro»");
+    expect((frase as string).indexOf("è salvato")).toBeLessThan(
+      (frase as string).indexOf("Miniera a Nastro"),
+    );
   });
 });
 
