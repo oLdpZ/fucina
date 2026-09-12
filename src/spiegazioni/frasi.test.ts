@@ -644,6 +644,24 @@ describe("il tetto in vigore sul mazzo in mano", () => {
     expect(frase).toMatch(/altre 8 carte/u);
   });
 
+  it("con cinque nomi non scrive «e altre 1 carte»", () => {
+    // Il ticket 43: il plurale era scritto a mano, e con esattamente cinque
+    // carte senza listino il resto è uno. La riga si legge sulla schermata del
+    // mazzo e sul foglio per l'arbitro, cioè nei due posti in cui l'app chiede
+    // di essere creduta sui numeri.
+    const cinque = Array.from({ length: 5 }, (_, quale) => `Carta ${quale + 1}`);
+
+    for (const frase of [
+      frasePerIlTettoInVigore({ tetto: 30, incontabili: cinque }),
+      frasePerIlTettoSuQuelCheEsce({ tetto: 30, incontabili: cinque }),
+    ]) {
+      expect(frase).not.toMatch(/1 carte/u);
+      expect(frase).toContain("Carta 4");
+      expect(frase).not.toContain("Carta 5");
+      expect(frase).toMatch(/un’altra carta/u);
+    }
+  });
+
   it("su quel che esce ritira la promessa quando il mazzo non si sa contare", () => {
     // Il ticket 38 sul foglio per l'arbitro, che è dove la promessa costa di
     // più: è la lista che esce dal negozio con un numero sotto.
@@ -828,6 +846,98 @@ describe("la corsa contro un orologio", () => {
 
     expect(frase).toContain("tutte le volte");
     expect(frase).not.toContain("le altre");
+  });
+
+  it("una partita su cinquecento che non chiude non si arrotonda a «100%»", () => {
+    // Il ticket 43. La guardia guardava il numero grezzo — esatto, `>= 1` — e
+    // accanto ci stampava quello arrotondato: 499 partite su 500 fanno 0,998,
+    // che come percentuale tonda è «100%». Ne usciva «ci arriva 100% delle
+    // volte — le altre non chiude affatto», cioè precisamente la riga che il
+    // commento tre righe sopra la guardia promette di non scrivere.
+    const frase = frasePerLaCorsa({ ...GREZZI, quotaPartiteChiuse: 499 / 500 });
+
+    expect(frase).not.toContain("100%");
+    expect(frase).toContain("99,8%");
+    // La partita che non chiude c'è, e va detta: il guasto era la coppia, non
+    // la coda.
+    expect(frase).toContain("le altre non chiude affatto");
+  });
+
+  it("una partita su cinquecento che chiude non si arrotonda a «0%»", () => {
+    // L'altro capo dello stesso guasto: la frase dice a che turno il mazzo
+    // chiude, e sotto scriveva che non ci arriva mai. Il turno medio esiste
+    // appena una partita chiude, quindi il ramo del «non chiude mai» non
+    // interviene, e restava scritto «chiude al turno 7,0 […] E ci arriva 0%
+    // delle volte».
+    const frase = frasePerLaCorsa({ ...GREZZI, quotaPartiteChiuse: 1 / 500 });
+
+    expect(frase).not.toContain("0% delle volte");
+    expect(frase).toContain("0,2%");
+  });
+
+  it("la somma che la frase mostra torna con i numeri che mostra", () => {
+    // Il patto della corsa: chi legge può rifare la somma. Un ritardo che si
+    // mostra «0,0» esce dall'elenco, e allora non può nemmeno restare dentro il
+    // turno ritardato — se no la riga legge «chiude al turno 5,0, che diventa
+    // 5,2 contando 0,1 per le sue contromagie», e i conti non tornano.
+    const frase = frasePerLaCorsa({
+      ...GREZZI,
+      turnoSuo: 9,
+      turnoMio: 5,
+      ritardoDaRimozioni: 2 * 0.5 * (1 / 24),
+      ritardoDaContromagie: 1.5 * 2 * 0.5 * (1 / 24),
+      turnoMioRitardato: 5 + 2 * 0.5 * (1 / 24) + 1.5 * 2 * 0.5 * (1 / 24),
+    });
+
+    expect(frase).toContain("chiude al turno 5,0, che diventa 5,1 contando 0,1 per le sue contromagie");
+    expect(frase).not.toContain("rimozioni");
+  });
+
+  it("non dichiara un vincitore fra due turni che si mostrano uguali", () => {
+    // Il turno medio è una media su cinquecento partite, e si mostra a un
+    // decimale: con un avversario a 5 e un mazzo a 5,02 la frase scriveva due
+    // volte «5,0» e ne dichiarava uno perdente.
+    const frase = frasePerLaCorsa({
+      ...GREZZI,
+      turnoSuo: 5,
+      turnoMio: 5.02,
+      turnoMioRitardato: 5.02,
+    });
+
+    expect(frase).toContain("arrivano insieme");
+    expect(frase).not.toContain("arriva prima");
+  });
+
+  it("non nomina un ritardo che si mostra «0,0»", () => {
+    // Un avversario con una sola rimozione contro un mazzo mezzo di creature
+    // costa 2 × 0,5 × 1/24 = 0,042 turni: la guardia sul grezzo lo faceva
+    // nominare, e la frase leggeva «chiude al turno 5,0, che diventa 5,0
+    // contando 0,0 per le sue rimozioni». Il «diventa» non diventava niente.
+    const frase = frasePerLaCorsa({
+      ...GREZZI,
+      turnoMio: 5,
+      ritardoDaRimozioni: 2 * 0.5 * (1 / 24),
+      turnoMioRitardato: 5 + 2 * 0.5 * (1 / 24),
+    });
+
+    expect(frase).not.toContain("rimozioni");
+    expect(frase).not.toContain("diventa");
+    expect(frase).toContain("chiude al turno 5,0");
+  });
+
+  it("il turno ritardato segue il ritardo mostrato, non quello grezzo", () => {
+    // L'altra direzione della stessa regola: mezzo centesimo di turno si mostra
+    // «0,1», mentre il turno ritardato grezzo — 5,05 — arrotondato per conto suo
+    // resterebbe «5,0». La frase deve dire 5,1, cioè il turno più il ritardo che
+    // ha appena scritto, o torna a promettere un «diventa» che non diventa.
+    const frase = frasePerLaCorsa({
+      ...GREZZI,
+      turnoMio: 5,
+      ritardoDaRimozioni: 0.05,
+      turnoMioRitardato: 5.05,
+    });
+
+    expect(frase).toContain("chiude al turno 5,0, che diventa 5,1 contando 0,1 per le sue rimozioni");
   });
 });
 

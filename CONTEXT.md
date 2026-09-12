@@ -103,6 +103,13 @@ L'esito della corsa è la **sesta componente del punteggio**, accanto alle
 cinque. Sta nel punteggio e non accanto al mazzo perché altrimenti l'app
 saprebbe dirti che perdi senza costruire per non perdere.
 
+Chi arriva primo si decide **al decimo di turno**, che è la cifra in cui la
+corsa si racconta. Il turno di chiusura è una media su cinquecento partite
+simulate contro una caricatura (ADR-0002): oltre il decimo non c'è una misura,
+c'è il rumore della simulazione, e due turni che si mostrano uguali non hanno un
+vincitore. Vale per tutto quel che la corsa scrive — un ritardo che si mostra
+«0,0» non si nomina, e una coda che non sposta il turno mostrato non si scrive.
+
 ## Potenza
 
 **Le componenti del punteggio messe insieme**, e mai un numero che l'app

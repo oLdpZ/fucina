@@ -57,9 +57,64 @@ export function percentoFine(quota: number): string {
   return `${(quota * 100).toFixed(1).replace(".", ",")}%`;
 }
 
+/**
+ * «80%», «99,8%», «0,2%»: la percentuale di una **parte**, che non può dire né
+ * «100%» né «0%».
+ *
+ * La usa chi, accanto alla percentuale, dice quel che è successo nel resto delle
+ * volte — «le altre non chiude affatto» — o a che turno succede la cosa di cui
+ * sta dando la quota. Arrotondata all'intero, una parte quasi intera si scrive
+ * «100%» e una parte piccolissima «0%», e in tutti e due i casi la frase si
+ * contraddice da sola: 499 partite su 500 fanno 0,998 e una su 500 fa 0,002, e
+ * sono i due capi dello stesso guasto (ticket 43).
+ *
+ * Quando succede si scende di un decimale, che sulle cinquecento partite della
+ * simulazione è una cifra vera e non una precisione inventata: le due quote
+ * estreme che non siano il tutto e il niente sono appunto 99,8% e 0,2%. I due
+ * tagli — 99,9% e 0,1% — servono alle quote che arrivassero da conti più fini:
+ * sono i numeri più alto e più basso che una parte possa mostrare restando una
+ * parte.
+ *
+ * Il tutto e il niente esatti restano «100%» e «0%», perché lì non c'è niente da
+ * arrotondare e nessuna frase da contraddire.
+ */
+export function percentoDiUnaParte(quota: number): string {
+  if (quota <= 0 || quota >= 1) return percento(quota);
+  const tondo = Math.round(quota * 100);
+  if (tondo > 0 && tondo < 100) return `${tondo}%`;
+  const fine = comeSiScrive(quota * 100, 1);
+  return `${decimale(Math.min(Math.max(fine, 0.1), 99.9), 1)}%`;
+}
+
 /** «2,4»: il numero con la virgola, come si scrive in italiano. */
 export function decimale(valore: number, cifre = 2): string {
   return valore.toFixed(cifre).replace(".", ",");
+}
+
+/**
+ * Il numero **com'è scritto nella frase**, riportato a numero.
+ *
+ * Serve alle guardie. Un modello che decidesse sul valore grezzo e ne stampasse
+ * uno arrotondato finirebbe per scrivere frasi che si contraddicono da sole: «ci
+ * arriva 100% delle volte — le altre non chiude affatto» con 499 partite su 500,
+ * «che diventa 5,0 contando 0,0 per le sue rimozioni», due turni identici a
+ * schermo e uno dei due dichiarato perdente. Sono tutte e tre girate nell'app
+ * (ticket 43), e sono la stessa cosa: la guardia guardava un numero e la frase
+ * ne mostrava un altro.
+ *
+ * La regola, da qui in avanti: **si arrotonda una volta sola, in cima al
+ * modello**, e da lì in giù guardie e frasi guardano lo stesso valore. Dove una
+ * guardia debba restare sul grezzo, la sua soglia va scritta con la sua ragione
+ * accanto — divergere in silenzio non è più permesso.
+ *
+ * L'arrotondamento è quello di `toFixed`, e non un `Math.round` sulle cifre
+ * spostate, perché è `toFixed` che scrive la frase: sui casi al limite i due non
+ * danno la stessa cifra — 5,05 in binario è poco meno di 5,05 e si scrive «5,0»
+ * — e prendere l'altro rimetterebbe dentro proprio la divergenza che questa
+ * funzione esiste per chiudere.
+ */
+export function comeSiScrive(valore: number, cifre = 2): number {
+  return Number(valore.toFixed(cifre));
 }
 
 /**
@@ -457,7 +512,13 @@ const NOMI_INCONTABILI_DA_DIRE = 4;
 function incontabiliDette(nomi: readonly string[]): string {
   if (nomi.length <= NOMI_INCONTABILI_DA_DIRE) return elenco(nomi);
   const dette = nomi.slice(0, NOMI_INCONTABILI_DA_DIRE);
-  return elenco([...dette, `altre ${nomi.length - dette.length} carte`]);
+  const restanti = nomi.length - dette.length;
+  // Con esattamente cinque carte senza listino il resto è uno, e il plurale
+  // scritto a mano leggeva «e altre 1 carte» — sulla schermata del mazzo e sul
+  // foglio per l'arbitro, cioè nei due posti in cui l'app chiede di essere
+  // creduta sui numeri (ticket 43).
+  const resto = restanti === 1 ? "un’altra carta" : `altre ${carte(restanti)}`;
+  return elenco([...dette, resto]);
 }
 
 export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string {
@@ -1013,24 +1074,46 @@ export function frasePerLaCorsa(grezzi: GrezziDellaCorsa): string {
     return `Contro ${grezzi.contro}, che chiude al turno ${grezzi.turnoSuo}, questo mazzo non chiude mai entro il tempo che la simulazione guarda: la corsa non la corre.`;
   }
 
+  // Qui, una volta sola, i numeri diventano quelli che l'utente leggerà: da
+  // questa riga in giù nessuna guardia guarda più il grezzo (`comeSiScrive`, e
+  // il ticket 43 per le tre frasi che ne uscivano contraddette). Il turno suo
+  // non è in lista perché non ha un arrotondamento da condividere: l'orologio lo
+  // valida intero, e intero si scrive.
+  const mio = comeSiScrive(grezzi.turnoMio, 1);
+  const daRimozioni = comeSiScrive(grezzi.ritardoDaRimozioni, 1);
+  const daContromagie = comeSiScrive(grezzi.ritardoDaContromagie, 1);
+  // Il turno ritardato si rifà **dai numeri mostrati**, e non si arrotonda
+  // `turnoMioRitardato`: un ritardo che si mostra «0,0» esce dall'elenco, e se
+  // restasse dentro la somma la frase mostrerebbe un «diventa» che con i suoi
+  // stessi addendi non torna. È il patto scritto sopra — chi legge può rifare la
+  // somma — e qui è anche l'unico modo di tenerlo.
+  const ritardato = comeSiScrive(mio + daRimozioni + daContromagie, 1);
+
   const ritardi: string[] = [];
-  if (grezzi.ritardoDaRimozioni > 0) {
-    ritardi.push(`${decimale(grezzi.ritardoDaRimozioni, 1)} per le sue rimozioni`);
+  if (daRimozioni > 0) {
+    ritardi.push(`${decimale(daRimozioni, 1)} per le sue rimozioni`);
   }
-  if (grezzi.ritardoDaContromagie > 0) {
-    ritardi.push(`${decimale(grezzi.ritardoDaContromagie, 1)} per le sue contromagie`);
+  if (daContromagie > 0) {
+    ritardi.push(`${decimale(daContromagie, 1)} per le sue contromagie`);
   }
 
-  const mio = decimale(grezzi.turnoMio, 1);
-  const arrivo =
-    ritardi.length === 0
-      ? `chiude al turno ${mio}`
-      : `chiude al turno ${mio}, che diventa ${decimale(grezzi.turnoMioRitardato, 1)} contando ${elenco(ritardi)}`;
+  // Il «diventa» si scrive solo se il turno **diventa** qualcos'altro. Un
+  // ritardo può mostrarsi e non spostare il turno mostrato — mezzo centesimo di
+  // turno fa «0,1» e lascia «5,0» dov'era — e la frase che lo contasse
+  // prometterebbe un cambiamento che accanto non si vede.
+  const diventa = ritardi.length > 0 && ritardato > mio;
+  const arrivo = diventa
+    ? `chiude al turno ${decimale(mio, 1)}, che diventa ${decimale(ritardato, 1)} contando ${elenco(ritardi)}`
+    : `chiude al turno ${decimale(mio, 1)}`;
 
+  // Chi arriva prima si decide sul turno che la frase ha appena scritto: due
+  // numeri identici a schermo non possono avere un vincitore, chiunque sia
+  // avanti alla terza cifra.
+  const arrivoMostrato = diventa ? ritardato : mio;
   const chi =
-    grezzi.turnoMioRitardato < grezzi.turnoSuo
+    arrivoMostrato < grezzi.turnoSuo
       ? "arriva prima lui"
-      : grezzi.turnoMioRitardato > grezzi.turnoSuo
+      : arrivoMostrato > grezzi.turnoSuo
         ? "arriva prima l’avversario"
         : "arrivano insieme";
 
@@ -1038,12 +1121,13 @@ export function frasePerLaCorsa(grezzi: GrezziDellaCorsa): string {
   // medio mente: chiudere al quarto turno una volta su cinque non è arrivare
   // primi. Ma «le altre volte non chiude affatto» si dice solo quando le altre
   // volte esistono: scriverlo sotto un 100% sarebbe una frase che si contraddice
-  // da sola, ed è il genere di riga che insegna a non leggere le altre.
-  const quota = percento(grezzi.quotaPartiteChiuse);
+  // da sola, ed è il genere di riga che insegna a non leggere le altre. Il tutto
+  // è esatto — una partita non chiusa su cinquecento è una parte, e
+  // `percentoDiUnaParte` la scrive come tale invece di arrotondarla al tutto.
   const quanteVolte =
     grezzi.quotaPartiteChiuse >= 1
       ? `E ci arriva tutte le volte.`
-      : `E ci arriva ${quota} delle volte — le altre non chiude affatto, e la corsa non si vince nemmeno partendo bene.`;
+      : `E ci arriva ${percentoDiUnaParte(grezzi.quotaPartiteChiuse)} delle volte — le altre non chiude affatto, e la corsa non si vince nemmeno partendo bene.`;
 
   return `Contro ${grezzi.contro}, che chiude al turno ${grezzi.turnoSuo}, questo mazzo ${arrivo}: ${chi}. ${quanteVolte}`;
 }
