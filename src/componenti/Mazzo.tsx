@@ -20,7 +20,7 @@ import {
   type CopieDiCarta,
   type RigaDelMazzo,
 } from "../mazzo/base-di-terre.js";
-import { copieMassime } from "../mazzo/copie.js";
+import { tettoInMano } from "../mazzo/copie.js";
 import {
   DIMENSIONE_MAZZO,
   PERDITA_MASSIMA_PER_I_COLORI,
@@ -457,7 +457,7 @@ function RigaCarta({
         <button
           type="button"
           onClick={() => cambiaCopie(riga.carta, +1)}
-          disabled={riga.copie >= copieMassime(riga.carta)}
+          disabled={riga.copie >= tettoInMano(riga.carta)}
           aria-label={`Una copia in più di ${riga.carta.nome}`}
         >
           +

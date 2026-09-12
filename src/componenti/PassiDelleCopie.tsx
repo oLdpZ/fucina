@@ -12,7 +12,7 @@
  */
 
 import type { Carta } from "../dati/pool.js";
-import { copieMassime } from "../mazzo/copie.js";
+import { entraInMano, tettoInMano } from "../mazzo/copie.js";
 
 export function PassiDelleCopie({
   carta,
@@ -25,13 +25,20 @@ export function PassiDelleCopie({
   cambiaCopie: (carta: Carta, delta: number) => void;
   grande?: boolean;
 }) {
-  if (carta.terra !== null) {
+  // La regola non è di questo comando: è quella che decide che cosa il mazzo in
+  // mano contiene (`entraInMano`), e qui si legge invece di ripetersi. Il
+  // comando la **dice** invece di sparire in silenzio, perché una carta senza il
+  // suo bottone farebbe pensare a un guasto.
+  if (!entraInMano(carta)) {
     return <p class="terra-non-si-aggiunge">Le terre le sceglie l&rsquo;app</p>;
   }
 
-  // Il tetto lo dice la carta: quasi sempre quattro, ma non per quelle poche
-  // che portano scritto di poterne mettere quante se ne vuole.
-  const tetto = copieMassime(carta);
+  // Fin dove il più può arrivare: il tetto della carta — quasi sempre quattro,
+  // ma non per quelle poche che portano scritto di poterne mettere quante se ne
+  // vuole — e comunque non oltre il mazzo. È lo stesso numero a cui `cambiaCopie`
+  // tronca, chiesto alla stessa funzione: un bottone che resta acceso su un
+  // passo che non fa niente è un bottone rotto.
+  const tetto = tettoInMano(carta);
 
   return (
     <div class={grande ? "passi" : "passi piccoli"} data-nel-mazzo={copie > 0}>

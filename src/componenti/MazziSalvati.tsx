@@ -272,12 +272,17 @@ export function MazziSalvati({
       return;
     }
     setSalvati(await elencaMazziSalvati());
-    // Anche salvare rimette il mazzo in mano, e anche qui le terre che il mazzo
-    // portava — quelle prese dal catalogo, che il catalogo non esclude —
-    // restano fuori. Prima questo ritorno si buttava e il messaggio se lo
-    // scriveva questa riga: si salvava con quattro Strip Mine dentro, il file
-    // le teneva, il mazzo in mano le perdeva in silenzio e il «Risalva»
-    // successivo scriveva il mazzo mozzato sopra quello buono (ticket 48).
+    // Anche salvare rimette il mazzo in mano, e ci passa dallo stesso posto
+    // degli altri due: quel che `apriMazzo` scarta si racconta, non si butta.
+    //
+    // Oggi non scarta niente, e si può **dimostrare**: le terre in mano non ci
+    // entrano da nessuna porta (`entraInMano`, ticket 51), quindi il file che
+    // `componi()` ha appena scritto non ne contiene. Il ticket 48 raccontava
+    // un'altra storia — quattro terre prese dal catalogo, il file che le tiene
+    // e il «Risalva» che le cancella — e quella storia non stava in piedi: il
+    // comando delle copie una terra non la aggiunge, e non lo faceva nemmeno
+    // allora. Il giro resta perché la regola sia una per tutti e tre e non tre
+    // uguali, che è quel che la rende vera anche domani.
     raccontaLeTerreScartate(
       apriMazzo(salvato, false),
       `«${salvato.nome}» è salvato su questo dispositivo.`,

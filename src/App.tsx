@@ -26,7 +26,7 @@ import type { Formato } from "./dati/formato.js";
 import type { Carta, Pool } from "./dati/pool.js";
 import { FILTRI_VUOTI, type Filtri } from "./catalogo/filtri.js";
 import type { CopieDiCarta } from "./mazzo/base-di-terre.js";
-import { copieMassime } from "./mazzo/copie.js";
+import { copieInMano, entraInMano } from "./mazzo/copie.js";
 import {
   temaInVigore,
   tettoInVigore,
@@ -34,7 +34,7 @@ import {
   vincoliDiUnMazzoRiaperto,
   type MazzoConsegnato,
 } from "./mazzo/in-vigore.js";
-import { DIMENSIONE_MAZZO, TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
+import { TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
 import type { MazzoSalvato } from "./mazzo/salvato.js";
 import { usaMotore } from "./ricerca/usa-motore.js";
 import { COMBO_VUOTA, type Combo as CarteDellaCombo } from "./combo/combo.js";
@@ -452,8 +452,13 @@ export function App() {
       // Il tetto lo dice la carta, non il codice: è un dato del pool, e le
       // poche carte che non ne hanno — quelle col permesso nel testo, le terre
       // base — fanno proprio i mazzi fuori meta che cerchiamo.
-      const tetto = Math.min(copieMassime(carta), DIMENSIONE_MAZZO);
-      const quante = Math.max(0, Math.min(tetto, (prima.get(carta.nome) ?? 0) + delta));
+      // Quante ne restano dopo il passo lo decide `copieInMano`, e con lui la
+      // regola che le terre in mano non ci vanno. Prima qui c'era solo il tetto
+      // di copie, e la regola delle terre la conoscevano i **bottoni**: nessuno
+      // ne offre uno sopra una terra, quindi non passava — ma la porta era
+      // aperta, e bastava un bottone nuovo in un posto nuovo per far entrare una
+      // carta che poi nessuna schermata avrebbe più mostrato (ticket 51).
+      const quante = copieInMano(carta, (prima.get(carta.nome) ?? 0) + delta);
       if (quante === 0) dopo.delete(carta.nome);
       else dopo.set(carta.nome, quante);
       return dopo;
@@ -498,12 +503,11 @@ export function App() {
       // (`mazzo/base-di-terre.ts`), una lista che ne porta perde davvero
       // qualcosa. Finché è così, chi importa se lo deve sentir dire: se ne
       // porta il conto fuori di qui, e chi chiama lo racconta.
-      if (carta.terra !== null) {
+      if (!entraInMano(carta)) {
         scartate.push({ nome: carta.nome, copie: Math.max(1, voce.copie) });
         continue;
       }
-      const tetto = Math.min(copieMassime(carta), DIMENSIONE_MAZZO);
-      copie.set(voce.nome, Math.max(1, Math.min(tetto, voce.copie)));
+      copie.set(voce.nome, copieInMano(carta, Math.max(1, voce.copie)));
     }
     setCopiePerNome(copie);
     cambiaTerre(salvato.richiesta.terreVolute);

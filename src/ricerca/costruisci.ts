@@ -75,7 +75,7 @@ import {
   type BaseDiTerre,
   type CopieDiCarta,
 } from "../mazzo/base-di-terre.js";
-import { copieAlMassimo, copieMassime } from "../mazzo/copie.js";
+import { copieAlMassimo, copieMassime, entraInMano } from "../mazzo/copie.js";
 import { comprabile, contoDelMazzo, nonSupera, prezzoDiUnaCopia } from "../mazzo/spesa.js";
 import { terreCandidate, terrePermesseDalTema } from "../mazzo/terre-candidate.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
@@ -85,7 +85,6 @@ import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
 import { POSTI_NON_TERRA } from "../tema/taratura.js";
 import {
   escluso,
-  eTerra,
   purezza,
   risolviTema,
   temaDichiarato,
@@ -628,7 +627,11 @@ export function costruisciMazzo(
   // sceglie l'app, ma dentro i limiti che l'utente ha dichiarato.
   const terrePermesse = terrePermesseDalTema(pool, tema);
   const giocabiliPermesse = pool.filter(
-    (carta) => carta.terra === null && !eTerra(carta) && !escluso(carta, tema),
+    // Che cosa non sia una terra lo dice `entraInMano`, che è la stessa regola
+    // con cui le carte entrano nel mazzo dal catalogo e rientrano da un file
+    // salvato: il motore non deve poter costruire un mazzo che l'app poi non si
+    // lascia tenere in mano (ticket 51).
+    (carta) => entraInMano(carta) && !escluso(carta, tema),
   );
 
   // Il tetto di spesa, quando è acceso, è il **secondo** filtro e non il primo:
