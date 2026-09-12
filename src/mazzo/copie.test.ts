@@ -18,12 +18,17 @@ function conTetto(tettoDiCopie: number | null): Carta {
   return { ...QUALUNQUE, tettoDiCopie, terra: null };
 }
 
+/**
+ * Una terra vera, **senza scorciatoie di tipo**: il cast nasconderebbe il giorno
+ * in cui il campo cambia forma, e questi test la terra la descrivono per intero
+ * apposta.
+ */
 const UNA_TERRA: Carta = {
   ...QUALUNQUE,
   tipi: ["Land"],
   tettoDiCopie: null,
-  terra: { produce: ["R"], entraGirata: false },
-} as unknown as Carta;
+  terra: { coloriProdotti: ["R"], entraGirata: false, condizione: null },
+};
 
 /**
  * Una terra che la preparazione non ha saputo leggere: il tipo dice Land, il
