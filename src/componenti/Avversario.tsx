@@ -84,7 +84,12 @@ export function Avversario({
         </p>
       ) : null}
 
-      {orologi.length === 0 ? (
+      {/* «Non è un guasto» si può dire solo quando non c'è un guasto. Con una
+          nota sul deposito sopra — gli orologi che non si sono potuti leggere,
+          per esempio (ticket 54) — l'elenco vuoto non è quel che l'utente ha
+          deciso, ed è già la nota a raccontarlo: due frasi che si
+          contraddicono a due righe di distanza sono peggio di una sola. */}
+      {orologi.length === 0 && notaSulDeposito === null ? (
         <p class="nota-filtro">
           Nessun mazzo dichiarato: la corsa non si corre, e il punteggio resta quello delle cinque
           componenti di sempre. Non è un guasto — è quel che succede finché non dici contro chi

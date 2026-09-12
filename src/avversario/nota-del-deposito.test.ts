@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { EsitoDellaScrittura } from "../dati/deposito.js";
-import { notaDelDeposito } from "./nota-del-deposito.js";
+import { notaDelDeposito, notaDellaLettura } from "./nota-del-deposito.js";
 
 /** Come l'app la usa: ogni esito riscrive la nota, e l'ultima è quella in vista. */
 function dopoGliEsiti(
@@ -77,5 +77,49 @@ describe("la nota sul deposito degli orologi", () => {
     expect(dopoGliEsiti("salvataggio", ["rifiutata", "rifiutata"])).not.toBe(null);
     expect(dopoGliEsiti("salvataggio", ["rifiutata", "rifiutata", "fatta"])).toBe(null);
     expect(dopoGliEsiti("salvataggio", ["rifiutata", "fatta", "rifiutata"])).not.toBe(null);
+  });
+});
+
+/**
+ * L'altra porta, quella d'ingresso (ticket 54). Una lettura che non riesce
+ * lascia la schermata senza i mazzi dell'utente pur senza averli persi, e
+ * l'app da quel momento non scrive più per non scriverci sopra: sono due fatti
+ * che riguardano lui, e tacerli sarebbe lo stesso silenzio del ticket 45.
+ */
+describe("la nota sulla lettura degli orologi", () => {
+  it("non dice niente quando la lettura è riuscita", () => {
+    expect(notaDellaLettura("letti")).toBe(null);
+    expect(notaDellaLettura("mai-salvati")).toBe(null);
+  });
+
+  it("dice quali mazzi non si sono letti, e che questa sessione non si salva", () => {
+    const nota = notaDellaLettura("non-si-e-letto");
+    expect(nota).not.toBe(null);
+    // **Quali** mazzi: quelli che incontri, come li chiama la nota del
+    // salvataggio. L'app ne conserva anche un altro tipo — i mazzi salvati
+    // dall'utente, che stanno in un altro scaffale e questa nota non tocca —
+    // e chi legge non deve credere che siano quelli a essersi persi.
+    expect(nota).toContain("mazzi che incontri");
+    expect(nota).toContain("sessione");
+    expect(nota).not.toContain("leggiOrologiSalvati");
+    expect(nota).not.toContain("IndexedDB");
+  });
+
+  /**
+   * La regola delle altre note vale anche qui: **solo quel che si sa**. Un
+   * deposito che non si è lasciato leggere non dice che cosa ci sia dentro, e
+   * promettere che i mazzi dell'utente sono al sicuro sarebbe inventare — la
+   * stessa invenzione per cui la nota del ripristino tace.
+   */
+  it("non promette che quel che non si è letto sia ancora là", () => {
+    const nota = notaDellaLettura("non-si-e-letto") ?? "";
+    expect(nota).not.toContain("non sono persi");
+    expect(nota).not.toContain("al sicuro");
+  });
+
+  it("non è la nota del salvataggio: dicono due cose diverse", () => {
+    expect(notaDellaLettura("non-si-e-letto")).not.toBe(
+      notaDelDeposito("salvataggio", "rifiutata"),
+    );
   });
 });

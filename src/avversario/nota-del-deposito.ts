@@ -7,6 +7,11 @@
  * perché chi chiama se ne occupi. Questa è la funzione che se ne occupa per gli
  * orologi (ticket 45): l'esito entra, la parola da mostrare esce.
  *
+ * Le porte sono due, e le note anche. `notaDelDeposito` è quella delle
+ * scritture — il salvataggio a ogni tasto, il ripristino. `notaDellaLettura`,
+ * in fondo, è quella dell'apertura: gli orologi conservati che non si sono
+ * potuti leggere (ticket 54). Stessa regola per tutt'e due.
+ *
  * Gli orologi sono l'unica cosa che l'app conserva e che nessuno può
  * ricostruire al posto dell'utente, e la loro schermata è l'unica **senza un
  * tasto salva** — si salvano a ogni tasto premuto. Non c'è quindi il momento in
@@ -30,7 +35,7 @@
  *   sola invece di mettersi in mezzo.
  */
 
-import type { EsitoDellaScrittura } from "../dati/deposito.js";
+import type { EsitoDellaLettura, EsitoDellaScrittura } from "../dati/deposito.js";
 
 /** Quale scrittura il deposito ha accettato o rifiutato. */
 export type ScritturaDegliOrologi = "salvataggio" | "ripristino";
@@ -73,4 +78,39 @@ export function notaDelDeposito(
   if (esito === "fatta") return null;
   if (esito === "nessun-deposito" && quale === "ripristino") return null;
   return NOTE[quale];
+}
+
+/**
+ * La nota **prima** di ogni scrittura: quando gli orologi conservati non si
+ * sono potuti leggere (ticket 54).
+ *
+ * Stessa regola delle altre — che cosa perde l'utente, e solo quel che si sa —
+ * applicata a una porta diversa. Qui quel che si sa è poco e va detto tutto
+ * intero: sullo schermo i suoi mazzi non ci sono, e per non scrivere sopra un
+ * deposito che non si è saputo guardare l'app da adesso non salva più.
+ *
+ * Quel che **non** si sa non si dice. Non si promette che i suoi mazzi siano
+ * ancora là — dietro una lettura fallita ci può essere tutto come ci può
+ * essere un deposito rovinato —, che è la stessa ragione per cui la nota del
+ * ripristino tace invece di rassicurare. E non si suggerisce il rimedio di uno
+ * solo dei casi possibili: chiudere le altre schede serve quando è un'altra
+ * scheda a tenere il deposito, e dirlo a chi ha un guasto diverso è mandarlo a
+ * fare una cosa inutile.
+ *
+ * I mazzi di cui parla sono **quelli che incontri**, come li chiama la nota
+ * del salvataggio: l'app ne conserva anche di altri — i mazzi che l'utente ha
+ * salvato, in un altro scaffale (ticket 07) — e quelli qui non c'entrano.
+ *
+ * Senza questa nota la schermata mostrerebbe un pannello vuoto senza dire
+ * perché, e un elenco vuoto in questa app è una risposta dell'utente: sarebbe
+ * un guasto travestito da sua decisione.
+ */
+export function notaDellaLettura(lettura: EsitoDellaLettura): string | null {
+  if (lettura !== "non-si-e-letto") return null;
+  return (
+    "I mazzi che incontri, quelli salvati su questo dispositivo, non si sono " +
+    "potuti leggere: qui sotto non ci sono. Per non scriverci sopra senza " +
+    "averli visti, l'app da adesso non li salva: quel che scrivi vale per " +
+    "questa sessione e non oltre. Riprova a riaprire l'app più tardi."
+  );
 }

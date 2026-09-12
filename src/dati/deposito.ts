@@ -39,17 +39,37 @@ const CHIAVE = "pool";
  */
 const CHIAVE_OROLOGI = "orologi";
 
-/** Apre il deposito, creando gli scaffali che mancano. `null` se non si può. */
-function apri(): Promise<IDBDatabase | null> {
+/**
+ * Perché il deposito non si è aperto — e serve a una domanda sola: **se là
+ * dentro possa esserci roba dell'utente**.
+ *
+ * `non-c-e` è un dispositivo dove IndexedDB non si usa affatto: l'oggetto non
+ * esiste, o aprirlo solleva (Firefox in navigazione privata). Nessuno ci ha
+ * mai scritto niente, perché nessuno ci poteva scrivere, e questo si può
+ * affermare. `non-si-vede` è un deposito che c'è e non si è lasciato aprire —
+ * un'altra scheda che tiene aperta una versione vecchia, un errore
+ * dell'apertura — e là dentro può esserci tutto quel che l'utente ha salvato.
+ *
+ * La differenza non cambia niente a chi scrive: in tutti e due i casi non ha
+ * scritto. Cambia tutto a chi legge, che senza di essa leggerebbe «non si è
+ * potuto guardare» come «non c'è niente» (ticket 54).
+ */
+type PortaChiusa = "non-c-e" | "non-si-vede";
+
+/**
+ * Apre il deposito, creando gli scaffali che mancano. Se non si può, **perché**.
+ */
+function apri(): Promise<IDBDatabase | PortaChiusa> {
   return new Promise((risolvi) => {
-    if (typeof indexedDB === "undefined") return risolvi(null);
+    if (typeof indexedDB === "undefined") return risolvi("non-c-e");
 
     let richiesta: IDBOpenDBRequest;
     try {
       richiesta = indexedDB.open(DEPOSITO, VERSIONE);
     } catch {
-      // Firefox in navigazione privata lancia qui, invece di rispondere.
-      return risolvi(null);
+      // Firefox in navigazione privata lancia qui, invece di rispondere. Un
+      // deposito che rifiuta persino di aprirsi non ha mai conservato niente.
+      return risolvi("non-c-e");
     }
 
     richiesta.onupgradeneeded = () => {
@@ -68,12 +88,15 @@ function apri(): Promise<IDBDatabase | null> {
       if (ceduto) return richiesta.result.close();
       risolvi(richiesta.result);
     };
-    richiesta.onerror = () => risolvi(null);
+    // Un'apertura che risponde no è un deposito che esiste e non si fa
+    // guardare: quel che ci sta dentro resta una domanda aperta.
+    richiesta.onerror = () => risolvi("non-si-vede");
     // Un'altra scheda che tiene aperta una versione vecchia bloccherebbe per
-    // sempre: meglio rinunciare e usare i dati inclusi.
+    // sempre: meglio rinunciare e usare i dati inclusi. Là dentro, però, ci
+    // sono tutti i dati dell'utente, e nessuno li sta cancellando.
     richiesta.onblocked = () => {
       ceduto = true;
-      risolvi(null);
+      risolvi("non-si-vede");
     };
   });
 }
@@ -111,18 +134,31 @@ export function transazione<T>(
  * (ticket 45) ha bisogno di distinguerle — e di distinguere l'una e l'altra da
  * un deposito che non si è aperto.
  */
+export interface Eseguita<T> {
+  readonly come: EsitoDellaScrittura;
+  /**
+   * Com'è andata **ad aprire**: `aperta`, o il perché no. Chi scrive non ne ha
+   * bisogno — non ha scritto in nessuno dei tre casi —, chi legge sì
+   * (ticket 54).
+   */
+  readonly porta: "aperta" | PortaChiusa;
+  readonly esito: T | null;
+}
+
 function eseguita<T>(
   scaffale: string,
   modo: IDBTransactionMode,
   lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
-): Promise<{ come: EsitoDellaScrittura; esito: T | null }> {
+): Promise<Eseguita<T>> {
   return apri().then(
     (deposito) =>
-      new Promise<{ come: EsitoDellaScrittura; esito: T | null }>((risolvi) => {
+      new Promise<Eseguita<T>>((risolvi) => {
         // Il deposito si è aperto: da qui in poi ogni rinuncia è un rifiuto suo,
-        // e di quel che ci sta dentro si può parlare.
-        const rifiuto = { come: "rifiutata", esito: null } as const;
-        if (deposito === null) return risolvi({ come: "nessun-deposito", esito: null });
+        // e di quel che ci sta dentro si può parlare — c'è, e lo si è visto.
+        const rifiuto = { come: "rifiutata", porta: "aperta", esito: null } as const;
+        if (typeof deposito === "string") {
+          return risolvi({ come: "nessun-deposito", porta: deposito, esito: null });
+        }
 
         let esito: T | null = null;
         try {
@@ -136,7 +172,7 @@ function eseguita<T>(
           // dichiarata riuscita e poi annullata sarebbe una bugia.
           trans.oncomplete = () => {
             deposito.close();
-            risolvi({ come: "fatta", esito });
+            risolvi({ come: "fatta", porta: "aperta", esito });
           };
           trans.onerror = () => {
             deposito.close();
@@ -190,14 +226,41 @@ export async function dimenticaPool(): Promise<void> {
 /* --- Gli orologi dell'avversario ----------------------------------------- */
 
 /**
- * Gli orologi che l'utente ha scritto, o `null` se non ne ha mai salvati.
+ * Com'è andata la lettura degli orologi conservati.
  *
- * `null` e un elenco **vuoto** dicono cose diverse, e tenerli distinti è tutto
- * il senso di questa funzione: `null` è «non ha ancora deciso», e allora l'app
- * mostra il file di partenza del manutentore; l'elenco vuoto è «non voglio
- * correre contro nessuno», ed è una risposta da rispettare. Con un solo valore
- * per i due casi, chi cancella tutti gli orologi se li ritroverebbe alla
- * riapertura.
+ * I tre casi non sono due per la stessa ragione per cui non lo sono quelli
+ * della scrittura, dall'altra parte della porta (ticket 54). `mai-salvati` è un
+ * deposito che si è aperto e ha risposto: là dentro non c'è niente dell'utente,
+ * e lo si può affermare — e lo è anche il dispositivo dove IndexedDB non si usa
+ * affatto, perché là dentro non ci è mai potuto entrare niente.
+ * `non-si-e-letto` è un deposito che **c'è** e non si è lasciato guardare: si è
+ * aperto e ha rifiutato la lettura, oppure non si è aperto pur esistendo —
+ * un'altra scheda che ne tiene aperta una versione vecchia. Là dentro ci sono
+ * tutti i mazzi dell'utente, e nessuno li ha visti. Chi legge deve poter
+ * distinguere il vuoto che sa di essere vuoto da quello che non lo sa.
+ */
+export type EsitoDellaLettura = "letti" | "mai-salvati" | "non-si-e-letto";
+
+/** Gli orologi conservati, e **com'è andata** a leggerli. */
+export type LetturaDegliOrologi =
+  | { readonly come: "letti"; readonly orologi: Orologio[] }
+  | { readonly come: "mai-salvati" }
+  | { readonly come: "non-si-e-letto" };
+
+/**
+ * Gli orologi che l'utente ha scritto, e se non ce ne sono **perché**.
+ *
+ * Un elenco letto e un elenco **vuoto** dicono cose diverse, e tenerli distinti
+ * è metà del senso di questa funzione: `mai-salvati` è «non ha ancora deciso»,
+ * e allora l'app mostra il file di partenza del manutentore; un `letti` con
+ * zero voci è «non voglio correre contro nessuno», ed è una risposta da
+ * rispettare. Con un solo valore per i due casi, chi cancella tutti gli
+ * orologi se li ritroverebbe alla riapertura.
+ *
+ * L'altra metà è il terzo caso. Una lettura che non è riuscita non è un
+ * deposito vuoto, e dirla come tale mette il file del manutentore al posto dei
+ * suoi mazzi — che il primo tasto premuto poi salva sopra gli originali
+ * (ticket 54). Chi chiama decide che farne: `aperturaDegliOrologi`.
  *
  * Si ri-controlla quel che si rilegge, come per il pool: un elenco troncato dal
  * browser che recupera spazio metterebbe nel punteggio una corsa contro un
@@ -213,14 +276,40 @@ export async function dimenticaPool(): Promise<void> {
  * dove sono, perché cancellarli è la decisione più drastica che questo codice
  * possa prendere e non la prende in silenzio.
  */
-export async function leggiOrologiSalvati(): Promise<Orologio[] | null> {
-  const letto = await transazione<unknown>(SCAFFALE, "readonly", (scaffale) =>
-    scaffale.get(CHIAVE_OROLOGI),
+export async function leggiOrologiSalvati(): Promise<LetturaDegliOrologi> {
+  return letturaDegliOrologi(
+    await eseguita<unknown>(SCAFFALE, "readonly", (scaffale) =>
+      scaffale.get(CHIAVE_OROLOGI),
+    ),
   );
-  if (letto === null || letto === undefined) return null;
+}
+
+/**
+ * Che cosa dice la risposta del deposito, tradotta nei tre casi.
+ *
+ * Sta fuori da `leggiOrologiSalvati` perché è **la decisione**, e una decisione
+ * si prova: IndexedDB qui non serve, e senza questa separazione la sola regola
+ * che il ticket 54 scrive resterebbe l'unica cosa non coperta da un test.
+ */
+export function letturaDegliOrologi({
+  come,
+  porta,
+  esito: letto,
+}: Eseguita<unknown>): LetturaDegliOrologi {
+  // Un dispositivo dove IndexedDB non si usa affatto non ha mai conservato
+  // niente: là dentro non c'è nessun mazzo dell'utente perché non ce n'è mai
+  // potuto entrare uno, e dirgli «non si è potuto leggere» gli toglierebbe il
+  // file di cortesia per un pericolo che non esiste. È un vuoto che sa di
+  // essere vuoto, e vale come «non ha mai deciso».
+  if (porta === "non-c-e") return { come: "mai-salvati" };
+  // Tutto il resto — il deposito che non si è fatto aprire, quello che ha
+  // rifiutato la lettura — è quel che sta sul dispositivo rimasto invisibile.
+  if (come !== "fatta") return { come: "non-si-e-letto" };
+  if (letto === null || letto === undefined) return { come: "mai-salvati" };
   // Quel che elenco non è vale come «non ha mai deciso»: là non c'è nessuna
   // voce da tenere, e il file del manutentore è meglio di una schermata vuota.
-  return orologiCheSiLeggono(letto) ?? null;
+  const orologi = orologiCheSiLeggono(letto);
+  return orologi === undefined ? { come: "mai-salvati" } : { come: "letti", orologi };
 }
 
 /** Tiene da parte gli orologi dell'utente, e dice com'è andata. */

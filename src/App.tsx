@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
+import { aperturaDegliOrologi } from "./avversario/apertura-degli-orologi.js";
 import { caricaOrologiDiPartenza } from "./avversario/carica-orologi.js";
 import { improntaDellaCorsa } from "./avversario/impronta-della-corsa.js";
-import { notaDelDeposito } from "./avversario/nota-del-deposito.js";
+import { notaDelDeposito, notaDellaLettura } from "./avversario/nota-del-deposito.js";
 import { orologiCheSiLeggono, type Orologio } from "./avversario/orologio.js";
 import { Avversario } from "./componenti/Avversario.js";
 import { Catalogo } from "./componenti/Catalogo.js";
@@ -175,6 +176,30 @@ export function App() {
    */
   const orologiScrittiAMano = useRef(false);
   /**
+   * Si può scrivere nel deposito degli orologi?
+   *
+   * Parte da sì e diventa no in un caso solo: la lettura dell'apertura non è
+   * riuscita, e allora sul dispositivo potrebbero esserci tutti i mazzi
+   * dell'utente, invisibili da qui. Scriverci sopra li perderebbe davvero, e
+   * questa schermata scrive a ogni tasto premuto (ticket 54).
+   *
+   * Un `ref` e non uno stato: non cambia niente di quel che si disegna — le
+   * parole per l'utente le porta `notaSulDeposito` — e serve dentro una
+   * funzione che il disegno non rifà.
+   */
+  const siPuoScrivereGliOrologi = useRef(true);
+  /**
+   * L'utente ha già svuotato il deposito degli orologi in questa sessione?
+   *
+   * Serve alla stessa gara della guardia qui sopra, dall'altro capo: la lettura
+   * dell'apertura arriva tardi, e se nel frattempo un «rimetti i mazzi di
+   * partenza» è **riuscito**, quel che la lettura ha da dire non vale più —
+   * nel deposito adesso non c'è niente dell'utente, e richiudere la porta lo
+   * lascerebbe senza scrittura per il resto della sessione, sopra un deposito
+   * che si sa vuoto.
+   */
+  const orologiGiaDimenticati = useRef(false);
+  /**
    * La nota sul deposito che ha rifiutato gli orologi, o `null` finché non ha
    * rifiutato: quel che la schermata degli orologi deve dire, deciso da
    * `nota-del-deposito.ts` (ticket 45).
@@ -285,13 +310,33 @@ export function App() {
    * La distinzione fra «non ha mai deciso» e «ha salvato un elenco vuoto» è
    * tutta qui: senza, chi cancella tutti gli orologi se li ritroverebbe alla
    * riapertura, e l'app gli rimetterebbe in bocca un meta che ha rifiutato.
+   *
+   * E la distinzione fra «non ha mai deciso» e «non si è potuto leggere» sta
+   * accanto a quella: una lettura che non riesce non è un deposito vuoto, e
+   * chi decide che farne è `aperturaDegliOrologi` (ticket 54).
    */
   useEffect(() => {
     let vivo = true;
     void leggiOrologiSalvati()
-      .then(async (suoi) => {
-        if (!vivo || orologiScrittiAMano.current) return;
-        if (suoi !== null) return setOrologi(suoi);
+      .then(async (lettura) => {
+        if (!vivo) return;
+        // Una cancellazione riuscita nel frattempo ha già risposto a questa
+        // domanda, e con più autorità: il deposito si è aperto, e quel che
+        // l'utente aveva salvato non c'è più. Questa lettura parla di prima.
+        if (orologiGiaDimenticati.current) return;
+        const apertura = aperturaDegliOrologi(lettura.come);
+        // La porta si chiude **prima** della guardia su quel che l'utente ha
+        // scritto nel frattempo: che il deposito non si sia lasciato leggere
+        // non dipende da lui, e da questo momento in poi vale comunque. Chi ha
+        // battuto qualcosa mentre la lettura era per strada da qui in avanti
+        // non scrive più, che è la cosa che il ticket 54 deve garantire.
+        siPuoScrivereGliOrologi.current = apertura.siPuoScrivere;
+        // Il pannello resta vuoto perché non si è saputo leggere, non perché
+        // l'utente abbia detto di non incontrare nessuno: la differenza la
+        // legge solo lui, e gliela si scrive.
+        if (!apertura.siPuoScrivere) setNotaSulDeposito(notaDellaLettura(lettura.come));
+        if (orologiScrittiAMano.current || apertura.mostra === "niente") return;
+        if (lettura.come === "letti") return setOrologi(lettura.orologi);
         const diPartenza = await caricaOrologiDiPartenza();
         // Il file del manutentore arriva da un `fetch`, e alla prima apertura
         // quell'attesa è lunga abbastanza perché l'utente apra il pannello e
@@ -321,15 +366,28 @@ export function App() {
   const cambiaOrologi = (nuovi: readonly Orologio[]) => {
     orologiScrittiAMano.current = true;
     setOrologi(nuovi);
+    // Il deposito che non si è lasciato leggere non si lascia nemmeno
+    // sovrascrivere: là dentro potrebbero esserci tutti i mazzi dell'utente, e
+    // la riga qui sotto li seppellirebbe sotto quel che c'è sullo schermo —
+    // che i suoi non sono (ticket 54). Non si salva e non si aggiunge niente
+    // da dire: la nota della lettura è già in vista e racconta il caso per
+    // intero — i suoi sono al sicuro, questa sessione non entra nel deposito.
+    if (!siPuoScrivereGliOrologi.current) return;
     // L'esito del deposito non si butta: modo privato, spazio esaurito,
     // permessi negati sono casi normali, e questa schermata è l'unica senza un
     // tasto salva — senza questa riga chi scrive dieci mazzi in navigazione
     // privata li perde tutti chiudendo la scheda, e nessuno gliel'ha detto
     // (ticket 45). La nota riscritta identica a ogni tasto non è un messaggio
     // nuovo: è la stessa parola che resta finché una scrittura non riesce.
-    void salvaOrologi(orologiCheSiLeggono(nuovi) ?? []).then((esito) =>
-      setNotaSulDeposito(notaDelDeposito("salvataggio", esito)),
-    );
+    void salvaOrologi(orologiCheSiLeggono(nuovi) ?? []).then((esito) => {
+      // Una scrittura partita **prima** che la porta si chiudesse torna
+      // quando la nota della lettura è già in vista, e un suo «fatta»
+      // cancellerebbe quella nota: l'utente resterebbe senza spiegazione e
+      // senza salvataggi, che è il silenzio da cui il ticket 54 parte. Chi non
+      // può più scrivere non ha più niente da dire sul deposito.
+      if (!siPuoScrivereGliOrologi.current) return;
+      setNotaSulDeposito(notaDelDeposito("salvataggio", esito));
+    });
   };
 
   /** Rimette i mazzi di partenza, dimenticando quel che l'utente aveva scritto. */
@@ -341,7 +399,23 @@ export function App() {
         // cancellazione non passa, i mazzi di partenza tornano sullo schermo ma
         // alla riapertura ci sono ancora i suoi. Solo se si sa — un deposito
         // che non si è aperto non lo dice, e la nota tace.
-        setNotaSulDeposito(notaDelDeposito("ripristino", esito));
+        // Una cancellazione riuscita riapre la porta che una lettura fallita
+        // aveva chiuso: nel deposito adesso non c'è più niente dell'utente, e
+        // non c'è più niente da scriverci sopra (ticket 54). È anche l'unica
+        // via d'uscita che ha chi apre l'app dietro un deposito illeggibile —
+        // e la sceglie lui, dicendolo, non l'app in silenzio.
+        if (esito === "fatta") {
+          orologiGiaDimenticati.current = true;
+          siPuoScrivereGliOrologi.current = true;
+        }
+        // Finché la porta resta chiusa la nota resta quella della lettura: è
+        // ancora vera, e sostituirla con quella del ripristino lascerebbe fuori
+        // il fatto che conta — che da qui in avanti non si sta salvando niente.
+        setNotaSulDeposito(
+          siPuoScrivereGliOrologi.current
+            ? notaDelDeposito("ripristino", esito)
+            : notaDellaLettura("non-si-e-letto"),
+        );
         setOrologi(await caricaOrologiDiPartenza());
       })
       .catch(() => {});
