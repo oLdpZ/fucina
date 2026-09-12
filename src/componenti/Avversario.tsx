@@ -41,11 +41,21 @@ export function Avversario({
   orologi,
   cambiaOrologi,
   ripristina,
+  notaSulDeposito,
 }: {
   orologi: readonly Orologio[];
   cambiaOrologi: (orologi: readonly Orologio[]) => void;
   /** Torna al file di partenza, buttando quel che l'utente ha scritto. */
   ripristina: () => void;
+  /**
+   * Il deposito ha rifiutato di conservare gli orologi, e queste sono le parole
+   * da mostrare: che cosa l'utente perde (ticket 45). `null` nel caso normale,
+   * e allora la schermata non guadagna nessun messaggio.
+   *
+   * Le decide `nota-del-deposito.ts`, non questa schermata: arrivano già
+   * scritte perché è chi scrive nel deposito a sapere com'è andata.
+   */
+  notaSulDeposito: string | null;
 }) {
   const [aperto, setAperto] = useState(false);
 
@@ -63,6 +73,16 @@ export function Avversario({
       <h2>Chi incontri</h2>
 
       <p class="patto">{PATTO_DELLA_CORSA}</p>
+
+      {/* Sta in cima, sopra le caselle e fuori dal pannello che si apre e si
+          chiude: un guasto del deposito riguarda tutto l'elenco, non la riga
+          che si sta battendo, e chiudendo il pannello non smette di essere
+          vero. Resta finché una scrittura non riesce. */}
+      {notaSulDeposito !== null ? (
+        <p class="avviso-guasto" role="alert">
+          {notaSulDeposito}
+        </p>
+      ) : null}
 
       {orologi.length === 0 ? (
         <p class="nota-filtro">

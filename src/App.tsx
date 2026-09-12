@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 
 import { caricaOrologiDiPartenza } from "./avversario/carica-orologi.js";
 import { improntaDellaCorsa } from "./avversario/impronta-della-corsa.js";
+import { notaDelDeposito } from "./avversario/nota-del-deposito.js";
 import { orologiCheSiLeggono, type Orologio } from "./avversario/orologio.js";
 import { Avversario } from "./componenti/Avversario.js";
 import { Catalogo } from "./componenti/Catalogo.js";
@@ -174,6 +175,16 @@ export function App() {
    */
   const orologiScrittiAMano = useRef(false);
   /**
+   * La nota sul deposito che ha rifiutato gli orologi, o `null` finché non ha
+   * rifiutato: quel che la schermata degli orologi deve dire, deciso da
+   * `nota-del-deposito.ts` (ticket 45).
+   *
+   * Vive qui e non nella schermata perché è qui che si scrive nel deposito, ed
+   * è una stringa e non un booleano perché la scelta delle parole non è una
+   * cosa che l'app decide in due punti diversi.
+   */
+  const [notaSulDeposito, setNotaSulDeposito] = useState<string | null>(null);
+  /**
    * Il motore vive qui e non nella schermata da cui lo si accende: le pagine
    * si smontano passando da una all'altra, e una ricerca che vivesse dentro la
    * pagina morirebbe andando a controllare una carta nel catalogo — cioè
@@ -310,15 +321,28 @@ export function App() {
   const cambiaOrologi = (nuovi: readonly Orologio[]) => {
     orologiScrittiAMano.current = true;
     setOrologi(nuovi);
-    void salvaOrologi(orologiCheSiLeggono(nuovi) ?? []);
+    // L'esito del deposito non si butta: modo privato, spazio esaurito,
+    // permessi negati sono casi normali, e questa schermata è l'unica senza un
+    // tasto salva — senza questa riga chi scrive dieci mazzi in navigazione
+    // privata li perde tutti chiudendo la scheda, e nessuno gliel'ha detto
+    // (ticket 45). La nota riscritta identica a ogni tasto non è un messaggio
+    // nuovo: è la stessa parola che resta finché una scrittura non riesce.
+    void salvaOrologi(orologiCheSiLeggono(nuovi) ?? []).then((riuscita) =>
+      setNotaSulDeposito(notaDelDeposito("salvataggio", riuscita)),
+    );
   };
 
   /** Rimette i mazzi di partenza, dimenticando quel che l'utente aveva scritto. */
   const ripristinaOrologi = () => {
     orologiScrittiAMano.current = true;
     void dimenticaOrologi()
-      .then(() => caricaOrologiDiPartenza())
-      .then(setOrologi)
+      .then(async (riuscita) => {
+        // Lo stesso silenzio del salvataggio, all'incontrario: se la
+        // cancellazione non passa, i mazzi di partenza tornano sullo schermo ma
+        // alla riapertura ci sono ancora i suoi.
+        setNotaSulDeposito(notaDelDeposito("ripristino", riuscita));
+        setOrologi(await caricaOrologiDiPartenza());
+      })
       .catch(() => {});
   };
 
@@ -622,6 +646,7 @@ export function App() {
               orologi={orologi}
               cambiaOrologi={cambiaOrologi}
               ripristina={ripristinaOrologi}
+              notaSulDeposito={notaSulDeposito}
             />
             <Costruzione
               pool={pool}

@@ -40,6 +40,24 @@
   color: var(--inchiostro);
 }
 
+/*
+ * Il deposito che ha rifiutato di conservare gli orologi (ticket 45). Ha lo
+ * stesso aspetto del guasto della schermata dei mazzi salvati — colore
+ * d'accento, bordo, riga stretta — perché è la stessa cosa: qualcosa che
+ * l'utente sta per perdere, e non una nota di contorno.
+ */
+.avversario .avviso-guasto {
+  max-width: var(--larghezza-colonna);
+  margin: 0;
+  padding: calc(var(--passo) * 3);
+  border: 1px solid var(--accento);
+  border-radius: var(--raggio);
+  background: var(--superficie);
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  color: var(--accento);
+}
+
 .orologi,
 .orologi-riassunto,
 .esiti-corsa {

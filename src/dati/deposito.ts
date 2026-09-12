@@ -84,10 +84,28 @@ export function transazione<T>(
   modo: IDBTransactionMode,
   lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
 ): Promise<T | null> {
+  return eseguita(scaffale, modo, lavoro).then(({ esito }) => esito);
+}
+
+/**
+ * La stessa transazione, che dice anche **se si è chiusa**.
+ *
+ * `transazione` risponde col risultato della richiesta, e ci sono scritture che
+ * un risultato non ce l'hanno: una `delete` riuscita e una rifiutata
+ * arriverebbero entrambe come `null`, cioè una cancellazione non avvenuta
+ * annunciata come fatta. Chi deve dire all'utente che il deposito ha rifiutato
+ * (ticket 45) ha bisogno di distinguerle.
+ */
+function eseguita<T>(
+  scaffale: string,
+  modo: IDBTransactionMode,
+  lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
+): Promise<{ fatta: boolean; esito: T | null }> {
   return apri().then(
     (deposito) =>
-      new Promise<T | null>((risolvi) => {
-        if (deposito === null) return risolvi(null);
+      new Promise<{ fatta: boolean; esito: T | null }>((risolvi) => {
+        const rinuncia = { fatta: false, esito: null };
+        if (deposito === null) return risolvi(rinuncia);
 
         let esito: T | null = null;
         try {
@@ -101,19 +119,19 @@ export function transazione<T>(
           // dichiarata riuscita e poi annullata sarebbe una bugia.
           trans.oncomplete = () => {
             deposito.close();
-            risolvi(esito);
+            risolvi({ fatta: true, esito });
           };
           trans.onerror = () => {
             deposito.close();
-            risolvi(null);
+            risolvi(rinuncia);
           };
           trans.onabort = () => {
             deposito.close();
-            risolvi(null);
+            risolvi(rinuncia);
           };
         } catch {
           deposito.close();
-          risolvi(null);
+          risolvi(rinuncia);
         }
       }),
   );
@@ -190,15 +208,21 @@ export async function leggiOrologiSalvati(): Promise<Orologio[] | null> {
 
 /** Tiene da parte gli orologi dell'utente. `false` se non si è potuto. */
 export async function salvaOrologi(orologi: readonly Orologio[]): Promise<boolean> {
-  const esito = await transazione(SCAFFALE, "readwrite", (scaffale) =>
+  const { fatta } = await eseguita(SCAFFALE, "readwrite", (scaffale) =>
     // Una copia semplice: IndexedDB non sa scrivere un array di sola lettura
     // così com'è, e vuole oggetti nudi.
     scaffale.put(orologi.map((orologio) => ({ ...orologio })), CHIAVE_OROLOGI),
   );
-  return esito !== null;
+  return fatta;
 }
 
-/** Torna al file di partenza: dimentica quel che l'utente aveva scritto. */
-export async function dimenticaOrologi(): Promise<void> {
-  await transazione(SCAFFALE, "readwrite", (scaffale) => scaffale.delete(CHIAVE_OROLOGI));
+/**
+ * Torna al file di partenza: dimentica quel che l'utente aveva scritto.
+ * `false` se non si è potuto, e allora alla riapertura i suoi sono ancora lì.
+ */
+export async function dimenticaOrologi(): Promise<boolean> {
+  const { fatta } = await eseguita(SCAFFALE, "readwrite", (scaffale) =>
+    scaffale.delete(CHIAVE_OROLOGI),
+  );
+  return fatta;
 }
