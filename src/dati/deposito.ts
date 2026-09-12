@@ -78,6 +78,20 @@ function apri(): Promise<IDBDatabase | null> {
   });
 }
 
+/**
+ * Com'è andata una scrittura, per chi deve dirlo all'utente.
+ *
+ * I tre casi non sono due perché **non dicono la stessa cosa a chi legge**.
+ * `rifiutata` è un deposito che si è aperto e ha detto di no: quel che c'era
+ * dentro è ancora lì, e lo si può affermare. `nessun-deposito` è un deposito
+ * che non si è aperto affatto — navigazione privata, `indexedDB` che non c'è,
+ * un'altra scheda che tiene aperta una versione vecchia — e di quel che sta
+ * sul dispositivo non si sa niente: in navigazione privata non c'è niente,
+ * dietro un `onblocked` c'è tutto. Chi scrive una nota per l'utente deve poter
+ * distinguere il caso che sa raccontare da quello che non sa (ticket 45).
+ */
+export type EsitoDellaScrittura = "fatta" | "rifiutata" | "nessun-deposito";
+
 /** Una transazione sola, chiusa da sola, con l'esito promesso. */
 export function transazione<T>(
   scaffale: string,
@@ -88,24 +102,27 @@ export function transazione<T>(
 }
 
 /**
- * La stessa transazione, che dice anche **se si è chiusa**.
+ * La stessa transazione, che dice anche **com'è andata**.
  *
  * `transazione` risponde col risultato della richiesta, e ci sono scritture che
  * un risultato non ce l'hanno: una `delete` riuscita e una rifiutata
  * arriverebbero entrambe come `null`, cioè una cancellazione non avvenuta
  * annunciata come fatta. Chi deve dire all'utente che il deposito ha rifiutato
- * (ticket 45) ha bisogno di distinguerle.
+ * (ticket 45) ha bisogno di distinguerle — e di distinguere l'una e l'altra da
+ * un deposito che non si è aperto.
  */
 function eseguita<T>(
   scaffale: string,
   modo: IDBTransactionMode,
   lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
-): Promise<{ fatta: boolean; esito: T | null }> {
+): Promise<{ come: EsitoDellaScrittura; esito: T | null }> {
   return apri().then(
     (deposito) =>
-      new Promise<{ fatta: boolean; esito: T | null }>((risolvi) => {
-        const rinuncia = { fatta: false, esito: null };
-        if (deposito === null) return risolvi(rinuncia);
+      new Promise<{ come: EsitoDellaScrittura; esito: T | null }>((risolvi) => {
+        // Il deposito si è aperto: da qui in poi ogni rinuncia è un rifiuto suo,
+        // e di quel che ci sta dentro si può parlare.
+        const rifiuto = { come: "rifiutata", esito: null } as const;
+        if (deposito === null) return risolvi({ come: "nessun-deposito", esito: null });
 
         let esito: T | null = null;
         try {
@@ -119,19 +136,19 @@ function eseguita<T>(
           // dichiarata riuscita e poi annullata sarebbe una bugia.
           trans.oncomplete = () => {
             deposito.close();
-            risolvi({ fatta: true, esito });
+            risolvi({ come: "fatta", esito });
           };
           trans.onerror = () => {
             deposito.close();
-            risolvi(rinuncia);
+            risolvi(rifiuto);
           };
           trans.onabort = () => {
             deposito.close();
-            risolvi(rinuncia);
+            risolvi(rifiuto);
           };
         } catch {
           deposito.close();
-          risolvi(rinuncia);
+          risolvi(rifiuto);
         }
       }),
   );
@@ -206,23 +223,27 @@ export async function leggiOrologiSalvati(): Promise<Orologio[] | null> {
   return orologiCheSiLeggono(letto) ?? null;
 }
 
-/** Tiene da parte gli orologi dell'utente. `false` se non si è potuto. */
-export async function salvaOrologi(orologi: readonly Orologio[]): Promise<boolean> {
-  const { fatta } = await eseguita(SCAFFALE, "readwrite", (scaffale) =>
+/** Tiene da parte gli orologi dell'utente, e dice com'è andata. */
+export async function salvaOrologi(
+  orologi: readonly Orologio[],
+): Promise<EsitoDellaScrittura> {
+  const { come } = await eseguita(SCAFFALE, "readwrite", (scaffale) =>
     // Una copia semplice: IndexedDB non sa scrivere un array di sola lettura
     // così com'è, e vuole oggetti nudi.
     scaffale.put(orologi.map((orologio) => ({ ...orologio })), CHIAVE_OROLOGI),
   );
-  return fatta;
+  return come;
 }
 
 /**
  * Torna al file di partenza: dimentica quel che l'utente aveva scritto.
- * `false` se non si è potuto, e allora alla riapertura i suoi sono ancora lì.
+ *
+ * `rifiutata` vuol dire che i suoi sono ancora sul dispositivo e alla
+ * riapertura torneranno; `nessun-deposito` che non si sa dire.
  */
-export async function dimenticaOrologi(): Promise<boolean> {
-  const { fatta } = await eseguita(SCAFFALE, "readwrite", (scaffale) =>
+export async function dimenticaOrologi(): Promise<EsitoDellaScrittura> {
+  const { come } = await eseguita(SCAFFALE, "readwrite", (scaffale) =>
     scaffale.delete(CHIAVE_OROLOGI),
   );
-  return fatta;
+  return come;
 }

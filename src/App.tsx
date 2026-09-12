@@ -327,8 +327,8 @@ export function App() {
     // privata li perde tutti chiudendo la scheda, e nessuno gliel'ha detto
     // (ticket 45). La nota riscritta identica a ogni tasto non è un messaggio
     // nuovo: è la stessa parola che resta finché una scrittura non riesce.
-    void salvaOrologi(orologiCheSiLeggono(nuovi) ?? []).then((riuscita) =>
-      setNotaSulDeposito(notaDelDeposito("salvataggio", riuscita)),
+    void salvaOrologi(orologiCheSiLeggono(nuovi) ?? []).then((esito) =>
+      setNotaSulDeposito(notaDelDeposito("salvataggio", esito)),
     );
   };
 
@@ -336,11 +336,12 @@ export function App() {
   const ripristinaOrologi = () => {
     orologiScrittiAMano.current = true;
     void dimenticaOrologi()
-      .then(async (riuscita) => {
+      .then(async (esito) => {
         // Lo stesso silenzio del salvataggio, all'incontrario: se la
         // cancellazione non passa, i mazzi di partenza tornano sullo schermo ma
-        // alla riapertura ci sono ancora i suoi.
-        setNotaSulDeposito(notaDelDeposito("ripristino", riuscita));
+        // alla riapertura ci sono ancora i suoi. Solo se si sa — un deposito
+        // che non si è aperto non lo dice, e la nota tace.
+        setNotaSulDeposito(notaDelDeposito("ripristino", esito));
         setOrologi(await caricaOrologiDiPartenza());
       })
       .catch(() => {});
