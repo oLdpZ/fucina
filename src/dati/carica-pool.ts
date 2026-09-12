@@ -118,6 +118,19 @@ export function interpretaPool(dati: unknown): Pool {
     improntaDelDocumento: typeof improntaDelDocumento === "string" ? improntaDelDocumento : "",
     registroTagScryfall: senzaTag ? [] : (registroTagScryfall as TagDiScryfall[]),
     carte: (carte as Carta[]).map((carta) => {
+      // Prima di chiedere un campo alla voce, si chiede che la voce sia una
+      // carta. È la stessa domanda che il pool intero si sente fare in cima, e
+      // per la stessa ragione: un file troncato, un JSON scritto a mano male o
+      // un deposito recuperato a metà mettono un `null` in mezzo alle carte, e
+      // senza questa riga quel che arriva sullo schermo del guasto è la frase
+      // del motore JavaScript invece di quella scritta per una persona.
+      // `Array.isArray` perché `typeof [] === "object"`: una lista sarebbe
+      // l'unica voce a passare la domanda senza essere una carta, e uscirebbe
+      // di qui senza nome e senza tag per far cadere il motore molto più in
+      // là, dove le parole sono di un altro modulo.
+      if (typeof carta !== "object" || carta === null || Array.isArray(carta)) {
+        throw new Error("Il file del pool delle carte non si legge.");
+      }
       // La scorciatoia va chiesta a **tutti** i campi che il rattoppo scrive, e
       // non a due di loro. I campi nuovi non sono arrivati tutti insieme e non
       // arriveranno tutti insieme la prossima volta: chiedendone solo alcuni,

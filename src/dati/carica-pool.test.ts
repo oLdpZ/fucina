@@ -253,6 +253,29 @@ describe("lettura del pool", () => {
   it("rifiuta un pool senza carte: sarebbe un'app muta senza dire perché", () => {
     expect(() => interpretaPool({ generatoIl: "2026-09-02", carte: [] })).toThrow(/vuoto/i);
   });
+
+  /**
+   * Quel che viene sollevato qui è **quel che l'utente legge sullo schermo**: la
+   * schermata del guasto mostra il messaggio tale e quale. Un `TypeError` del
+   * motore JavaScript parlerebbe di proprietà di `null` a chi voleva costruire
+   * un mazzo, quindi il test guarda la frase e non il fatto che sollevi.
+   */
+  it("chiama guasto — con parole — una voce che non è una carta", () => {
+    // `[]` sta nell'elenco perché è la voce che somiglia di più a una carta
+    // senza esserlo: `typeof [] === "object"`, quindi passerebbe la domanda
+    // fatta male e uscirebbe di qui come una carta senza nome e senza tag, per
+    // far cadere il motore molto più in là e con parole di un altro modulo.
+    for (const voce of [null, "Goblin Chieftain", 7, []]) {
+      expect(() =>
+        interpretaPool({ generatoIl: "2026-09-02", carte: [voce], registroTagScryfall: [] }),
+      ).toThrow("Il file del pool delle carte non si legge.");
+      // Senza registro dei tag si passa dal rattoppo invece che dalla
+      // scorciatoia: le due strade devono dire la stessa frase.
+      expect(() => interpretaPool({ generatoIl: "2026-09-02", carte: [voce] })).toThrow(
+        "Il file del pool delle carte non si legge.",
+      );
+    }
+  });
 });
 
 describe("la data dei dati", () => {
