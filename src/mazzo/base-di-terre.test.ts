@@ -566,6 +566,69 @@ describe("la base dentro un budget", () => {
     }
   });
 
+  it("non dichiara una rinuncia che non libera nemmeno un centesimo", () => {
+    // Una doppia che costa quanto la terra base che la sostituirebbe: toglierla
+    // non risparmia niente, e la base non deve né toglierla né dire all'utente
+    // di averlo fatto. Il prezzo dell'altra doppia, sotto quello della base, è
+    // lì per dare alle somme addendi diversi: senza, i conti tornano a bit e il
+    // guasto non si vede (ticket 47).
+    const riprezzata = (nome: string, euro: number): Carta => {
+      const carta = TERRE_FINTE.find((voce) => voce.nome === nome)!;
+      return { ...carta, prezzo: { ...carta.prezzo, euro } };
+    };
+    const pool = [
+      riprezzata("Swamp", 0.1),
+      riprezzata("Mountain", 0.1),
+      riprezzata("Pyre Threshold", 0.1),
+      riprezzata("Sootfall Gate", 0.05),
+    ];
+    const conQuesto = (budget: number | null) =>
+      analizzaBaseDiTerre(DUE_COLORI, pool, { terreVolute: 22, budget });
+
+    const impossibile = conQuesto(0);
+
+    expect(impossibile.rinunceDelBudget).toEqual([]);
+    expect(copie(impossibile, "Pyre Threshold")).toBe(copie(conQuesto(null), "Pyre Threshold"));
+  });
+
+  it("a pari risparmio lascia andare la terra meno buona, e tiene la migliore", () => {
+    // La regola di spareggio, inchiodata: due doppie allo stesso prezzo liberano
+    // la stessa cifra, e il budget ne chiede via una copia sola. Se ne va quella
+    // scelta **dopo** — qui la girata, che dentro la sua famiglia era la meno
+    // buona — e non la migliore.
+    //
+    // Questo test prova la **regola**, non la soglia con cui la parità si dice:
+    // il ticket 47 sospettava che la parità non scattasse quasi mai, e la
+    // misura ha detto il contrario — in mezzo milione di configurazioni provate
+    // le due somme tornavano uguali a bit ogni volta che il risparmio era
+    // davvero uguale. La regola girava; a essere rotta era la scelta fra spese
+    // **diverse**, che è il test qui sopra.
+    const riprezzata = (nome: string, euro: number): Carta => {
+      const carta = TERRE_FINTE.find((voce) => voce.nome === nome)!;
+      return { ...carta, prezzo: { ...carta.prezzo, euro } };
+    };
+    const pool = [
+      ...TERRE_FINTE.filter((carta) => ["Swamp", "Mountain"].includes(carta.nome)),
+      riprezzata("Cinder Crossing", 0.11),
+      riprezzata("Ashen Waystation", 0.11),
+    ];
+    const conQuesto = (budget: number | null) =>
+      analizzaBaseDiTerre(DUE_COLORI, pool, { terreVolute: 22, budget });
+
+    const senza = conQuesto(null);
+    // Quattro copie per doppia a 0,11 € e quattordici terre base a 0,05 €: la
+    // base costa 1,58 €, e una copia in meno ne libera sei centesimi. Il budget
+    // sta in mezzo apposta: ne deve andare via **una** sola.
+    const stretta = conQuesto(1.55);
+
+    expect(copie(senza, "Cinder Crossing")).toBe(4);
+    expect(copie(senza, "Ashen Waystation")).toBe(4);
+    expect(stretta.rinunceDelBudget.map((voce) => [voce.carta.nome, voce.copie])).toEqual([
+      ["Ashen Waystation", 1],
+    ]);
+    expect(copie(stretta, "Cinder Crossing")).toBe(4);
+  });
+
   it("alzare il budget non peggiora mai la base", () => {
     // La proprietà che il ticket 20 chiede di inchiodare, e che oggi è rotta:
     // più soldi non danno mai una base che costa meno, cioè peggiore.

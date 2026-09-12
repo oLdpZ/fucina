@@ -10,6 +10,7 @@ import {
   descriviLaStampa,
   listaDellaSpesa,
   contoDelMazzo,
+  costaMeno,
   nonSupera,
   prezzoDiUnaCopia,
 } from "./spesa.js";
@@ -362,5 +363,28 @@ describe("quando una spesa sta dentro una cifra chiesta", () => {
   it("ci sta, come sempre, quel che costa meno", () => {
     expect(nonSupera(29, 30)).toBe(true);
     expect(nonSupera(30, 30)).toBe(true);
+  });
+});
+
+describe("quando una spesa costa meno di un'altra", () => {
+  it("due somme che valgono lo stesso non sono un risparmio", () => {
+    // La domanda della base di terre quando sceglie quale copia togliere: le
+    // due somme stanno sopra insiemi diversi di terre, e valendo lo stesso
+    // differiscono lo stesso di un quadrilionesimo. Prendere quel rumore per un
+    // risparmio faceva rinunciare a una terra per niente — e l'utente se lo
+    // leggeva scritto (ticket 47).
+    const somma = 0.1 + 0.2;
+
+    expect(somma).not.toBe(0.3);
+    expect(costaMeno(somma, 0.3)).toBe(false);
+    expect(costaMeno(0.3, somma)).toBe(false);
+  });
+
+  it("un centesimo è un risparmio, e si può scrivere in euro", () => {
+    // Ogni prezzo arriva dal listino scritto al centesimo: sotto il centesimo
+    // non c'è nessuna differenza vera da trovare, e il centesimo intero deve
+    // passare tutto.
+    expect(costaMeno(29.99, 30)).toBe(true);
+    expect(costaMeno(30, 29.99)).toBe(false);
   });
 });

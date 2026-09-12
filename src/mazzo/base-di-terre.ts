@@ -41,7 +41,7 @@ import type { Carta, ColoreMana, Tag } from "../dati/pool.js";
 import { copieAlMassimo } from "./copie.js";
 import { simboliDiColore } from "./costo.js";
 import { probabilitaDiLanciare, type GruppoDiTerre, type Pip } from "./probabilita.js";
-import { contoDelMazzo, nonSupera, prezzoDiUnaCopia } from "./spesa.js";
+import { contoDelMazzo, costaMeno, nonSupera, prezzoDiUnaCopia } from "./spesa.js";
 import {
   COPIE_MINIME_PER_UNA_TERRA_DI_UTILITA,
   DIMENSIONE_MAZZO,
@@ -605,9 +605,10 @@ function riempiConLeBasi(
  *
  * Perciò si guarda il conto **dopo**: si prova a togliere una copia per ogni
  * terra rimasta, si tiene la prova che dà il totale più basso, e se nessuna lo
- * abbassa si smette. È la stessa regola cieca alla famiglia che il committente
- * ha chiesto — decide quanto costa la copia, non a che famiglia appartiene — ma
- * misurata sul risultato invece che sul cartellino.
+ * abbassa di una cifra che in euro si possa scrivere si smette (`costaMeno`).
+ * È la stessa regola cieca alla famiglia che il committente ha chiesto — decide
+ * quanto costa la copia, non a che famiglia appartiene — ma misurata sul
+ * risultato invece che sul cartellino.
  *
  * Su questo pool la differenza si vede: se ne va Taiga a 470,95 € prima di una
  * terra di utilità da un euro che il mazzo usa davvero, e se ne andrebbe
@@ -654,8 +655,17 @@ function scendiNelBudget(
     // Si prova a togliere una copia per ogni terra rimasta e si guarda quanto
     // verrebbe a costare la base **intera**, terra base di rimpiazzo compresa.
     // Vince la prova che costa meno; a parità se ne va quella scelta **dopo**,
-    // che dentro la sua famiglia era la meno buona, e a parità di tutto il
-    // nome — due giri sugli stessi dati devono dare la stessa base.
+    // che dentro la sua famiglia era la meno buona.
+    //
+    // «Meno» e «parità» si dicono con `costaMeno`, e non con `<` e `===`: sono
+    // somme sopra insiemi diversi di terre, e due che valgono lo stesso in euro
+    // possono differire di un quadrilionesimo, col segno che l'ordine degli
+    // addendi decide. Col confronto nudo la base toglieva una copia che non
+    // liberava niente, e lo diceva all'utente (ticket 47). La parità, invece,
+    // scattava già: a risparmio davvero uguale le due somme tornavano uguali a
+    // bit in ogni configurazione cercata, e la soglia qui la tiene in piedi
+    // anche dove non tornerebbero. La prima prova non ha parità con cui
+    // confrontarsi: deve abbassare il conto di davvero, o la rinuncia non si fa.
     let peggiore = -1;
     let costoDopo = costo;
     for (let i = 0; i < rimaste.length; i++) {
@@ -664,8 +674,15 @@ function scendiNelBudget(
       voce.copie -= 1;
       const prova = contoDelMazzo([...rimaste, ...basi(restanti + 1)]).minimo;
       voce.copie += 1;
-      if (prova < costoDopo || (prova === costoDopo && peggiore >= 0)) {
+      if (costaMeno(prova, costoDopo)) {
         costoDopo = prova;
+        peggiore = i;
+      } else if (peggiore >= 0 && !costaMeno(costoDopo, prova)) {
+        // Parità: se ne va questa, scelta **dopo**. Il metro però non si sposta
+        // — `costoDopo` resta il più basso visto — perché «pari» qui vuol dire
+        // «entro mezzo centesimo», e spostarlo a ogni parità lo lascerebbe
+        // scivolare di mezzo centesimo per volta fino a chiamare pari due spese
+        // che pari non sono.
         peggiore = i;
       }
     }

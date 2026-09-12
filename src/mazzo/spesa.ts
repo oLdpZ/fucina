@@ -78,6 +78,33 @@ export function nonSupera(spesa: number, tetto: number): boolean {
   return spesa <= tetto + PARI_IN_EURO;
 }
 
+/**
+ * `spesa` costa meno di `altra` di una cifra che in euro si possa scrivere?
+ *
+ * Non è `nonSupera` rovesciato: quello chiede se una somma **ci sta dentro** una
+ * cifra che qualcuno ha scritto, questo confronta **due somme** fra loro e
+ * chiede se passando dall'una all'altra si risparmia qualcosa. La domanda la fa
+ * la base di terre quando sceglie quale copia togliere per stare nel budget, e
+ * la risposta l'utente se la legge: la copia che non ha avuto gli arriva scritta
+ * col suo nome e col suo prezzo, e una rinuncia che non abbassa il conto gli
+ * racconta un risparmio che non c'è.
+ *
+ * La soglia è la stessa `PARI_IN_EURO`, e la ragione è un'altra. Ogni prezzo
+ * arriva dal listino già scritto al centesimo, quindi due somme di copie che
+ * differiscono per davvero differiscono di **almeno un centesimo**; sotto, la
+ * differenza è il rumore della somma in binario — un quadrilionesimo, col segno
+ * deciso dall'ordine degli addendi. Mezzo centesimo sta a metà fra i due, e li
+ * separa entrambi con tutto il margine che c'è: più stretto lascerebbe passare
+ * il rumore di somme più lunghe, più largo scambierebbe un centesimo vero per
+ * niente.
+ *
+ * Nemmeno qui si arrotondano le due somme per confrontarle, per la ragione
+ * scritta sopra `PARI_IN_EURO`.
+ */
+export function costaMeno(spesa: number, altra: number): boolean {
+  return spesa < altra - PARI_IN_EURO;
+}
+
 /** Una riga della lista della spesa: una carta, le sue copie, e il suo conto. */
 export type VoceDiSpesa = {
   carta: Carta;
