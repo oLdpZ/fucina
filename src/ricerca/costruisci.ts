@@ -76,7 +76,14 @@ import {
   type CopieDiCarta,
 } from "../mazzo/base-di-terre.js";
 import { copieAlMassimo, copieMassime, entraInMano } from "../mazzo/copie.js";
-import { comprabile, contoDelMazzo, nonSupera, prezzoDiUnaCopia } from "../mazzo/spesa.js";
+import {
+  comprabile,
+  contoDelMazzo,
+  nonPeggiora,
+  nonSupera,
+  prezzoDiUnaCopia,
+  quanteCopieCiStanno,
+} from "../mazzo/spesa.js";
 import { terreCandidate, terrePermesseDalTema } from "../mazzo/terre-candidate.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
@@ -1452,7 +1459,7 @@ function riempi(
     if (resta === null) return volute;
     const prezzo = prezzoDiUnaCopia(carta) ?? 0;
     if (prezzo <= 0) return volute;
-    return Math.min(volute, Math.max(0, Math.floor((resta - speso) / prezzo)));
+    return Math.min(volute, quanteCopieCiStanno(resta - speso, prezzo));
   };
 
   // I pezzi della combo entrano **senza chiedere il prezzo**: sono la ragione
@@ -1589,7 +1596,7 @@ function adatta(
     let ancora = Math.min(copieAlMassimo(carta) - gia, posti - copie);
     if (resta !== null) {
       const prezzo = prezzoDiUnaCopia(carta) ?? 0;
-      if (prezzo > 0) ancora = Math.min(ancora, Math.max(0, Math.floor((resta - speso) / prezzo)));
+      if (prezzo > 0) ancora = Math.min(ancora, quanteCopieCiStanno(resta - speso, prezzo));
     }
     if (ancora <= 0) continue;
     dopo.set(carta.nome, { carta, copie: gia + ancora });
@@ -1661,10 +1668,10 @@ function scambi(
  * di copie, e quel tetto lo dice la carta, non il codice (`mazzo/copie.ts`).
  *
  * Col tetto di spesa acceso c'è una seconda ragione per dire di no: lo scambio
- * porterebbe il mazzo **sopra il tetto**. La regola non è «resta sotto» ma
- * «resta sotto, oppure costa meno di prima»: un mazzo già sforato — capita coi
- * pezzi di una combo, che il prezzo non lo pagano — deve poter scendere, e una
- * regola secca gli vieterebbe anche gli scambi che lo riportano dentro.
+ * peggiorerebbe la spesa. Che cosa vuol dire, e perché non è «resta sotto»
+ * secco, lo dice `nonPeggiora` — che sta in `mazzo/spesa.ts` con gli altri
+ * confronti fra cifre in euro, e non qui, perché è di lì che si sbagliano
+ * tutti allo stesso modo quando si riscrivono a mano.
  */
 function conLoScambio(
   selezione: Selezione,
@@ -1681,7 +1688,7 @@ function conLoScambio(
     const attuale = prezzoDellaSelezione(selezione);
     const nuovo =
       attuale - (prezzoDiUnaCopia(esce.carta) ?? 0) + (prezzoDiUnaCopia(scambio.dentro) ?? 0);
-    if (!nonSupera(nuovo, tettoPerLeCarte(portafoglio)) && nuovo > attuale) return null;
+    if (!nonPeggiora(nuovo, attuale, tettoPerLeCarte(portafoglio))) return null;
   }
 
   const dopo: Selezione = new Map(selezione);

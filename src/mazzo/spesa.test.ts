@@ -11,8 +11,10 @@ import {
   listaDellaSpesa,
   contoDelMazzo,
   costaMeno,
+  nonPeggiora,
   nonSupera,
   prezzoDiUnaCopia,
+  quanteCopieCiStanno,
 } from "./spesa.js";
 
 const carta = (nome: string): Carta => {
@@ -386,5 +388,65 @@ describe("quando una spesa costa meno di un'altra", () => {
     // passare tutto.
     expect(costaMeno(29.99, 30)).toBe(true);
     expect(costaMeno(30, 29.99)).toBe(false);
+  });
+});
+
+describe("quante copie ci stanno in quel che resta", () => {
+  it("conta la copia che ci sta esatta, e che la somma in binario nasconde", () => {
+    // Il caso vero del pool spedito: tre copie da 0,35 € dentro 1,05 € che
+    // restano. Il resto è una sottrazione fra somme, e in binario viene
+    // 1,0499999999999998: la divisione nuda dava 2,999… e il motore prendeva
+    // due copie invece di tre (ticket 59).
+    const resta = 1.4 - 0.35;
+
+    expect(resta).toBeLessThan(1.05);
+    expect(quanteCopieCiStanno(resta, 0.35)).toBe(3);
+  });
+
+  it("non conta la copia che non ci sta, che è un centesimo di differenza", () => {
+    // Il perdono è lo stesso mezzo centesimo di `nonSupera`: un centesimo in
+    // meno è un prezzo diverso, e la terza copia lì non ci sta davvero.
+    expect(quanteCopieCiStanno(1.04, 0.35)).toBe(2);
+  });
+
+  it("conta zero copie quando il budget è finito, o è già sfondato", () => {
+    expect(quanteCopieCiStanno(0, 0.35)).toBe(0);
+    expect(quanteCopieCiStanno(0.34, 0.35)).toBe(0);
+    // Sfondato: `riempi` riempie apposta oltre il tetto, e da lì chiede ancora.
+    expect(quanteCopieCiStanno(-12.5, 0.35)).toBe(0);
+  });
+
+  it("di una carta che non costa niente ce ne stanno tutte, non nessuna", () => {
+    // Una carta senza listino arriva qui come uno zero, e la risposta giusta è
+    // «tutte»: non è il budget a doverla tenere fuori. Chi chiama prende il
+    // minimo fra questo numero e le copie che vuole, e uno zero al posto
+    // dell’infinito terrebbe fuori dal mazzo proprio le carte gratis.
+    expect(quanteCopieCiStanno(0, 0)).toBe(Number.POSITIVE_INFINITY);
+    expect(quanteCopieCiStanno(-12.5, 0)).toBe(Number.POSITIVE_INFINITY);
+    expect(Math.min(4, quanteCopieCiStanno(0, 0))).toBe(4);
+  });
+});
+
+describe("quando un cambio di spesa non peggiora", () => {
+  it("un cambio a spesa invariata passa, anche se l'ultima cifra non torna", () => {
+    // Due carte allo stesso prezzo di listino danno due somme che differiscono
+    // di un quadrilionesimo, col segno deciso dall'ordine degli addendi. Sopra
+    // il tetto — e la selezione ci sta spesso, perché `riempi` riempie oltre —
+    // il `>` nudo rifiutava circa metà degli scambi a costo zero (ticket 62).
+    const attuale = 0.1 + 0.2;
+    const nuovo = 0.3;
+
+    expect(nuovo).not.toBe(attuale);
+    expect(nonPeggiora(nuovo, attuale, 0.2)).toBe(true);
+    expect(nonPeggiora(attuale, nuovo, 0.2)).toBe(true);
+  });
+
+  it("sopra il tetto si può solo scendere, e un centesimo in più è salire", () => {
+    expect(nonPeggiora(30.01, 30, 29)).toBe(false);
+    expect(nonPeggiora(29.99, 30, 29)).toBe(true);
+  });
+
+  it("dentro il tetto si sale quanto si vuole: è il tetto a dire di no, non il prima", () => {
+    expect(nonPeggiora(29, 10, 30)).toBe(true);
   });
 });

@@ -105,6 +105,56 @@ export function costaMeno(spesa: number, altra: number): boolean {
   return spesa < altra - PARI_IN_EURO;
 }
 
+/**
+ * Quante copie da `prezzoPerCopia` ci stanno in `disponibile`.
+ *
+ * È `nonSupera` messo in forma di conteggio, e sta qui per la stessa ragione
+ * per cui ci sta lui: la domanda è in euro, e chi la fa con la divisione nuda
+ * la sbaglia allo stesso modo in cui la sbagliava il confronto nudo. Il numero
+ * su cui si divide è quasi sempre una **sottrazione fra somme** — quel che il
+ * tetto lascia meno quel che si è già speso — e una sottrazione fra somme in
+ * binario non torna: 1,40 € meno 0,35 € fa 1,0499999999999998, che diviso 0,35
+ * dà 2,999… e conta due copie dove ce ne stanno tre.
+ *
+ * Il posto liberato per sbaglio non resta vuoto — chi riempie ci mette una
+ * carta più cara — e il mazzo esce sopra il tetto: una copia in meno diventa
+ * una spesa in più (ticket 59).
+ *
+ * Il perdono è lo stesso mezzo centesimo, e vuol dire la stessa cosa: ci sta
+ * ogni copia che `nonSupera` direbbe che ci sta. Un `disponibile` negativo — il
+ * budget già sfondato, che capita perché si riempie apposta oltre — vale zero
+ * copie e non un numero negativo di copie.
+ *
+ * Una carta che non costa niente — gratis, o senza listino, che qui arriva
+ * allo stesso modo — non è una domanda di budget, e la risposta è «tutte». Si
+ * dice `Infinity` e si dice per scelta: chi chiama prende il minimo fra questo
+ * numero e le copie che vuole, e un infinito lì dentro lascia passare quelle e
+ * basta. Uno zero direbbe il contrario di quel che è vero — nessuna copia ci
+ * sta — e terrebbe fuori dal mazzo proprio le carte che non lo fanno costare.
+ */
+export function quanteCopieCiStanno(disponibile: number, prezzoPerCopia: number): number {
+  if (prezzoPerCopia <= 0) return Number.POSITIVE_INFINITY;
+  return Math.max(0, Math.floor((disponibile + PARI_IN_EURO) / prezzoPerCopia));
+}
+
+/**
+ * Passare da una spesa di `attuale` a una di `nuovo` è concesso sotto `tetto`?
+ *
+ * La regola non è «resta sotto» ma «resta sotto, **oppure** non costa di più di
+ * prima»: un mazzo già sforato — capita coi pezzi di una combo, che il prezzo
+ * non lo pagano — deve poter cambiare carte per scendere, e una regola secca
+ * gli vieterebbe proprio gli scambi che lo riportano dentro.
+ *
+ * Il secondo ramo è `costaMeno` girato, e non un `>` nudo. Sopra il tetto due
+ * carte allo **stesso** prezzo di listino danno due somme che differiscono di
+ * un quadrilionesimo, col segno deciso dall’ordine degli addendi: col `>` nudo
+ * uno scambio a spesa invariata che migliora il mazzo veniva rifiutato circa
+ * una volta su due (ticket 62).
+ */
+export function nonPeggiora(nuovo: number, attuale: number, tetto: number): boolean {
+  return nonSupera(nuovo, tetto) || !costaMeno(attuale, nuovo);
+}
+
 /** Una riga della lista della spesa: una carta, le sue copie, e il suo conto. */
 export type VoceDiSpesa = {
   carta: Carta;
