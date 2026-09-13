@@ -3,7 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { aperturaDegliOrologi } from "./avversario/apertura-degli-orologi.js";
 import { caricaOrologiDiPartenza } from "./avversario/carica-orologi.js";
 import { improntaDellaCorsa } from "./avversario/impronta-della-corsa.js";
-import { notaDelDeposito, notaDellaLettura } from "./avversario/nota-del-deposito.js";
+import {
+  notaDelDeposito,
+  notaDelFileDiPartenza,
+  notaDellaLettura,
+  noteInFila,
+} from "./avversario/note-degli-orologi.js";
 import { orologiCheSiLeggono, type Orologio } from "./avversario/orologio.js";
 import { Avversario } from "./componenti/Avversario.js";
 import { Catalogo } from "./componenti/Catalogo.js";
@@ -184,7 +189,7 @@ export function App() {
    * questa schermata scrive a ogni tasto premuto (ticket 54).
    *
    * Un `ref` e non uno stato: non cambia niente di quel che si disegna — le
-   * parole per l'utente le porta `notaSulDeposito` — e serve dentro una
+   * parole per l'utente le porta `notaSugliOrologi` — e serve dentro una
    * funzione che il disegno non rifà.
    */
   const siPuoScrivereGliOrologi = useRef(true);
@@ -200,15 +205,20 @@ export function App() {
    */
   const orologiGiaDimenticati = useRef(false);
   /**
-   * La nota sul deposito che ha rifiutato gli orologi, o `null` finché non ha
-   * rifiutato: quel che la schermata degli orologi deve dire, deciso da
-   * `nota-del-deposito.ts` (ticket 45).
+   * Quel che la schermata degli orologi deve dire su come stanno gli orologi,
+   * o `null` quando non c'è niente da dire.
    *
-   * Vive qui e non nella schermata perché è qui che si scrive nel deposito, ed
+   * Una casella sola per tre porte — il deposito che rifiuta una scrittura
+   * (ticket 45), quello che non si è lasciato leggere (ticket 54), il file di
+   * partenza che manca o ha righe storte (ticket 57) — perché a chi guarda
+   * interessa **perché il pannello è come lo vede**, non da quale porta è
+   * arrivato il guaio. Le parole le decide `note-degli-orologi.ts`.
+   *
+   * Vive qui e non nella schermata perché è qui che si aprono quelle porte, ed
    * è una stringa e non un booleano perché la scelta delle parole non è una
    * cosa che l'app decide in due punti diversi.
    */
-  const [notaSulDeposito, setNotaSulDeposito] = useState<string | null>(null);
+  const [notaSugliOrologi, setNotaSugliOrologi] = useState<string | null>(null);
   /**
    * Il motore vive qui e non nella schermata da cui lo si accende: le pagine
    * si smontano passando da una all'altra, e una ricerca che vivesse dentro la
@@ -334,7 +344,7 @@ export function App() {
         // Il pannello resta vuoto perché non si è saputo leggere, non perché
         // l'utente abbia detto di non incontrare nessuno: la differenza la
         // legge solo lui, e gliela si scrive.
-        if (!apertura.siPuoScrivere) setNotaSulDeposito(notaDellaLettura(lettura.come));
+        if (!apertura.siPuoScrivere) setNotaSugliOrologi(notaDellaLettura(lettura.come));
         if (orologiScrittiAMano.current || apertura.mostra === "niente") return;
         if (lettura.come === "letti") return setOrologi(lettura.orologi);
         const diPartenza = await caricaOrologiDiPartenza();
@@ -343,7 +353,12 @@ export function App() {
         // scriva. Quel che ha scritto vince sempre: senza questa guardia il
         // file di cortesia gli passava sopra, e il tasto successivo salvava la
         // sostituzione (ticket 35).
-        if (vivo && !orologiScrittiAMano.current) setOrologi(diPartenza);
+        if (!vivo || orologiScrittiAMano.current) return;
+        setOrologi(diPartenza.come === "letti" ? diPartenza.orologi : []);
+        // Un file di cortesia che manca, o a cui è caduta una riga, lascia il
+        // pannello con meno mazzi di quanti dovrebbe: senza una parola si
+        // leggerebbe come una decisione dell'utente (ticket 57).
+        setNotaSugliOrologi(notaDelFileDiPartenza(diPartenza));
       })
       // Gli orologi che non si caricano non fermano l'app: senza, la corsa
       // semplicemente non si corre, e tutto il resto funziona intero.
@@ -386,7 +401,7 @@ export function App() {
       // senza salvataggi, che è il silenzio da cui il ticket 54 parte. Chi non
       // può più scrivere non ha più niente da dire sul deposito.
       if (!siPuoScrivereGliOrologi.current) return;
-      setNotaSulDeposito(notaDelDeposito("salvataggio", esito));
+      setNotaSugliOrologi(notaDelDeposito("salvataggio", esito));
     });
   };
 
@@ -411,12 +426,21 @@ export function App() {
         // Finché la porta resta chiusa la nota resta quella della lettura: è
         // ancora vera, e sostituirla con quella del ripristino lascerebbe fuori
         // il fatto che conta — che da qui in avanti non si sta salvando niente.
-        setNotaSulDeposito(
-          siPuoScrivereGliOrologi.current
-            ? notaDelDeposito("ripristino", esito)
-            : notaDellaLettura("non-si-e-letto"),
-        );
-        setOrologi(await caricaOrologiDiPartenza());
+        const notaDelDepositoOra = siPuoScrivereGliOrologi.current
+          ? notaDelDeposito("ripristino", esito)
+          : notaDellaLettura("non-si-e-letto");
+
+        const diPartenza = await caricaOrologiDiPartenza();
+        // Lo schermo segue il deposito **anche quando il file non arriva**:
+        // l'utente ha chiesto di buttare quel che aveva scritto, e lasciarglielo
+        // davanti lo farebbe risalvare al primo tasto — proprio quello che ha
+        // appena detto di non volere. Senza file di partenza il pannello resta
+        // vuoto, ed è la nota a dire che non è una sua scelta.
+        setOrologi(diPartenza.come === "letti" ? diPartenza.orologi : []);
+        // La casella è una e le porte sono due. Prima quel che si vede — perché
+        // è la domanda che l'utente si sta facendo guardando il pannello — poi
+        // quel che è rimasto sul dispositivo.
+        setNotaSugliOrologi(noteInFila(notaDelFileDiPartenza(diPartenza), notaDelDepositoOra));
       })
       .catch(() => {});
   };
@@ -725,7 +749,7 @@ export function App() {
               orologi={orologi}
               cambiaOrologi={cambiaOrologi}
               ripristina={ripristinaOrologi}
-              notaSulDeposito={notaSulDeposito}
+              notaSugliOrologi={notaSugliOrologi}
             />
             <Costruzione
               pool={pool}

@@ -117,8 +117,17 @@ export function interpretaOrologi(dati: unknown): Orologio[] {
  * capito niente di quel che c'è scritto», e solo il secondo fa tornare il file
  * del manutentore.
  *
- * Per un testo arrivato da fuori vale l'altra, quella severa: là il file non è
- * ancora di nessuno, ed è il momento di dire quale riga guardare.
+ * Per un testo arrivato da fuori — un mazzo scambiato per iscritto — vale
+ * l'altra, quella severa: là il file non è ancora di nessuno, e rifiutarlo
+ * dicendo quale riga guardare è la risposta giusta, perché chi lo ha in mano lo
+ * può correggere.
+ *
+ * Il file di partenza del manutentore è arrivato da fuori e usa questa, e non è
+ * una contraddizione: quel file esiste perché la prima schermata non sia vuota,
+ * e il severo — che solleva — la svuotava del tutto per una riga (ticket 57).
+ * Chi lo apre non lo può correggere, quindi rifiutarlo non gli serve a niente.
+ * Le ragioni non si buttano lo stesso: `righeCheNonSiConservano` le consegna, e
+ * la schermata dice quanti mazzi sono caduti.
  */
 export function orologiCheSiLeggono(dati: unknown): Orologio[] | undefined {
   if (!Array.isArray(dati)) return undefined;

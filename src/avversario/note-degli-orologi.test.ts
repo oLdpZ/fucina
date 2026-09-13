@@ -10,7 +10,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { EsitoDellaScrittura } from "../dati/deposito.js";
-import { notaDelDeposito, notaDellaLettura } from "./nota-del-deposito.js";
+import type { OrologiDiPartenza } from "./carica-orologi.js";
+import {
+  notaDelDeposito,
+  notaDelFileDiPartenza,
+  notaDellaLettura,
+  noteInFila,
+} from "./note-degli-orologi.js";
 
 /** Come l'app la usa: ogni esito riscrive la nota, e l'ultima è quella in vista. */
 function dopoGliEsiti(
@@ -121,5 +127,80 @@ describe("la nota sulla lettura degli orologi", () => {
     expect(notaDellaLettura("non-si-e-letto")).not.toBe(
       notaDelDeposito("salvataggio", "rifiutata"),
     );
+  });
+});
+
+/**
+ * La terza porta: il file di cortesia del manutentore (ticket 57).
+ *
+ * Quel file esiste per una cosa sola — che la prima schermata non sia vuota —,
+ * e quando è lui a mancare la schermata resta vuota per un guasto e non per una
+ * decisione. È la stessa distinzione del ticket 54, da un'altra parte ancora.
+ */
+describe("la nota sul file di partenza degli orologi", () => {
+  const letti = (scarti: Map<number, string>): OrologiDiPartenza => ({
+    come: "letti",
+    orologi: [],
+    scarti,
+  });
+
+  it("non dice niente quando il file si è letto per intero", () => {
+    expect(notaDelFileDiPartenza(letti(new Map()))).toBe(null);
+  });
+
+  it("dice che i mazzi di partenza non ci sono, quando il file non si è letto", () => {
+    const nota = notaDelFileDiPartenza({ come: "non-si-e-letto" });
+    expect(nota).not.toBe(null);
+    // Che cosa vede l'utente: il pannello comincia vuoto, e non perché lo abbia
+    // deciso lui. Non il nome del file, non il codice della risposta.
+    expect(nota).toContain("vuoto");
+    expect(nota).not.toContain("orologi.json");
+    expect(nota).not.toContain("fetch");
+  });
+
+  it("conta le righe cadute, e dice che le altre ci sono", () => {
+    const una = notaDelFileDiPartenza(letti(new Map([[1, "non si legge"]])));
+    const due = notaDelFileDiPartenza(letti(new Map([[1, "no"], [3, "no"]])));
+    expect(una).toContain("1 mazzo");
+    expect(due).toContain("2 mazzi");
+    // Non è la nota del file che manca: là non c'è niente, qui c'è quasi tutto.
+    expect(una).not.toBe(notaDelFileDiPartenza({ come: "non-si-e-letto" }));
+  });
+});
+
+/**
+ * Due porte che si aprono insieme e una casella sola.
+ *
+ * Succede al «rimetti i mazzi di partenza»: la cancellazione può fallire e il
+ * file di cortesia può non arrivare, nello stesso istante. Le due note vanno
+ * messe in fila senza che l'una neghi quel che l'altra afferma — che è la
+ * ragione per cui la nota del ripristino non dice più «i mazzi di partenza
+ * sono tornati sullo schermo»: quando il file non arriva, non sono tornati.
+ */
+describe("due note nella stessa casella", () => {
+  it("una sola nota resta quella che è", () => {
+    const sola = notaDelDeposito("ripristino", "rifiutata");
+    expect(noteInFila(null, sola)).toBe(sola);
+    expect(noteInFila(sola, null)).toBe(sola);
+  });
+
+  it("niente da dire resta niente", () => {
+    expect(noteInFila(null, null)).toBe(null);
+  });
+
+  it("due note stanno nella stessa casella, nell'ordine in cui arrivano", () => {
+    const insieme = noteInFila(
+      notaDelFileDiPartenza({ come: "non-si-e-letto" }),
+      notaDelDeposito("ripristino", "rifiutata"),
+    );
+    expect(insieme).toContain("non si sono potuti caricare");
+    expect(insieme).toContain("apertura");
+  });
+
+  it("nessuna delle due promette che i mazzi di partenza siano sullo schermo", () => {
+    // Il ripristino parla del **dispositivo**, non dello schermo: la frase che
+    // parlava dello schermo diventava falsa appena il file non arrivava.
+    const nota = notaDelDeposito("ripristino", "rifiutata") ?? "";
+    expect(nota).not.toContain("sono tornati sullo schermo");
   });
 });

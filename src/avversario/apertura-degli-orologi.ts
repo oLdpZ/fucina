@@ -20,7 +20,7 @@
  * Perciò di una lettura che non è riuscita si fa **niente**: non si sostituisce
  * quel che c'è sullo schermo, e non si scrive sul dispositivo. Quel che
  * l'utente batte in questa sessione resta in questa sessione — e glielo si dice
- * (`nota-del-deposito.ts`), perché un silenzio è esattamente quel che questo
+ * (`note-degli-orologi.ts`), perché un silenzio è esattamente quel che questo
  * ticket toglie di mezzo.
  */
 

@@ -41,21 +41,23 @@ export function Avversario({
   orologi,
   cambiaOrologi,
   ripristina,
-  notaSulDeposito,
+  notaSugliOrologi,
 }: {
   orologi: readonly Orologio[];
   cambiaOrologi: (orologi: readonly Orologio[]) => void;
   /** Torna al file di partenza, buttando quel che l'utente ha scritto. */
   ripristina: () => void;
   /**
-   * Il deposito ha rifiutato di conservare gli orologi, e queste sono le parole
-   * da mostrare: che cosa l'utente perde (ticket 45). `null` nel caso normale,
-   * e allora la schermata non guadagna nessun messaggio.
+   * Qualcosa non va con gli orologi, e queste sono le parole da mostrare: che
+   * cosa l'utente perde. Il deposito che rifiuta di conservarli (ticket 45),
+   * quello che non si è lasciato leggere (ticket 54), il file di partenza che
+   * manca o ha righe storte (ticket 57). `null` nel caso normale, e allora la
+   * schermata non guadagna nessun messaggio.
    *
-   * Le decide `nota-del-deposito.ts`, non questa schermata: arrivano già
-   * scritte perché è chi scrive nel deposito a sapere com'è andata.
+   * Le decide `note-degli-orologi.ts`, non questa schermata: arrivano già
+   * scritte perché è chi apre quelle porte a sapere com'è andata.
    */
-  notaSulDeposito: string | null;
+  notaSugliOrologi: string | null;
 }) {
   const [aperto, setAperto] = useState(false);
 
@@ -75,21 +77,22 @@ export function Avversario({
       <p class="patto">{PATTO_DELLA_CORSA}</p>
 
       {/* Sta in cima, sopra le caselle e fuori dal pannello che si apre e si
-          chiude: un guasto del deposito riguarda tutto l'elenco, non la riga
-          che si sta battendo, e chiudendo il pannello non smette di essere
-          vero. Resta finché una scrittura non riesce. */}
-      {notaSulDeposito !== null ? (
+          chiude: un guasto riguarda tutto l'elenco, non la riga che si sta
+          battendo, e chiudendo il pannello non smette di essere vero. Resta
+          finché una scrittura non riesce. */}
+      {notaSugliOrologi !== null ? (
         <p class="avviso-guasto" role="alert">
-          {notaSulDeposito}
+          {notaSugliOrologi}
         </p>
       ) : null}
 
       {/* «Non è un guasto» si può dire solo quando non c'è un guasto. Con una
-          nota sul deposito sopra — gli orologi che non si sono potuti leggere,
-          per esempio (ticket 54) — l'elenco vuoto non è quel che l'utente ha
-          deciso, ed è già la nota a raccontarlo: due frasi che si
-          contraddicono a due righe di distanza sono peggio di una sola. */}
-      {orologi.length === 0 && notaSulDeposito === null ? (
+          nota sopra — gli orologi che non si sono potuti leggere (ticket 54),
+          il file di partenza che non è arrivato (ticket 57) — l'elenco vuoto
+          non è quel che l'utente ha deciso, ed è già la nota a raccontarlo:
+          due frasi che si contraddicono a due righe di distanza sono peggio di
+          una sola. */}
+      {orologi.length === 0 && notaSugliOrologi === null ? (
         <p class="nota-filtro">
           Nessun mazzo dichiarato: la corsa non si corre, e il punteggio resta quello delle cinque
           componenti di sempre. Non è un guasto — è quel che succede finché non dici contro chi

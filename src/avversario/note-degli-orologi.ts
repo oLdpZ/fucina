@@ -1,5 +1,5 @@
 /**
- * **Quando il deposito rifiuta gli orologi, la schermata lo dice.**
+ * **Quando qualcosa va storto con gli orologi, la schermata lo dice.**
  *
  * `deposito.ts` promette in cima a sé di non fallire rumorosamente: modo
  * privato, spazio esaurito, permessi negati, database aperto da un'altra
@@ -7,10 +7,14 @@
  * perché chi chiama se ne occupi. Questa è la funzione che se ne occupa per gli
  * orologi (ticket 45): l'esito entra, la parola da mostrare esce.
  *
- * Le porte sono due, e le note anche. `notaDelDeposito` è quella delle
- * scritture — il salvataggio a ogni tasto, il ripristino. `notaDellaLettura`,
- * in fondo, è quella dell'apertura: gli orologi conservati che non si sono
- * potuti leggere (ticket 54). Stessa regola per tutt'e due.
+ * Le porte sono tre, e le note anche. `notaDelDeposito` è quella delle
+ * scritture — il salvataggio a ogni tasto, il ripristino. `notaDellaLettura` è
+ * quella dell'apertura: gli orologi conservati che non si sono potuti leggere
+ * (ticket 54). `notaDelFileDiPartenza` è quella del file del manutentore, che
+ * può mancare o avere righe storte (ticket 57). Stessa regola per tutt'e tre —
+ * che cosa perde l'utente, e solo quel che si sa — perché a chi guarda la
+ * schermata la porta da cui è arrivato il guaio non interessa: gli interessa
+ * perché il pannello è come lo vede.
  *
  * Gli orologi sono l'unica cosa che l'app conserva e che nessuno può
  * ricostruire al posto dell'utente, e la loro schermata è l'unica **senza un
@@ -36,6 +40,7 @@
  */
 
 import type { EsitoDellaLettura, EsitoDellaScrittura } from "../dati/deposito.js";
+import type { OrologiDiPartenza } from "./carica-orologi.js";
 
 /** Quale scrittura il deposito ha accettato o rifiutato. */
 export type ScritturaDegliOrologi = "salvataggio" | "ripristino";
@@ -45,10 +50,13 @@ const NOTE: Record<ScritturaDegliOrologi, string> = {
     "I mazzi che incontri non si sono potuti salvare su questo dispositivo: " +
     "manca lo spazio, o il browser è in navigazione privata. Restano per questa " +
     "sessione e non oltre: chiudendo la scheda li perdi.",
+  // Parla del **dispositivo**, non dello schermo. La versione di prima apriva
+  // con «I mazzi di partenza sono tornati sullo schermo», e quella frase
+  // diventava falsa appena il file di cortesia non arrivava (ticket 57): due
+  // note nella stessa casella non si devono smentire a una riga di distanza.
   ripristino:
-    "I mazzi di partenza sono tornati sullo schermo, ma quel che avevi scritto " +
-    "non si è potuto cancellare da questo dispositivo. Alla prossima apertura " +
-    "ritroverai i tuoi, non questi.",
+    "Quel che avevi scritto non si è potuto cancellare da questo dispositivo. " +
+    "Alla prossima apertura ritroverai i tuoi mazzi, non quelli che vedi adesso.",
 };
 
 /**
@@ -113,4 +121,64 @@ export function notaDellaLettura(lettura: EsitoDellaLettura): string | null {
     "averli visti, l'app da adesso non li salva: quel che scrivi vale per " +
     "questa sessione e non oltre. Riprova a riaprire l'app più tardi."
   );
+}
+
+/**
+ * La nota sul file di cortesia del manutentore (ticket 57).
+ *
+ * Quel file esiste per **una cosa sola**: che la prima schermata non sia vuota
+ * (ADR-0002). Quando è lui a non arrivare, o quando gliene cade dentro qualche
+ * riga, la conseguenza è la stessa del ticket 54 vista da un'altra porta — un
+ * pannello con meno mazzi di quanti dovrebbe averne, e nessun modo per chi
+ * guarda di sapere se sia un guasto o una decisione.
+ *
+ * Le due note dicono cose diverse perché sono due situazioni diverse, e la
+ * differenza la deve leggere l'utente. Il file che manca gli lascia un pannello
+ * **vuoto** e niente da correggere: l'unica cosa utile è dirgli che tocca a lui
+ * scriverli, che è comunque quel che l'app preferisce. Le righe cadute gli
+ * lasciano un pannello **quasi intero**, e la nota serve a impedirgli di
+ * credere che quello sia tutto il meta che il manutentore aveva scritto.
+ *
+ * Le ragioni riga per riga non entrano nella nota. Sono scritte per chi ha il
+ * file aperto davanti — il manutentore — e all'utente non servono: lui quel
+ * file non lo può correggere, e un elenco di guasti che non può riparare è
+ * rumore. Il conto sì: gli dice quanto manca.
+ */
+export function notaDelFileDiPartenza(partenza: OrologiDiPartenza): string | null {
+  if (partenza.come === "non-si-e-letto") {
+    return (
+      "I mazzi di partenza non si sono potuti caricare, e il pannello comincia " +
+      "vuoto: non è una tua scelta. Scrivi i mazzi che incontri, oppure riapri " +
+      "l'app più tardi."
+    );
+  }
+  const caduti = partenza.scarti.size;
+  if (caduti === 0) return null;
+  return (
+    `Dei mazzi di partenza ${caduti === 1 ? "1 mazzo" : `${caduti} mazzi`} non si ` +
+    "sono potuti leggere, e qui sotto non ci sono: gli altri sì. Puoi " +
+    "aggiungerli a mano, o correggere i numeri di quelli che vedi."
+  );
+}
+
+/**
+ * Più note nella stessa casella, in fila.
+ *
+ * La schermata degli orologi ha **un** posto per le parole, e ci sono momenti
+ * in cui due porte si aprono insieme: il «rimetti i mazzi di partenza» può
+ * trovare un deposito che rifiuta di cancellare **e** un file di cortesia che
+ * non arriva. Sceglierne una vorrebbe dire tacere l'altra, e tutt'e due
+ * nominano una cosa che l'utente ha perso.
+ *
+ * L'ordine è quello in cui arrivano, e chi chiama mette prima quel che si vede
+ * — perché è la domanda che l'utente si sta facendo guardando il pannello — e
+ * poi quel che è rimasto sul dispositivo.
+ *
+ * Perché si possano mettere in fila, nessuna delle note deve affermare quel che
+ * un'altra nega: è il motivo per cui quella del ripristino parla del
+ * dispositivo e non dello schermo.
+ */
+export function noteInFila(...note: readonly (string | null)[]): string | null {
+  const dette = note.filter((nota): nota is string => nota !== null);
+  return dette.length === 0 ? null : dette.join(" ");
 }
