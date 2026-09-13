@@ -4,7 +4,16 @@ import { fileURLToPath } from "node:url";
 import { COMBO_VUOTA } from "../src/combo/combo.ts";
 import type { Carta, Pool } from "../src/dati/pool.ts";
 import { costruisciMazzo, type Frontiera, type MazzoCostruito } from "../src/ricerca/costruisci.ts";
-import { DENSITA_DI_SINERGIA_PIENA } from "../src/punteggio/taratura.ts";
+import {
+  DENSITA_DI_SINERGIA_PIENA,
+  PESI_DELLE_COMPONENTI,
+  TURNO_DI_CHIUSURA_OTTIMO,
+  TURNO_DI_CHIUSURA_PESSIMO,
+  TURNO_MAZZO_LENTO,
+  TURNO_MAZZO_VELOCE,
+} from "../src/punteggio/taratura.ts";
+import { PESI_DELLA_PUREZZA, TARATURA_DELLA_RICERCA } from "../src/ricerca/taratura.ts";
+import { PARTITE_SIMULATE } from "../src/mazzo/taratura.ts";
 import { spiegaFrontiera, type SpiegazioniDelMazzo } from "../src/spiegazioni/spiegazioni.ts";
 import { GALLERIA } from "../src/tema/galleria.ts";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, eTerra, type Tema } from "../src/tema/tema.ts";
@@ -372,6 +381,22 @@ function main(): void {
     "",
     "> ⚠️ I tempi qui sotto sono di un computer da tavolo. **Quanto ci metta un",
     "> telefono vero resta da misurare**, ed è una casella aperta del ticket 14.",
+    "",
+    "## Le tarature con cui questo documento è stato generato",
+    "",
+    "Stanno qui perché un numero misurato senza sapere sotto quali altri numeri",
+    "è stato misurato non è una misura: è un aneddoto. Se una riga qui sotto",
+    "cambia, tutto il resto del documento va rifatto.",
+    "",
+    "| taratura | valore |",
+    "| --- | --- |",
+    `| densità di sinergia piena | ${DENSITA_DI_SINERGIA_PIENA} |`,
+    `| pesi delle componenti | ${Object.entries(PESI_DELLE_COMPONENTI).map(([k, v]) => `${k} ${v}`).join(" · ")} |`,
+    `| turno di chiusura ottimo → pessimo | ${TURNO_DI_CHIUSURA_OTTIMO} → ${TURNO_DI_CHIUSURA_PESSIMO} |`,
+    `| turno mazzo veloce → lento | ${TURNO_MAZZO_VELOCE} → ${TURNO_MAZZO_LENTO} |`,
+    `| pesi della purezza | ${PESI_DELLA_PUREZZA.join(" · ")} |`,
+    `| partenze · partite in ricerca · valutazioni · candidati | ${TARATURA_DELLA_RICERCA.partenze} · ${TARATURA_DELLA_RICERCA.partiteInRicerca} · ${TARATURA_DELLA_RICERCA.valutazioniMassimePerPartenza} · ${TARATURA_DELLA_RICERCA.candidatiMassimi} |`,
+    `| partite simulate per il mazzo consegnato | ${PARTITE_SIMULATE} |`,
     "",
     "---",
     "",

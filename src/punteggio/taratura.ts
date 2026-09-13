@@ -187,12 +187,46 @@ export const COPPIE_CHE_SI_ATTIVANO: readonly (readonly [Tag, Tag])[] = [
  *
  * La densità è la quota di coppie di copie non-terra che si attivano a
  * vicenda, e non arriva mai vicino a uno nemmeno in un mazzo costruito
- * apposta: metà pedine e metà sacrifici fanno una densità attorno a mezzo, un
- * mazzo tematico normale sta molto sotto. Questo numero è il punto in cui si
- * dice «basta così»: sopra, aggiungere sinergia non è più il problema del
- * mazzo. **Il primo da ritarare alla sosta**, guardando le densità vere.
+ * apposta. Questo numero è il punto in cui si dice «basta così»: sopra,
+ * aggiungere sinergia non è più il problema del mazzo.
+ *
+ * **Misurato sul pool vero il 13 settembre 2026** (ticket 15), ed era il primo
+ * indiziato per sua stessa ammissione. Valeva `0,15`, e a quel valore la
+ * componente era **morta**: su trentotto mazzi misurati — gli otto temi della
+ * galleria più i sei casi limite — trentasei valevano esattamente `1,000`. Il
+ * quindici per cento del punteggio era una costante additiva, uguale per ogni
+ * mazzo, che non distingueva niente da niente.
+ *
+ * Le densità vere si dividono in due gobbe: trentatré mazzi fra **0,147 e
+ * 0,20** (mediana 0,164) e cinque fra **0,31 e 0,80**, che sono i temi così
+ * stretti da ripetere le stesse poche carte. La soglia vecchia cadeva sotto il
+ * fondo della prima gobba — di lì il tetto per tutti.
+ *
+ * **0,30** sta nella valle fra le due, ed è dove il numero è stato messo. Ha
+ * migliorato le cose e **non le ha sistemate**, e la seconda misura — lo stesso
+ * banco, rifatto sul punteggio nuovo — dice perché, meglio di quanto sapesse
+ * chi ha scelto il numero:
+ *
+ * | | soglia 0,15 | soglia 0,30 |
+ * | --- | --- | --- |
+ * | mazzi al tetto | 36 su 38 | 17 su 31 |
+ * | densità mediana | 0,164 | **0,300** |
+ * | densità dal p25 al p75 | 0,155 → 0,201 | **0,293 → 0,314** |
+ *
+ * La mediana è atterrata **esattamente sulla soglia**, e il quartile centrale
+ * si è stretto attorno a lei. Non è una coincidenza ed è la cosa da capire:
+ * `densità / soglia` tagliato a uno è una funzione che **satura**, la ricerca
+ * spinge la densità fino al punto in cui smette di essere premiata e lì si
+ * ferma. La soglia non misura i mazzi, **li attira**. Alzarla da 0,15 a 0,30 ha
+ * spostato il mucchio da «tutti sopra» a «tutti sul bordo», che è meno peggio —
+ * il fondo della scala ora si vede, il valore minimo è 0,475 — ma è lo stesso
+ * difetto in un altro punto.
+ *
+ * **Quindi il numero resta provvisorio, e il difetto non è nel numero**: è nella
+ * forma. Una funzione che sale sempre, piano, senza un tetto da raggiungere,
+ * non avrebbe un punto in cui accatastarsi. Vedi il ticket 72.
  */
-export const DENSITA_DI_SINERGIA_PIENA = 0.15;
+export const DENSITA_DI_SINERGIA_PIENA = 0.3;
 
 /* ------------------------------------------------------------------------- *
  * Qualità delle singole carte
