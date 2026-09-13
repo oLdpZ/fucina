@@ -6,6 +6,7 @@ import type { Carta, Pool } from "../src/dati/pool.ts";
 import { costruisciMazzo, type Frontiera, type MazzoCostruito } from "../src/ricerca/costruisci.ts";
 import { DENSITA_DI_SINERGIA_PIENA } from "../src/punteggio/taratura.ts";
 import { spiegaFrontiera, type SpiegazioniDelMazzo } from "../src/spiegazioni/spiegazioni.ts";
+import { GALLERIA } from "../src/tema/galleria.ts";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, eTerra, type Tema } from "../src/tema/tema.ts";
 
 /**
@@ -33,7 +34,7 @@ import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, eTerra, type Tema } from "../src/tema/te
 const qui = (percorso: string) => fileURLToPath(new URL(percorso, import.meta.url));
 
 const POOL = qui("../public/dati/pool.json");
-const USCITA = qui("../.scratch/fondamenta-e-motore/la-sosta.md");
+const USCITA = qui("../.scratch/old-school-italiano/la-sosta.md");
 
 /**
  * Il seme, fisso. È la stessa scelta di tutto il resto del motore: il caso
@@ -51,9 +52,19 @@ const TEMPO_MASSIMO_MS = 300_000;
 
 type Prova = {
   titolo: string;
-  /** Perché questo tema sta nell'elenco: il ticket 14 ne chiede cinque tipi. */
+  /** Perché questo tema sta nell'elenco. */
   perche: string;
   tema: Tema;
+  /**
+   * A quale delle due domande risponde questa prova.
+   *
+   * `galleria` sono gli **otto temi che l'utente vede per primi**: è lì che si
+   * legge se il motore ha buon gusto, perché sono i mazzi che verranno
+   * costruiti davvero. `robustezza` sono i casi limite — il tema larghissimo,
+   * quello strettissimo, quello che vince senza creature — dove non si chiede
+   * se il mazzo è bello ma se il motore regge senza mentire.
+   */
+  gruppo: "galleria" | "robustezza";
 };
 
 /* -------------------------------------------------------------------------- *
@@ -105,11 +116,35 @@ function scegliIlSottotipoStretto(carte: readonly Carta[]): string {
     .sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]))[0]![0];
 }
 
+/**
+ * Gli otto temi della galleria, nell'ordine in cui l'utente li vede.
+ *
+ * Non sono scritti qui: si leggono da `tema/galleria.ts`, che è la stessa
+ * sorgente che la schermata apre. Ricopiarli vorrebbe dire misurare otto temi
+ * che assomigliano a quelli veri — e il giorno che uno dei due elenchi cambia,
+ * la sosta certificherebbe un'app che non esiste.
+ *
+ * La `promessa` della galleria viaggia con loro perché è la domanda: il mazzo
+ * che esce fa quel che la riga promette a chi ha toccato la casella?
+ */
+function laGalleria(): Prova[] {
+  return GALLERIA.map((voce) => ({
+    titolo: `Galleria — ${voce.nome}`,
+    perche: `La promessa che l'utente legge prima di toccare: «${voce.promessa}» Il mazzo che esce la mantiene?`,
+    tema: voce.tema,
+    gruppo: "galleria" as const,
+  }));
+}
+
 function leProve(carte: readonly Carta[]): Prova[] {
   const seme = scegliIlSeme(carte);
   const stretto = scegliIlSottotipoStretto(carte);
 
   return [
+    ...laGalleria(),
+    // I sei casi limite del ticket 14, che il cambio di formato non ha reso
+    // meno utili: il pool è un altro, e dove il motore si rompe va richiesto.
+    ...[
     {
       titolo: "Molto ampio — tutto il rosso",
       perche: "Il caso in cui il tema non stringe quasi nulla: la ricerca ha campo libero.",
@@ -149,12 +184,28 @@ function leProve(carte: readonly Carta[]): Prova[] {
         esclusioni: filtro({ tipi: ["Creature"] }),
       }),
     },
+    ].map((prova) => ({ ...prova, gruppo: "robustezza" as const })),
   ];
 }
 
 /* -------------------------------------------------------------------------- *
  * Il documento
  * -------------------------------------------------------------------------- */
+
+/**
+ * Il nome col quale la prova entra nella tabella riassuntiva.
+ *
+ * Non è `titolo` tagliato al primo trattino, che è come si scriveva prima: gli
+ * otto temi della galleria si chiamano tutti «Galleria — qualcosa», e la
+ * tabella diventava otto righe con lo stesso nome. Della galleria si tiene la
+ * seconda metà, che è il nome del mazzo; dei casi limite la prima, che è la
+ * loro categoria.
+ */
+function nomeBreve(prova: Prova): string {
+  return prova.gruppo === "galleria"
+    ? prova.titolo.replace("Galleria — ", "")
+    : prova.titolo.split(" — ")[0]!;
+}
 
 const perCento = (n: number) => `${(n * 100).toFixed(1)}%`;
 const conDecimali = (n: number, quanti = 4) => n.toFixed(quanti);
@@ -365,7 +416,7 @@ function main(): void {
           : `${leggi(primo)} → ${leggi(ultimo!)}`;
 
     riassunto.push(
-      `| ${prova.titolo.split(" — ")[0]} | ${frontiera.ampiezza.verdetto} | ${frontiera.mazzi.length} | ${(ms / 1000).toFixed(1)} s | ${arco((m) => conDecimali(m.purezza, 3))} | ${arco((m) => conDecimali(m.potenza, 3))} | ${arco((m) => (m.simulazione.turnoMedioDiChiusura === null ? "mai" : m.simulazione.turnoMedioDiChiusura.toFixed(1)))} |`,
+      `| ${nomeBreve(prova)} | ${frontiera.ampiezza.verdetto} | ${frontiera.mazzi.length} | ${(ms / 1000).toFixed(1)} s | ${arco((m) => conDecimali(m.purezza, 3))} | ${arco((m) => conDecimali(m.potenza, 3))} | ${arco((m) => (m.simulazione.turnoMedioDiChiusura === null ? "mai" : m.simulazione.turnoMedioDiChiusura.toFixed(1)))} |`,
     );
   }
 
