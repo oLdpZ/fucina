@@ -88,7 +88,33 @@ export const GALLERIA: readonly VoceDiGalleria[] = [
     nome: "Controllare",
     promessa:
       "Dici di no a quello che prova a fare, gli togli dal tavolo quel che è riuscito a giocare, e intanto peschi più carte di lui.",
-    tema: tema({ tag: ["controincantesimo", "pesca", "rimozione-mirata", "spazza-via"] }),
+    /**
+     * **`rimozione-mirata` non è qui, ed è la correzione del ticket 71.**
+     *
+     * C'era, e con lei il tema uniti 128 carte di cui il 54% erano quelle: ogni
+     * creatura che tappa per tirare un danno addosso a un'altra è rimozione per
+     * davvero e entrava di diritto. Il mazzo che usciva sul pool vero non aveva
+     * **nessuna contromagia e nessuna pesca** — era un mazzo di creature verdi e
+     * rosse con purezza 1,000, cioè perfettamente dentro il tema e perfettamente
+     * fuori dalla promessa.
+     *
+     * Il criterio che la sosta ne ha ricavato vale per **ogni voce di questa
+     * galleria**, e chi ne aggiunge una lo deve rileggere: **il tag più numeroso
+     * di una voce dev'essere uno di quelli che la sua promessa nomina.**
+     *
+     * Non è una regola sulla cardinalità, ed è per questo che si scrive così.
+     * «Reggere l'urto» è dominato al 76% da `previene-il-danno` e sta benissimo,
+     * perché quel tag **è** la sua promessa — «il danno non passa». Qui il tag
+     * dominante era l'unico dei quattro che la promessa non nominava.
+     *
+     * Tolta lei restano 63 carte e il più numeroso è `spazza-via`, che la
+     * promessa nomina: «gli togli dal tavolo quel che è riuscito a giocare».
+     *
+     * Le rimozioni a bersaglio singolo non spariscono dall'app: chi le vuole le
+     * trova nel catalogo e le mette a mano, e il motore le pesca comunque quando
+     * la frontiera cede tema per potenza. Non sono più il tema.
+     */
+    tema: tema({ tag: ["controincantesimo", "pesca", "spazza-via"] }),
   },
   {
     nome: "Prosciugare",
