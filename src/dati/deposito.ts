@@ -6,6 +6,13 @@
  * IndexedDB e non `localStorage`: il pool pesa qualche megabyte, cioè più di
  * quanto `localStorage` conceda, e ci si scrive senza fermare l'interfaccia.
  *
+ * **Le operazioni si fanno una alla volta, nell'ordine in cui partono.** Ci
+ * pensa la fila (`fila.ts`): IndexedDB ordina le transazioni dentro una
+ * connessione, e qui le connessioni sono una per operazione, quindi senza fila
+ * due tasti premuti in fretta atterrano come capita — e una cancellazione già
+ * annunciata all'utente si fa disfare dalla scrittura che l'ha preceduta
+ * (ticket 55).
+ *
  * **Nessuna di queste funzioni può fallire rumorosamente.** Modo privato,
  * spazio esaurito, permessi negati, database aperto da un'altra scheda: sono
  * tutti casi normali, e in tutti l'app deve restare intera coi dati che ha già
@@ -14,6 +21,7 @@
 
 import { orologiCheSiLeggono, type Orologio } from "../avversario/orologio.js";
 import { interpretaPool } from "./carica-pool.js";
+import { creaFila } from "./fila.js";
 import type { Pool } from "./pool.js";
 
 const DEPOSITO = "mazzi-fuori-meta";
@@ -38,6 +46,19 @@ const CHIAVE = "pool";
  * più vorrebbe dire una versione in più del deposito per niente.
  */
 const CHIAVE_OROLOGI = "orologi";
+
+/**
+ * La fila davanti al deposito: **una**, e ci passa tutto.
+ *
+ * Ci passano anche le letture, e non solo le scritture che il ticket 55
+ * nomina. Una lettura che scavalca la scrittura partita prima di lei legge il
+ * deposito com'era un istante fa e lo riferisce come se fosse adesso — la
+ * stessa inversione, con la bugia dalla parte di chi guarda invece che di chi
+ * scrive. Costa qualche millisecondo di attesa su operazioni che ne durano
+ * pochi, ed è il prezzo per cui l'ordine in cui l'app fa le cose è l'ordine in
+ * cui succedono.
+ */
+const inFila = creaFila();
 
 /**
  * Perché il deposito non si è aperto — e serve a una domanda sola: **se là
@@ -146,6 +167,15 @@ export interface Eseguita<T> {
 }
 
 function eseguita<T>(
+  scaffale: string,
+  modo: IDBTransactionMode,
+  lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
+): Promise<Eseguita<T>> {
+  return inFila(() => aperta(scaffale, modo, lavoro));
+}
+
+/** Il lavoro vero, una volta che la fila ha dato il turno. */
+function aperta<T>(
   scaffale: string,
   modo: IDBTransactionMode,
   lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
