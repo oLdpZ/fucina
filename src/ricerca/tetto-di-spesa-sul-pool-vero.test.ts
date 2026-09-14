@@ -91,18 +91,34 @@ describe("la base di terre dentro un budget, sul pool vero", () => {
   );
 
   /**
-   * Le terre **non base** che costano meno di qualunque terra base.
+   * Le terre **non base** su cui si prova l'invariante: quelle che portano un
+   * tag, cioè quelle che una base vera si porterebbe davvero, dalla più
+   * economica in giù.
    *
    * Si pescano dai dati e non si nominano, come vuole ADR-0004. Sono la ragione
    * per cui questo test esiste: scambiarne una con una terra base alza il conto
    * invece di abbassarlo, e la prima stesura del ticket 20 lo faceva.
+   *
+   * Fino al 14 settembre 2026 l'elenco era «quelle che costano meno di
+   * qualunque terra base», e non era una proprietà del motore: era un fatto di
+   * **mercato**. Quel giorno la base meno cara è scesa di quattordici centesimi
+   * e l'unica terra che le stava sotto è rimasta fuori per otto, lasciando
+   * l'elenco vuoto — e il test qui sotto verde senza provare niente. Questo file
+   * dice in cima che le attese non si fissano su nessun euro, e quella riga un
+   * euro lo fissava senza sembrare di farlo.
+   *
+   * L'invariante vale per **ogni** terra non base, e le più economiche sono solo
+   * quelle che lo rompono per prime: ora l'elenco viene da quel che il pool
+   * **è** — le carte del 1994 sono congelate (`PROGETTO.md` §7, Q29) — e non da
+   * quel che il mercato fa.
    */
-  const piuEconomicheDiUnaBase = terreDelPool.filter(
-    (carta) =>
-      !carta.tipi.includes("Basic") &&
-      carta.tag.length > 0 &&
-      (carta.prezzo.euro ?? Number.POSITIVE_INFINITY) < baseMenoCara,
-  );
+  const nonBasiConUnTag = terreDelPool
+    .filter((carta) => !carta.tipi.includes("Basic") && carta.tag.length > 0)
+    .sort(
+      (una, altra) =>
+        (una.prezzo.euro ?? Number.POSITIVE_INFINITY) -
+        (altra.prezzo.euro ?? Number.POSITIVE_INFINITY),
+    );
 
   /**
    * Un mazzo costruito **apposta** perché la base voglia quella terra: quaranta
@@ -127,10 +143,13 @@ describe("la base di terre dentro un budget, sul pool vero", () => {
       analizzaBaseDiTerre(mazzo, terreDelPool, { terreVolute: 22, budget }).terre,
     ).minimo;
 
-  it("nel pool esiste almeno una terra non base più economica di ogni terra base", () => {
-    // Se un giorno non ci fosse più, il test qui sotto diventerebbe una
-    // formalità verde: meglio saperlo da questa riga che scoprirlo per caso.
-    expect(piuEconomicheDiUnaBase.length).toBeGreaterThan(0);
+  it("nel pool ci sono terre non base con un tag, da cui il test qui sotto pesca", () => {
+    // Resta un canarino, ma su un fatto che non si muove da solo: se un giorno
+    // l'elenco fosse vuoto, il test qui sotto sarebbe una formalità verde, e
+    // meglio saperlo da questa riga che scoprirlo per caso. Sulle carte del 1994
+    // può svuotarsi solo se cambia il vocabolario dei tag — cioè per una nostra
+    // scelta, non per il prezzo di un mercoledì.
+    expect(nonBasiConUnTag.length).toBeGreaterThan(0);
   });
 
   it("stringere il budget non fa mai salire il conto della base", () => {
@@ -143,7 +162,7 @@ describe("la base di terre dentro un budget, sul pool vero", () => {
     // Il confronto è fra due budget, e non col conto senza budget: quello di un
     // mazzo che si compra le terre duali sta nelle migliaia di euro, e ogni
     // cifra gli starebbe sotto senza dire niente.
-    for (const terra of piuEconomicheDiUnaBase) {
+    for (const terra of nonBasiConUnTag) {
       const mazzo = mazzoCheLaVuole(terra);
       if (mazzo.length === 0) continue;
 
