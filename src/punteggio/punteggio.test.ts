@@ -648,7 +648,63 @@ describe("qualità delle singole carte", () => {
 
     expect(grezzi.risposteIncondizionate).toBe(4);
     expect(grezzi.risposteCondizionali).toBe(3);
-    expect(grezzi.carteDiVantaggio).toBe(2);
+    expect(grezzi.carteChePescano).toBe(2);
+  });
+
+  it("conta a parte le copie che pescano e quelle che spazzano il campo", () => {
+    // Il vantaggio in carte si guadagna in due modi (ticket 73), e i due modi
+    // si raccontano con due frasi diverse (ticket 78): un conto solo per
+    // tutt'e due metterebbe sotto la frase della pesca anche le copie che non
+    // pescano niente.
+    const pesca = magia({
+      nome: "Studio",
+      costoDiMana: "{1}{U}",
+      valoreDiMana: 2,
+      identitaDiColore: ["U"],
+      tipi: ["Sorcery"],
+      testo: "Draw two cards.",
+      tag: ["pesca"],
+    });
+    const spazzino = magia({
+      nome: "Spazzata",
+      costoDiMana: "{2}{W}{W}",
+      valoreDiMana: 4,
+      identitaDiColore: ["W"],
+      tipi: ["Sorcery"],
+      testo: "Destroy all creatures.",
+      tag: ["spazza-via"],
+    });
+
+    const grezzi = valuta([
+      { carta: pesca, copie: 2 },
+      { carta: spazzino, copie: 3 },
+    ]).punteggio.qualita.grezzi;
+
+    expect(grezzi.carteChePescano).toBe(2);
+    expect(grezzi.carteCheSpazzano).toBe(3);
+  });
+
+  it("una carta che pesca **e** spazza sta nel conto del mestiere che il punteggio le ha pesato", () => {
+    // Il punteggio prende il migliore dei due modi e non la somma: il conto
+    // deve stare dalla stessa parte, o la frase direbbe una cosa mentre il
+    // numero ne pesa un'altra.
+    const tutt2 = magia({
+      nome: "Spazzata Curiosa",
+      costoDiMana: "{2}{W}{W}",
+      valoreDiMana: 4,
+      identitaDiColore: ["W"],
+      tipi: ["Sorcery"],
+      testo: "Destroy all black creatures. Draw a card.",
+      tag: ["spazza-via", "pesca"],
+    });
+
+    const grezzi = valuta([{ carta: tutt2, copie: 2 }]).punteggio.qualita.grezzi;
+
+    // La pesca non si condiziona e vale uno pieno; lo spazzino di una categoria
+    // sola vale meno. Vince la pesca, e nel conto della pesca la carta va.
+    expect(grezzi.perCarta[0]!.modoDelVantaggio).toBe("pesca");
+    expect(grezzi.carteChePescano).toBe(2);
+    expect(grezzi.carteCheSpazzano).toBe(0);
   });
 
   it("vale di più una contromagia che annulla tutto di una che annulla una cosa sola", () => {

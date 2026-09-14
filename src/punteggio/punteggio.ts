@@ -165,6 +165,14 @@ export type QualitaDiUnaCarta = {
    * senza condizioni, meno quando spazza via una categoria sola.
    */
   vantaggio: number;
+  /**
+   * **Quale** dei modi del vantaggio le ha dato quella quota — `pesca` o
+   * `spazza-via` — e `null` se non ne fa nessuno. I due modi guadagnano carte
+   * in due maniere che al tavolo non si somigliano, e la frase si sceglie qui
+   * (ticket 78): su una carta che li facesse tutt'e due è il modo **migliore**,
+   * lo stesso che il punteggio ha pesato.
+   */
+  modoDelVantaggio: Tag | null;
   valore: number;
 };
 
@@ -172,10 +180,13 @@ export type GrezziDiQualita = {
   perCarta: QualitaDiUnaCarta[];
   /** L'efficienza media delle sole creature, pesata per copie. */
   efficienzaMedia: number;
-  /** Le tre conte che seguono sono **in copie**, non in nomi di carta. */
+  /** Le quattro conte che seguono sono **in copie**, non in nomi di carta. */
   risposteIncondizionate: number;
   risposteCondizionali: number;
-  carteDiVantaggio: number;
+  /** Le copie che rimettono carte in mano. */
+  carteChePescano: number;
+  /** Le copie che il vantaggio in carte se lo prendono spazzando il campo. */
+  carteCheSpazzano: number;
 };
 
 /**
@@ -602,7 +613,9 @@ function eCreatura(carta: Carta): boolean {
 /**
  * Il migliore dei mestieri che la carta sa fare, fra quelli dati, e alle
  * condizioni che il suo testo porta: uno se lo fa su quel che vuole, meno se il
- * testo pone condizioni, zero se non ne fa nessuno.
+ * testo pone condizioni, zero se non ne fa nessuno. Torna anche **quale** dei
+ * modi gliel'ha data, perché la frase che racconta il mestiere dev'essere
+ * quella del modo che il punteggio ha pesato, e non un'altra (ticket 78).
  *
  * Il **migliore** e non la somma: una carta che annulla il blu e in più
  * distrugge un permanente blu è la stessa carta giocata in due modi, e chi la
@@ -617,15 +630,27 @@ function eCreatura(carta: Carta): boolean {
  * del mestiere che se la cava meglio, non quella che il testo dell'altra metà
  * le avrebbe cucito addosso.
  */
-function migliorQuota(carta: Carta, modi: readonly ModoDiUnTag[]): number {
+function miglioreDeiModi(
+  carta: Carta,
+  modi: readonly ModoDiUnTag[],
+): { quota: number; tag: Tag | null } {
   const testo = carta.testo.toLowerCase();
   let migliore = 0;
+  let vincitore: Tag | null = null;
   for (const modo of modi) {
     if (!carta.tag.includes(modo.tag)) continue;
     const condizionato = modo.condizioni.some((frase) => testo.includes(frase));
-    migliore = Math.max(migliore, condizionato ? modo.quota : 1);
+    const quota = condizionato ? modo.quota : 1;
+    // Stretto, non `>=`: a parità di quota vince il modo dichiarato prima nella
+    // tabella, e non quello che sulla carta capita di trovarsi scritto dopo.
+    // Così la scelta si legge in `taratura.ts` invece di dipendere dall'ordine
+    // in cui i tag sono stati appiccicati alla carta.
+    if (quota > migliore) {
+      migliore = quota;
+      vincitore = modo.tag;
+    }
   }
-  return migliore;
+  return { quota: migliore, tag: vincitore };
 }
 
 function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
@@ -636,8 +661,8 @@ function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
       (carta.valoreDiMana + COSTO_DI_BASE_DI_UNA_CARTA)
     : 0;
   const corpo = fraZeroEUno(efficienza / EFFICIENZA_ATTESA);
-  const risposta = migliorQuota(carta, MODI_DI_RISPONDERE);
-  const vantaggio = migliorQuota(carta, MODI_DI_VANTAGGIO);
+  const risposta = miglioreDeiModi(carta, MODI_DI_RISPONDERE).quota;
+  const vantaggio = miglioreDeiModi(carta, MODI_DI_VANTAGGIO);
 
   return {
     nome: carta.nome,
@@ -646,7 +671,8 @@ function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
     efficienza,
     corpo,
     risposta,
-    vantaggio,
+    vantaggio: vantaggio.quota,
+    modoDelVantaggio: vantaggio.tag,
     // I tre mestieri si sommano **pesati**, e nessuno dei tre da solo arriva al
     // tetto: una creatura che pesca entrando dev'essere meglio della stessa
     // creatura e basta anche quando il corpo è già ottimo. Con la somma nuda,
@@ -656,7 +682,7 @@ function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
     valore: fraZeroEUno(
       VALORE_DEL_CORPO * corpo +
         VALORE_DELLA_RISPOSTA * risposta +
-        VALORE_DEL_VANTAGGIO_CARTE * vantaggio,
+        VALORE_DEL_VANTAGGIO_CARTE * vantaggio.quota,
     ),
   };
 }
@@ -708,7 +734,11 @@ function qualita(nonTerre: readonly CopieDiCarta[]): Componente<GrezziDiQualita>
       // vede in mano, non «una risposta» perché il nome è uno solo.
       risposteIncondizionate: copieDove((riga) => riga.risposta === 1),
       risposteCondizionali: copieDove((riga) => riga.risposta > 0 && riga.risposta < 1),
-      carteDiVantaggio: copieDove((riga) => riga.vantaggio > 0),
+      // Le due conte **separate**, e non una sola per i due modi: sotto due
+      // frasi diverse un conto unito direbbe a chi spazza quante copie pescano
+      // (ticket 78).
+      carteChePescano: copieDove((riga) => riga.modoDelVantaggio === "pesca"),
+      carteCheSpazzano: copieDove((riga) => riga.modoDelVantaggio === "spazza-via"),
     },
   };
 }

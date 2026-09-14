@@ -206,9 +206,16 @@ export type GrezziDelRuolo =
       copieCheLoFanno: number;
       copieNonTerra: number;
     }
-  /** Rimette carte in mano. */
+  /** Guadagna carte: rimettendole in mano, oppure spazzando il campo. */
   | {
       ruolo: "vantaggio";
+      /**
+       * Quale dei due modi il punteggio le ha pesato. Non è un dettaglio del
+       * numero: chi spazza non rimette in mano niente, e raccontarlo con la
+       * frase della pesca è una frase falsa (ticket 78).
+       */
+      modo: "pesca" | "spazza-via";
+      /** Le copie che fanno **quel** modo, non i due modi insieme. */
       copieCheLoFanno: number;
       copieNonTerra: number;
     }
@@ -255,7 +262,14 @@ function fraseDelRuolo(grezzi: GrezziDelRuolo): string {
         ? `Risponde a una carta avversaria e può prendere quello che vuole: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che rispondono senza condizioni, sulle ${grezzi.copieNonTerra} che non sono terre.`
         : `Risponde a una carta avversaria, ma solo se ha le caratteristiche giuste: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che rispondono anche loro a certe carte sole, sulle ${grezzi.copieNonTerra} che non sono terre.`;
     case "vantaggio":
-      return `Ti rimette carte in mano, e chi ha più carte ha più scelte: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che lo fanno, sulle ${grezzi.copieNonTerra} che non sono terre.`;
+      // Due frasi e non una vaga che le copra tutt'e due: il vantaggio in carte
+      // si guadagna in due modi (ticket 73) che al tavolo non si somigliano.
+      // Quella dello spazzino tace **di chi** sono le creature che prende,
+      // perché lo spazzino è simmetrico — Wrath of God prende anche le tue, e
+      // il danno a tutto il campo tocca anche te.
+      return grezzi.modo === "pesca"
+        ? `Ti rimette carte in mano, e chi ha più carte ha più scelte: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che lo fanno, sulle ${grezzi.copieNonTerra} che non sono terre.`
+        : `Spazza il campo, e una carta sola può prenderne più d'una: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che spazzano anche loro, sulle ${grezzi.copieNonTerra} che non sono terre.`;
     case "corpo":
       return `Per ${grezzi.valoreDiMana} mana mette in campo un ${grezzi.forza ?? "?"}/${grezzi.costituzione ?? "?"}: quanto corpo rende per il mana che costa vale ${decimale(grezzi.efficienza)}, contro una media di ${decimale(grezzi.efficienzaMedia)} fra le creature del mazzo.`;
     case "posto":

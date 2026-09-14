@@ -121,6 +121,38 @@ describe("perché la carta è nel mazzo", () => {
     expect(frase).toContain("fuori tema");
   });
 
+  it("la carta che pesca rimette carte in mano, quella che spazza no", () => {
+    // Wrath of God non rimette in mano niente: spazza il campo. Dirgli la
+    // frase della pesca era il difetto del ticket 78, e le due frasi si
+    // scelgono sul modo che il punteggio ha pesato.
+    const pesca = frasePerLaPresenza({
+      ...base,
+      ruolo: { ruolo: "vantaggio", modo: "pesca", copieCheLoFanno: 16, copieNonTerra: 38 },
+    });
+    const spazza = frasePerLaPresenza({
+      ...base,
+      ruolo: { ruolo: "vantaggio", modo: "spazza-via", copieCheLoFanno: 5, copieNonTerra: 38 },
+    });
+
+    expect(pesca).toContain("in mano");
+    expect(pesca).toContain("16 copie");
+    expect(spazza).not.toContain("in mano");
+    expect(spazza).toContain("5 copie");
+  });
+
+  it("la frase dello spazzino non dice di chi sono le creature che prende", () => {
+    // Lo spazzino è simmetrico: prende anche le tue creature, e il danno a
+    // tutto il campo tocca anche te. «Gli togli dal tavolo» sarebbe falso.
+    const spazza = frasePerLaPresenza({
+      ...base,
+      ruolo: { ruolo: "vantaggio", modo: "spazza-via", copieCheLoFanno: 5, copieNonTerra: 38 },
+    });
+
+    for (const possessivo of ["gli ", "avversar", " suo", " sue", " tuo", "loro creature"]) {
+      expect(spazza.toLowerCase(), possessivo).not.toContain(possessivo);
+    }
+  });
+
   it("dice la risposta, e distingue quella che colpisce sempre", () => {
     const sempre = frasePerLaPresenza({
       ...base,
@@ -139,7 +171,7 @@ describe("perché la carta è nel mazzo", () => {
     expect(
       frasePerLaPresenza({
         ...base,
-        ruolo: { ruolo: "vantaggio", copieCheLoFanno: 5, copieNonTerra: 38 },
+        ruolo: { ruolo: "vantaggio", modo: "pesca", copieCheLoFanno: 5, copieNonTerra: 38 },
       }),
     ).toContain("5 copie");
     expect(

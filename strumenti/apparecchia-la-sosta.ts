@@ -252,7 +252,7 @@ function componenti(mazzo: MazzoCostruito): string[] {
     ...(s.perCoppiaDiTag.length > 0
       ? [`  - da: ${s.perCoppiaDiTag.map((c) => `${c.uno}+${c.altro} (${c.coppie})`).join(" · ")}`]
       : []),
-    `- **qualità ${conDecimali(p.qualita.valore, 3)}** — efficienza media delle creature ${conDecimali(q.efficienzaMedia, 3)}; risposte ${q.risposteIncondizionate} incondizionate e ${q.risposteCondizionali} condizionali; ${q.carteDiVantaggio} copie di vantaggio in carte`,
+    `- **qualità ${conDecimali(p.qualita.valore, 3)}** — efficienza media delle creature ${conDecimali(q.efficienzaMedia, 3)}; risposte ${q.risposteIncondizionate} incondizionate e ${q.risposteCondizionali} condizionali; ${q.carteChePescano} copie che pescano e ${q.carteCheSpazzano} che spazzano il campo`,
   ];
 }
 

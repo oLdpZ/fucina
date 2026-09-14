@@ -154,6 +154,10 @@ function spiegaCarta(
   // far cadere l'app: una spiegazione più povera è meglio di una schermata rotta.
   const turno = probabilita?.turno ?? Math.max(1, carta.valoreDiMana);
 
+  // Il modo del vantaggio sceglie la frase **e** il conto che le sta accanto: i
+  // due modi si raccontano diversi e si contano a parte (ticket 78).
+  const spazzaVia = riga?.modoDelVantaggio === "spazza-via";
+
   const ruolo: GrezziDelRuolo =
     riga !== undefined && riga.risposta > 0
       ? {
@@ -166,7 +170,8 @@ function spiegaCarta(
       : riga !== undefined && riga.vantaggio > 0
         ? {
             ruolo: "vantaggio",
-            copieCheLoFanno: qualita.carteDiVantaggio,
+            modo: spazzaVia ? "spazza-via" : "pesca",
+            copieCheLoFanno: spazzaVia ? qualita.carteCheSpazzano : qualita.carteChePescano,
             copieNonTerra: mazzo.base.copieNonTerra,
           }
         : riga !== undefined && riga.creatura
