@@ -185,13 +185,17 @@ export function sottotipiDiCreatura(carte: readonly Carta[]): VoceSottotipo[] {
  * Un pool vuoto non dà zero. Zero come tetto chiuderebbe il campo del costo, e
  * un campo chiuso è peggio di un campo largo: mentre le carte non sono ancora
  * arrivate è meglio non restringere affatto che restringere a niente.
+ *
+ * Ma è la lista **vuota** a non sapere, non il massimo a zero: carte che ci sono
+ * e costano tutte zero — sole terre — dicono zero, ed è la risposta vera.
  */
 export function costoPiuAlto(carte: readonly Carta[]): number {
+  if (carte.length === 0) return COSTO_SENZA_POOL;
   let massimo = 0;
   for (const carta of carte) {
     if (carta.valoreDiMana > massimo) massimo = carta.valoreDiMana;
   }
-  return massimo === 0 ? COSTO_SENZA_POOL : massimo;
+  return massimo;
 }
 
 /**

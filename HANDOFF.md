@@ -347,6 +347,10 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   no. Un mazzo costruito attorno a una di quelle è esattamente il mazzo fuori
   meta per cui l'app esiste, e fermarlo a quattro sarebbe stato un errore
   dell'app, non una regola del gioco.
+  *Superato:* il tetto si legge ancora dal testo, ma l'app di una carta così ne
+  mette quattro — trentatré copie della stessa carta sono un mazzo legale che
+  non è un mazzo (`copieAlMassimo` in `src/mazzo/copie.ts`). Dal ticket 29 di
+  `old-school-italiano` vale anche per gli scambi della ricerca.
 - La manopola delle terre è **limitata fra 16 e 30**, e il limite non è estetico:
   il conto delle probabilità è esatto, e il suo costo cresce in fretta. A 44
   terre su un mazzo a cinque colori si arriva a quasi un secondo per tocco, su

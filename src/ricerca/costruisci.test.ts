@@ -256,11 +256,14 @@ describe("la legalità, che è un dato della carta e non un controllo a valle", 
     for (const voce of dove) expect(voce.copie).toBe(1);
   });
 
-  it("una carta col permesso nel testo supera le quattro copie", () => {
+  it("una carta col permesso nel testo non supera le quattro copie, nemmeno per scambio", () => {
     // «A deck can have any number of cards named …»: il permesso è scritto sulla
-    // carta, il pool lo legge una volta sola, e il motore ne legge il tetto come
-    // di tutte le altre. Il tema qui è il sottotipo che quella carta ha da sola,
-    // così la ricerca non ha altro da metterci.
+    // carta e il formato lo concede, ma l'app ne mette quattro — è quel che
+    // `copieAlMassimo` promette a chi conta la capienza, a chi riempie e a chi
+    // lo racconta. Lo scambio leggeva il tetto nudo, e ogni scambio accettato ne
+    // aggiungeva una senza che niente la ritirasse. Il tema qui è il sottotipo
+    // che quella carta ha da sola, così la ricerca ha tutte le ragioni di
+    // volerne di più.
     const illimitata = POOL_DEL_MOTORE.find((carta) => carta.tettoDiCopie === null);
     expect(illimitata).toBeDefined();
 
@@ -272,7 +275,10 @@ describe("la legalità, che è un dato della carta e non un controllo a valle", 
     const copie = tutteLeVoci(frontiera)
       .filter((voce) => voce.carta.nome === illimitata!.nome)
       .map((voce) => voce.copie);
-    expect(Math.max(...copie)).toBeGreaterThan(COPIE_MASSIME);
+    // Che ci sia è metà del test: se la ricerca la lasciasse fuori, il tetto
+    // passerebbe per vuoto.
+    expect(copie.length).toBeGreaterThan(0);
+    expect(Math.max(...copie)).toBe(COPIE_MASSIME);
   });
 
   it("il motore non sa quali carte siano limitate: cambia il dato, cambia il mazzo", () => {

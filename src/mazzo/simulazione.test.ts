@@ -360,4 +360,20 @@ describe("le terre che non fanno mana", () => {
 
     expect(esito.quotaManiTenibili).toBe(0);
   });
+
+  it("entrare girate non le fa passare davanti a una terra che fa mana", () => {
+    // A una terra che non produce niente entrare girata non costa nulla: il
+    // mana che ritarda non c'è. Il voto con cui si sceglie la terra deve quindi
+    // guardare prima se fa mana, e solo fra quelle se entra girata — se no una
+    // terra inerte girata si cala al posto di una Montagna, e si perde un mana
+    // che una terra inerte dritta non avrebbe fatto perdere. La stessa partita,
+    // con le inerti girate o dritte, deve andare allo stesso modo.
+    const conInerti = (entraGirata: boolean): CopieDiCarta[] => [
+      { carta: MONTAGNA, copie: 20 },
+      { carta: terra("Passaggio Inerte", [], entraGirata), copie: 16 },
+      { carta: magia({ nome: "Tre", costoDiMana: "{2}{R}", valoreDiMana: 3, forza: 3 }), copie: 24 },
+    ];
+
+    expect(simula(conInerti(true), 300)).toEqual(simula(conInerti(false), 300));
+  });
 });

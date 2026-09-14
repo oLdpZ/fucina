@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { POOL_FINTO } from "./pool-finto.js";
+import { POOL_FINTO, TERRE_FINTE } from "./pool-finto.js";
 import { costoPiuAlto, sottotipiDiCreatura, tipiPresenti, tipoPrincipale } from "./vocabolario.js";
 
 /**
@@ -83,5 +83,12 @@ describe("il costo più alto che ha senso chiedere", () => {
     // Zero come tetto chiuderebbe il campo: meglio non restringere affatto che
     // restringere a niente per un pool che non è ancora arrivato.
     expect(costoPiuAlto([])).toBeGreaterThan(0);
+  });
+
+  it("carte che costano tutte zero fanno un limite di zero", () => {
+    // «Il pool non c'è ancora» e «queste carte non costano niente» sono due
+    // risposte diverse. Una lista di sole terre c'è, e il costo più alto che ci
+    // si trova è zero: il segnaposto è per la lista vuota, non per il numero.
+    expect(costoPiuAlto(TERRE_FINTE)).toBe(0);
   });
 });

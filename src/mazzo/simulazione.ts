@@ -29,7 +29,8 @@
  *   `TERRE_MASSIME_IN_MANO`; dopo `MULLIGAN_MASSIMI` si tiene comunque.
  * - **Una terra per turno**, scelta guardando un turno avanti: si prova ogni
  *   terra della mano e si tiene quella che fa lanciare di più **oggi**. A parità
- *   si preferisce mettere giù quella che entra girata, per toglierla di mezzo.
+ *   si preferisce quella che fa mana, e fra quelle che lo fanno quella che
+ *   entra girata, per toglierla di mezzo.
  * - **Una terra che entra girata non produce mana il turno in cui la si gioca.**
  *   Vale anche per le terre che entrano girate **solo a certe condizioni**: qui
  *   contano come girate sempre. È la stessa lettura pessimistica di
@@ -435,16 +436,19 @@ function scegliLaTerra(
       forza += restoDellaMano[indice]!.forza;
     }
     const utili = scheda.terra.produce.filter((colore) => coloriChiesti.has(colore)).length;
-    // A parità di quel che si lancia oggi si mette giù la terra che entra
-    // girata: costa un turno, e costa meno adesso che dopo. E, sempre a parità,
-    // una terra che **fa mana** prima di una che non ne fa: al primo turno non
-    // si lancia niente comunque, e chi cala lì la terra di utilità si toglie un
-    // mana per tutta la partita.
+    // A parità di quel che si lancia oggi si mette giù una terra che **fa
+    // mana** prima di una che non ne fa: al primo turno non si lancia niente
+    // comunque, e chi cala lì la terra di utilità si toglie un mana per tutta
+    // la partita. Fra due terre che fanno mana, quella che entra girata: costa
+    // un turno, e costa meno adesso che dopo. L'ordine è questo e non l'altro:
+    // a una terra che non produce niente entrare girata non costa nulla, e
+    // messo prima farebbe calare una terra inerte girata al posto di una che
+    // il mana lo fa.
     const voto = [
       mana,
       forza,
-      scheda.terra.girata ? 1 : 0,
       scheda.terra.produce.length > 0 ? 1 : 0,
+      scheda.terra.girata ? 1 : 0,
       utili,
     ];
 

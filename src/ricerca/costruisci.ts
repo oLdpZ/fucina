@@ -497,6 +497,10 @@ function prezzoDellaSelezione(selezione: Selezione): number {
  * affatto, e chi chiama deve poterla dire invece di arrotondare.
  */
 function mazzoPiuEconomico(carte: readonly Carta[]): number | null {
+  // Qui il tetto è quello nudo, `copieMassime`, e non le quattro copie di chi
+  // costruisce: fra queste carte ci sono le terre base, e sessanta posti li
+  // riempiono davvero. Il pavimento è quel che il formato permette, non quel
+  // che il motore mette.
   const prezzi = carte
     .map((carta) => ({ euro: prezzoDiUnaCopia(carta) ?? 0, copie: copieMassime(carta) }))
     .sort((a, b) => a.euro - b.euro);
@@ -1643,10 +1647,10 @@ function scambi(
     if (obbligate.has(fuori)) continue;
     for (const dentro of candidati) {
       if (dentro.nome === fuori) continue;
-      // E non ci **entra** nemmeno: al massimo delle copie ci è già, e le
-      // poche carte che se ne concedono infinite potrebbero altrimenti
-      // salirci sopra senza che niente le rimetta giù — `adatta` non le
-      // tocca — fino a sfondare i sessanta.
+      // E non ci **entra** nemmeno: al massimo delle copie ci è già, e
+      // `conLoScambio` rifiuterebbe comunque una copia in più. Saltarlo qui
+      // risparmia la prova, e tiene il pezzo fuori dagli scambi da tutti e due
+      // i lati.
       if (obbligate.has(dentro.nome)) continue;
       tutti.push({ fuori, dentro });
     }
@@ -1665,7 +1669,10 @@ function scambi(
 /**
  * Il mazzo con una copia in meno di una carta e una in più di un'altra, oppure
  * `null` se lo scambio non si può fare — la carta che entra è già al suo tetto
- * di copie, e quel tetto lo dice la carta, non il codice (`mazzo/copie.ts`).
+ * di copie, e quel tetto lo dice la carta, non il codice (`mazzo/copie.ts`). È
+ * `copieAlMassimo`, lo stesso di chi conta la capienza e di chi riempie: col
+ * tetto nudo una carta che si concede copie illimitate saliva di una a ogni
+ * scambio, oltre le quattro su cui la capienza era stata contata.
  *
  * Col tetto di spesa acceso c'è una seconda ragione per dire di no: lo scambio
  * peggiorerebbe la spesa. Che cosa vuol dire, e perché non è «resta sotto»
@@ -1682,7 +1689,7 @@ function conLoScambio(
   if (esce === undefined) return null;
 
   const gia = selezione.get(scambio.dentro.nome)?.copie ?? 0;
-  if (gia + 1 > copieMassime(scambio.dentro)) return null;
+  if (gia + 1 > copieAlMassimo(scambio.dentro)) return null;
 
   if (portafoglio !== null) {
     const attuale = prezzoDellaSelezione(selezione);
