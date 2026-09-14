@@ -50,6 +50,7 @@ const FORMATO: Formato = {
       daConfermare: null,
     },
   ],
+  edizioniEscluse: [],
   limitate: { perché: "Troppo forti.", daConfermare: null, carte: [] },
   bandite: { perché: "Si giocano per la posta.", daConfermare: null, carte: [] },
 };

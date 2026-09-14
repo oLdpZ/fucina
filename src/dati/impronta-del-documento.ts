@@ -50,6 +50,7 @@ import { somma } from "../somma.js";
 import type {
   Criterio,
   Edizione,
+  EdizioneEsclusa,
   ElencoDiCarte,
   Formato,
   VoceDiCarta,
@@ -84,6 +85,11 @@ export const SPARTIZIONE = {
       "aggiornatoIl",
       "fonte",
       "regolamentoDiRiferimento",
+      // Le escluse non fanno il pool per definizione: sono le edizioni che non
+      // ci sono. Aggiungerne una, o correggerne il perché, non toglie una carta
+      // dal pool — toglierla dalle **ammesse** sì, e quello lo vede già
+      // `edizioni`.
+      "edizioniEscluse",
     ],
   } satisfies Spartizione<Formato>,
 
@@ -98,6 +104,15 @@ export const SPARTIZIONE = {
     fanno: ["codice", "lingue"],
     nonFanno: ["nome", "perché", "daConfermare"],
   } satisfies Spartizione<Edizione>,
+
+  /**
+   * Un'edizione esclusa: niente di suo fa il pool, e il giorno che qualcosa lo
+   * facesse questa riga è dove si dice.
+   */
+  edizioneEsclusa: {
+    fanno: [],
+    nonFanno: ["codice", "nome", "perché", "daConfermare"],
+  } satisfies Spartizione<EdizioneEsclusa>,
 
   /** Un elenco di carte — le limitate, le bandite. */
   elenco: {

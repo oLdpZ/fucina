@@ -44,6 +44,14 @@ const COMPLETO = {
       daConfermare: null,
     },
   ],
+  edizioniEscluse: [
+    {
+      codice: "zzz",
+      nome: "Edizione di prova esclusa",
+      perché: "Il gruppo l'ha guardata e ha detto di no.",
+      daConfermare: null,
+    },
+  ],
   limitate: {
     perché: "Sono le carte che il gruppo trova troppo forti.",
     daConfermare: null,
@@ -122,6 +130,71 @@ describe("lettura del documento di formato", () => {
         edizioni: [COMPLETO.edizioni[0], { ...COMPLETO.edizioni[0], codice: " AAA " }],
       }),
     ).toThrow(/aaa/);
+  });
+
+  it("legge le edizioni escluse come legge le ammesse", () => {
+    // Un'edizione fuori dal formato è un dato come gli altri: chi la legge
+    // vuole sapere quale fosse e perché è rimasta fuori, senza scavare in git.
+    const formato = interpretaFormato(COMPLETO);
+
+    expect(formato.edizioniEscluse).toHaveLength(1);
+    expect(formato.edizioniEscluse[0]?.codice).toBe("zzz");
+    expect(formato.edizioniEscluse[0]?.nome).toBe("Edizione di prova esclusa");
+    expect(formato.edizioniEscluse[0]?.perché).not.toBe("");
+  });
+
+  it("legge un documento che non esclude nessuna edizione", () => {
+    // Un formato che non ha niente da escludere non deve scrivere un elenco
+    // vuoto per dirlo: l'assenza qui non nasconde nessuna regola.
+    expect(interpretaFormato(senza("edizioniEscluse")).edizioniEscluse).toEqual([]);
+  });
+
+  it("non accetta un'edizione esclusa senza il proprio perché", () => {
+    // Vale quel che vale per le ammesse: una riga senza ragione, fra un anno,
+    // nessuno sa se si può togliere — e questo elenco esiste solo per la
+    // ragione, perché il pool non lo guarda affatto.
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioniEscluse: [{ codice: "zzz", nome: "Edizione di prova esclusa" }],
+      }),
+    ).toThrow(/perché/);
+  });
+
+  it("non accetta la stessa edizione ammessa ed esclusa insieme", () => {
+    // È la svista di chi decide di togliere un'edizione, scrive la riga fra le
+    // escluse e dimentica di cancellarla dalle ammesse: senza questo controllo
+    // il pool uscirebbe con dentro tutta l'edizione mentre il documento, a
+    // leggerlo, dice il contrario.
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioniEscluse: [{ ...COMPLETO.edizioniEscluse[0], codice: "aaa" }],
+      }),
+    ).toThrow(/aaa/);
+
+    // Lo spazio e la maiuscola non fanno due edizioni, qui come fra le ammesse.
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioniEscluse: [{ ...COMPLETO.edizioniEscluse[0], codice: " AAA " }],
+      }),
+    ).toThrow(/aaa/);
+  });
+
+  it("non accetta la stessa edizione esclusa due volte", () => {
+    // È la stessa mano che incolla una riga e non cancella l'originale: qui non
+    // cambia nessun pool, ma lascia due ragioni possibilmente diverse per lo
+    // stesso no, e chi rilegge non sa quale sia quella vera.
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        edizioniEscluse: [
+          COMPLETO.edizioniEscluse[0],
+          { ...COMPLETO.edizioniEscluse[0], codice: " ZZZ ", perché: "Detto in un altro modo." },
+        ],
+      }),
+    ).toThrow(/zzz/);
   });
 
   it("non accetta un'edizione che non dichiara le proprie lingue ammesse", () => {
@@ -226,6 +299,21 @@ describe("lettura del documento di formato", () => {
     };
 
     expect(() => interpretaFormato({ ...COMPLETO, limitate })).toThrow(/perché/);
+  });
+
+  it("non accetta un elenco senza il proprio perché", () => {
+    // Il perché dell'elenco intero dice perché l'elenco è fatto di nomi e non
+    // di una regola: è l'unico campo che spiega la decisione di ADR-0004, e
+    // finché si poteva omettere era anche l'unico che nessuno pretendeva.
+    const { perché: _, ...senzaPerché } = COMPLETO.bandite;
+
+    expect(() => interpretaFormato({ ...COMPLETO, bandite: senzaPerché })).toThrow(/perché/);
+  });
+
+  it("dice quale dei due elenchi non dice il proprio perché", () => {
+    const { perché: _, ...senzaPerché } = COMPLETO.limitate;
+
+    expect(() => interpretaFormato({ ...COMPLETO, limitate: senzaPerché })).toThrow(/limitate/);
   });
 
   it("non accetta una carta senza nome", () => {

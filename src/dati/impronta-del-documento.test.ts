@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Edizione, Formato } from "./formato.js";
+import type { Edizione, EdizioneEsclusa, Formato } from "./formato.js";
 import {
   improntaDelDocumento,
   SPARTIZIONE,
@@ -48,6 +48,14 @@ const FORMATO: Formato = {
       nome: "Seconda edizione",
       perché: "È l'era.",
       lingue: ["it"],
+      daConfermare: null,
+    },
+  ],
+  edizioniEscluse: [
+    {
+      codice: "zzz",
+      nome: "Edizione di prova esclusa",
+      perché: "Guardata, e lasciata fuori.",
       daConfermare: null,
     },
   ],
@@ -150,6 +158,20 @@ describe("l'impronta del documento non cambia", () => {
     expect(improntaDelDocumento(altro)).toBe(improntaDelDocumento(FORMATO));
   });
 
+  it("quando si guarda un'edizione e la si lascia fuori", () => {
+    // L'elenco delle escluse è memoria, non regola: dice che cosa si è deciso
+    // di non giocare, e il pool è già quel che è senza di lui. Se cambiasse
+    // l'impronta, scrivere il perché di un no costringerebbe a rigenerare
+    // quattrocento megabyte di archivio.
+    const altro = con({
+      edizioniEscluse: [
+        ...FORMATO.edizioniEscluse,
+        { codice: "yyy", nome: "Un'altra esclusa", perché: "Anche questa no.", daConfermare: null },
+      ],
+    });
+    expect(improntaDelDocumento(altro)).toBe(improntaDelDocumento(FORMATO));
+  });
+
   it("quando si riordinano le edizioni, che il pool guarda per codice", () => {
     const rimescolato = con({ edizioni: [...FORMATO.edizioni].reverse() });
     expect(improntaDelDocumento(rimescolato)).toBe(improntaDelDocumento(FORMATO));
@@ -187,6 +209,16 @@ describe("ogni voce del documento è classificata", () => {
     documento: FORMATO,
     criterio: FORMATO.criterio,
     edizione: FORMATO.edizioni[0]!,
+    // Scritto qui e non pescato dal documento di prova: l'elenco delle escluse
+    // può legittimamente essere vuoto, e il giorno che qualcuno lo svuotasse
+    // questa guardia cadrebbe con un errore che parla d'altro invece di dire
+    // quale voce nessuno ha classificato.
+    edizioneEsclusa: {
+      codice: "zzz",
+      nome: "Edizione di prova esclusa",
+      perché: "Guardata, e lasciata fuori.",
+      daConfermare: null,
+    } satisfies EdizioneEsclusa,
     elenco: FORMATO.limitate,
     voce: FORMATO.limitate.carte[0]!,
   };

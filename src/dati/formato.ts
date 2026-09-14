@@ -50,7 +50,9 @@ export type VoceDiCarta = {
  *
  * Il `perché` è dell'**elenco intero** e non della singola riga: dice perché
  * l'elenco è fatto di nomi e non di una regola, che è la decisione di ADR-0004
- * e la prima cosa che qualcuno vorrà disfare.
+ * e la prima cosa che qualcuno vorrà disfare. È obbligatorio come quello della
+ * singola carta, e per la stessa ragione detta più in grande: è l'unico campo
+ * del documento che quella decisione la spiega.
  */
 export type ElencoDiCarte = {
   perché: string;
@@ -84,6 +86,26 @@ export type Edizione = {
    * dello stesso gioco.
    */
   lingue: string[];
+  daConfermare: string | null;
+};
+
+/**
+ * Un'edizione che il formato **non** ammette, e la ragione per cui è rimasta
+ * fuori.
+ *
+ * Il documento porta anche i no, e non solo i sì. Una proposta scartata che
+ * vive soltanto in `git log` è una proposta che fra un anno qualcuno rifà da
+ * capo senza sapere che era già stata guardata: qui la ragione si rilegge dove
+ * si legge tutto il resto.
+ *
+ * Non ha `lingue`, al contrario dell'edizione ammessa: le lingue dicono quali
+ * copie si portano al tavolo, e di un'edizione che non si gioca non se ne porta
+ * nessuna.
+ */
+export type EdizioneEsclusa = {
+  codice: string;
+  nome: string;
+  perché: string;
   daConfermare: string | null;
 };
 
@@ -132,6 +154,15 @@ export type Formato = {
   regolamentoDiRiferimento: string;
   criterio: Criterio;
   edizioni: Edizione[];
+  /**
+   * Le edizioni guardate e lasciate fuori.
+   *
+   * Vuoto è legittimo — un formato può non aver scartato niente — ma
+   * un'edizione non può stare insieme qui e fra le ammesse: sarebbe il
+   * documento che dice due cose opposte, e quale valga la deciderebbe il
+   * codice invece di chi l'ha scritto.
+   */
+  edizioniEscluse: EdizioneEsclusa[];
   limitate: ElencoDiCarte;
   bandite: ElencoDiCarte;
 };

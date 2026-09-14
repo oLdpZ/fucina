@@ -27,6 +27,7 @@ import type {
   Criterio,
   DaConfermare,
   Edizione,
+  EdizioneEsclusa,
   ElencoDiCarte,
   Formato,
   VoceDiCarta,
@@ -80,7 +81,11 @@ export function interpretaFormato(dati: unknown): Formato {
   }
 
   const edizioni = leggiEdizioni(grezzo["edizioni"]);
-  controllaEdizioniRipetute(edizioni);
+  controllaEdizioniRipetute(edizioni, "ammette");
+
+  const edizioniEscluse = leggiEdizioniEscluse(grezzo["edizioniEscluse"]);
+  controllaEdizioniRipetute(edizioniEscluse, "esclude");
+  controllaEdizioniContraddette(edizioni, edizioniEscluse);
 
   const limitate = leggiElenco(grezzo["limitate"], "limitate");
   const bandite = leggiElenco(grezzo["bandite"], "bandite");
@@ -97,6 +102,7 @@ export function interpretaFormato(dati: unknown): Formato {
     regolamentoDiRiferimento: testo(grezzo["regolamentoDiRiferimento"]) ?? "",
     criterio: leggiCriterio(grezzo["criterio"]),
     edizioni,
+    edizioniEscluse,
     limitate,
     bandite,
   };
@@ -128,21 +134,28 @@ function controllaNomiRipetuti(limitate: ElencoDiCarte, bandite: ElencoDiCarte):
 }
 
 /**
- * La stessa edizione nominata due volte.
+ * La stessa edizione nominata due volte nello stesso elenco.
  *
- * Nell'impronta del formato sarebbe innocua — si deduplica — ma da quando
- * l'edizione porta le proprie `lingue` è una **contraddizione**: due righe
- * dicono quali copie sono legali, e quale delle due valga lo deciderebbe
- * l'ordine in cui il codice legge il file. È l'errore che fa una mano che
- * incolla una riga e dimentica di cancellare l'originale, e senza questo
- * controllo cambierebbe in silenzio la stampa che descrive ogni carta di
- * quell'edizione.
+ * Fra le **ammesse** nell'impronta del formato sarebbe innocua — si deduplica —
+ * ma da quando l'edizione porta le proprie `lingue` è una **contraddizione**:
+ * due righe dicono quali copie sono legali, e quale delle due valga lo
+ * deciderebbe l'ordine in cui il codice legge il file. Senza questo controllo
+ * cambierebbe in silenzio la stampa che descrive ogni carta di quell'edizione.
  *
- * Il confronto è sul codice ripulito, come lo ripuliscono l'impronta e la
- * preparazione: due righe che differiscono per uno spazio non sono due
- * edizioni.
+ * Fra le **escluse** non cambia nessun pool, e si rifiuta lo stesso: le due
+ * righe portano due ragioni, che possono dire cose diverse dello stesso no, e
+ * chi rilegge il documento fra un anno non sa quale sia quella vera. Quell'unica
+ * ragione è tutto il contenuto della riga.
+ *
+ * È l'errore che fa una mano che incolla una riga e dimentica di cancellare
+ * l'originale, e lo fa da tutte e due le parti. Il confronto è sul codice
+ * ripulito, come lo ripuliscono l'impronta e la preparazione: due righe che
+ * differiscono per uno spazio non sono due edizioni.
  */
-function controllaEdizioniRipetute(edizioni: Edizione[]): void {
+function controllaEdizioniRipetute(
+  edizioni: readonly { codice: string }[],
+  verbo: "ammette" | "esclude",
+): void {
   const viste = new Set<string>();
   const ripetute = new Set<string>();
 
@@ -154,7 +167,38 @@ function controllaEdizioniRipetute(edizioni: Edizione[]): void {
 
   if (ripetute.size > 0) {
     throw new Error(
-      `Il documento di formato ammette più di una volta l'edizione: ${[...ripetute].join(", ")}.`,
+      `Il documento di formato ${verbo} più di una volta l'edizione: ${[...ripetute].join(", ")}.`,
+    );
+  }
+}
+
+/**
+ * La stessa edizione ammessa ed esclusa insieme.
+ *
+ * `controllaEdizioniRipetute` prende la riga incollata due volte fra le
+ * ammesse; questa prende la svista che le somiglia e che costa di più: chi
+ * decide di togliere un'edizione scrive la riga fra le escluse e dimentica di
+ * cancellarla dalle ammesse. Senza controllo il pool uscirebbe con dentro tutta
+ * l'edizione mentre il documento, a leggerlo, dice il contrario — e il
+ * documento è quel che una persona rilegge, il pool no.
+ *
+ * Il confronto è sul codice ripulito, come lo fa il controllo delle ripetute:
+ * due righe che differiscono per uno spazio non sono due edizioni.
+ */
+function controllaEdizioniContraddette(
+  edizioni: Edizione[],
+  escluse: EdizioneEsclusa[],
+): void {
+  const ammesse = new Set(edizioni.map((edizione) => edizione.codice.trim().toLowerCase()));
+  const contraddette = new Set(
+    escluse
+      .map((edizione) => edizione.codice.trim().toLowerCase())
+      .filter((codice) => ammesse.has(codice)),
+  );
+
+  if (contraddette.size > 0) {
+    throw new Error(
+      `Il documento di formato dice insieme ammessa ed esclusa l'edizione: ${[...contraddette].join(", ")}.`,
     );
   }
 }
@@ -192,23 +236,62 @@ function leggiEdizioni(grezzo: unknown): Edizione[] {
   }
 
   return grezzo.map((riga: unknown, indice: number) => {
+    const edizione = leggiEdizione(riga, "ammessa", indice);
     const voce = (riga ?? {}) as Record<string, unknown>;
-    const codice = testo(voce["codice"]);
-    if (codice === null) {
-      throw new Error(`L'edizione numero ${indice + 1} del documento non ha un codice.`);
-    }
-    const perché = testo(voce["perché"]);
-    if (perché === null) {
-      throw new Error(`L'edizione «${codice}» del documento non dice il proprio perché.`);
-    }
-    return {
-      codice,
-      nome: testo(voce["nome"]) ?? codice,
-      perché,
-      lingue: leggiLingue(voce["lingue"], codice),
-      daConfermare: testo(voce["daConfermare"]),
-    };
+    return { ...edizione, lingue: leggiLingue(voce["lingue"], edizione.codice) };
   });
+}
+
+/**
+ * Le edizioni guardate e lasciate fuori.
+ *
+ * L'elenco assente vale «nessuna», e qui l'assenza non nasconde nessuna regola:
+ * un formato che non ha scartato niente non deve scrivere un elenco vuoto per
+ * dirlo. È l'opposto delle `lingue` di un'edizione, dove l'assenza sarebbe una
+ * regola inventata dal codice — qui non c'è niente da inventare, perché il pool
+ * questo elenco non lo guarda affatto.
+ */
+function leggiEdizioniEscluse(grezzo: unknown): EdizioneEsclusa[] {
+  if (grezzo === undefined || grezzo === null) return [];
+
+  if (!Array.isArray(grezzo)) {
+    throw new Error("Le edizioni escluse del documento di formato non sono un elenco.");
+  }
+
+  return grezzo.map((riga: unknown, indice: number) => leggiEdizione(riga, "esclusa", indice));
+}
+
+/**
+ * Quel che un'edizione porta, ammessa o esclusa che sia: quale edizione è, e
+ * perché sta dove sta.
+ *
+ * Il perché è obbligatorio da tutte e due le parti. Fra le ammesse dice perché
+ * il gruppo la gioca; fra le escluse dice che cosa si perde a non giocarla, ed
+ * è tutto quel che quella riga contiene — il pool le escluse non le guarda.
+ */
+function leggiEdizione(
+  grezzo: unknown,
+  quale: "ammessa" | "esclusa",
+  indice: number,
+): EdizioneEsclusa {
+  const voce = (grezzo ?? {}) as Record<string, unknown>;
+
+  const codice = testo(voce["codice"]);
+  if (codice === null) {
+    throw new Error(`L'edizione ${quale} numero ${indice + 1} del documento non ha un codice.`);
+  }
+
+  const perché = testo(voce["perché"]);
+  if (perché === null) {
+    throw new Error(`L'edizione ${quale} «${codice}» del documento non dice il proprio perché.`);
+  }
+
+  return {
+    codice,
+    nome: testo(voce["nome"]) ?? codice,
+    perché,
+    daConfermare: testo(voce["daConfermare"]),
+  };
 }
 
 /**
@@ -243,8 +326,18 @@ function leggiElenco(grezzo: unknown, quale: string): ElencoDiCarte {
     throw new Error(`Il documento di formato non contiene l'elenco delle carte ${quale}.`);
   }
 
+  // Il perché dell'elenco intero è obbligatorio quanto quello della singola
+  // carta, e dice la cosa più grande: perché l'elenco è fatto di nomi e non di
+  // una regola. È la decisione di ADR-0004, ed è l'unico campo del documento
+  // che la spiega — lasciarlo omettere voleva dire lasciarla senza ragioni
+  // scritte proprio nel punto in cui qualcuno vorrà disfarla.
+  const perché = testo(elenco["perché"]);
+  if (perché === null) {
+    throw new Error(`L'elenco delle carte ${quale} non dice il proprio perché.`);
+  }
+
   return {
-    perché: testo(elenco["perché"]) ?? "",
+    perché,
     daConfermare: testo(elenco["daConfermare"]),
     carte: carte.map((riga: unknown, indice: number) => leggiVoce(riga, quale, indice)),
   };
@@ -346,6 +439,9 @@ export function vociDaConfermare(formato: Formato): DaConfermare[] {
   aggiungi("il criterio del pool", formato.criterio.daConfermare);
   for (const edizione of formato.edizioni) {
     aggiungi(`l'edizione ${edizione.nome}`, edizione.daConfermare);
+  }
+  for (const edizione of formato.edizioniEscluse) {
+    aggiungi(`l'edizione esclusa ${edizione.nome}`, edizione.daConfermare);
   }
   aggiungi("le carte limitate", formato.limitate.daConfermare);
   for (const carta of formato.limitate.carte) {
