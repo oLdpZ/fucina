@@ -17,11 +17,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   carte,
+  ciSonoCopieChe,
   conArticolo,
   fraseConLeTerreScartate,
   copie,
   decimale,
   elenco,
+  esserci,
   frasePerIlGuaioDellaCombo,
   frasePerIlMazzoSolo,
   frasePerLaCorsa,
@@ -86,6 +88,19 @@ describe("come si scrivono i numeri", () => {
     expect(terre(22)).toBe("22 terre");
     expect(elenco(["uno"])).toBe("uno");
     expect(elenco(["uno", "due", "tre"])).toBe("uno, due e tre");
+  });
+
+  it("accorda anche il verbo che sta intorno al numero, non solo il nome", () => {
+    // «Ci sono 1 copia» era il difetto del ticket 79: il nome si accordava e il
+    // verbo no. La regola sta qui, in un posto solo, e i rami la chiamano.
+    expect(esserci(1)).toBe("c'è");
+    expect(esserci(4)).toBe("ci sono");
+    expect(ciSonoCopieChe(1, "spazza", "spazzano anche loro")).toBe(
+      "c'è 1 copia che spazza",
+    );
+    expect(ciSonoCopieChe(3, "spazza", "spazzano anche loro")).toBe(
+      "ci sono 3 copie che spazzano anche loro",
+    );
   });
 });
 
@@ -180,6 +195,51 @@ describe("perché la carta è nel mazzo", () => {
         ruolo: { ruolo: "posto", turno: 3, probabilitaDiMana: 0.72 },
       }),
     ).toContain("72%");
+  });
+
+  it("con una copia sola nessun ramo dice «ci sono 1 copia» né mette il verbo al plurale", () => {
+    // Le limitate del formato entrano in una copia sola, e la frase si legge a
+    // voce alta (ticket 13): «ci sono 1 copia che lo fanno» non regge la prova.
+    const ruoli: GrezziDiPresenza["ruolo"][] = [
+      { ruolo: "risposta", incondizionata: true, copieCheLoFanno: 1, copieNonTerra: 35 },
+      { ruolo: "risposta", incondizionata: false, copieCheLoFanno: 1, copieNonTerra: 35 },
+      { ruolo: "vantaggio", modo: "pesca", copieCheLoFanno: 1, copieNonTerra: 35 },
+      { ruolo: "vantaggio", modo: "spazza-via", copieCheLoFanno: 1, copieNonTerra: 35 },
+    ];
+
+    for (const ruolo of ruoli) {
+      const frase = frasePerLaPresenza({ ...base, copie: 1, ruolo });
+      expect(frase, JSON.stringify(ruolo)).toContain("c'è 1 copia");
+      expect(frase, JSON.stringify(ruolo)).not.toContain("ci sono 1 copia");
+      for (const plurale of ["lo fanno", "rispondono", "spazzano", "anche loro"]) {
+        expect(frase, plurale).not.toContain(plurale);
+      }
+    }
+  });
+
+  it("con due o più copie le frasi restano quelle di prima", () => {
+    const ruoli: [GrezziDiPresenza["ruolo"], string][] = [
+      [
+        { ruolo: "risposta", incondizionata: true, copieCheLoFanno: 6, copieNonTerra: 38 },
+        "ci sono 6 copie che rispondono senza condizioni",
+      ],
+      [
+        { ruolo: "risposta", incondizionata: false, copieCheLoFanno: 2, copieNonTerra: 38 },
+        "ci sono 2 copie che rispondono anche loro a certe carte sole",
+      ],
+      [
+        { ruolo: "vantaggio", modo: "pesca", copieCheLoFanno: 16, copieNonTerra: 38 },
+        "ci sono 16 copie che lo fanno",
+      ],
+      [
+        { ruolo: "vantaggio", modo: "spazza-via", copieCheLoFanno: 5, copieNonTerra: 38 },
+        "ci sono 5 copie che spazzano anche loro",
+      ],
+    ];
+
+    for (const [ruolo, atteso] of ruoli) {
+      expect(frasePerLaPresenza({ ...base, ruolo }), atteso).toContain(atteso);
+    }
   });
 });
 
@@ -474,6 +534,18 @@ describe("frasePerLaCombo", () => {
     expect(frase).not.toContain("tutte e");
   });
 
+  it("un pezzo solo in una copia sola non fa dire «ci sono 1 copia»", () => {
+    // Le limitate del formato entrano in una copia sola, e una combo dichiarata
+    // su una di quelle cadeva nello stesso stampo del ticket 79.
+    const frase = frasePerLaCombo({
+      ...base,
+      pezzi: [{ nome: "Loto Nero", copie: 1 }],
+      probabilita: 0.12,
+    });
+    expect(frase).toContain("c'è 1 copia");
+    expect(frase).not.toContain("ci sono 1 copia");
+  });
+
   it("quando dei pezzi non ne è rimasto nessuno non scrive nessuna probabilità", () => {
     const frase = frasePerLaCombo({
       ...base,
@@ -593,6 +665,10 @@ describe("le terre di un mazzo che arriva da fuori", () => {
     const frase = frasePerLeTerreScartate({ terre: [{ nome: "Labirinto", copie: 1 }] });
     expect(frase).toContain("La terra");
     expect(frase).toContain("non è quella che rimetto");
+    // Anche in coda, dov'era rimasto il plurale del ticket 79: «1 copia
+    // scritte in una lista non le so ancora tenere».
+    expect(frase).toContain("1 copia scritta in una lista non la so ancora tenere");
+    expect(frase).not.toContain("scritte");
   });
 });
 

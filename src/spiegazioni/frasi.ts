@@ -159,6 +159,40 @@ export function copie(quante: number): string {
   return quante === 1 ? "1 copia" : `${quante} copie`;
 }
 
+/**
+ * «c'è», «ci sono»: il verbo che si accorda col numero che gli viene dietro.
+ *
+ * Esiste perché `copie()` da sola non basta. Accordava il nome — «1 copia» — e
+ * lasciava al plurale il verbo scritto a mano intorno, così l'app diceva «nel
+ * mazzo ci sono 1 copia» (ticket 79). Le frasi si leggono a voce alta
+ * (ticket 13), e una riga così non regge la prova.
+ */
+export function esserci(quante: number): string {
+  return quante === 1 ? "c'è" : "ci sono";
+}
+
+/**
+ * «c'è 1 copia che spazza», «ci sono 5 copie che spazzano anche loro»: il
+ * numero delle copie col verbo davanti e il verbo della relativa dietro, tutto
+ * accordato in un colpo solo.
+ *
+ * I due verbi li porta chi chiama, perché sono parole sue e cambiano di ramo in
+ * ramo; l'accordo invece sta qui, in un posto solo, che era il difetto da
+ * togliere. Il singolare non è il plurale con la desinenza cambiata: con una
+ * copia sola quella copia **è** la carta che si sta guardando, e «anche loro»
+ * — che vuol dire *oltre a questa* — diventa falso e sparisce.
+ *
+ * Il nome dice il plurale perché è il caso che si legge nove volte su dieci, e
+ * perché è così che si legge la riga di chi chiama: `nel mazzo ${…}`.
+ */
+export function ciSonoCopieChe(
+  quante: number,
+  singolare: string,
+  plurale: string,
+): string {
+  return `${esserci(quante)} ${copie(quante)} che ${quante === 1 ? singolare : plurale}`;
+}
+
 /** «1 simbolo», «2,5 simboli»: i simboli di mana, che possono essere mezzi. */
 export function simboli(quanti: number): string {
   return quanti === 1 ? "1 simbolo" : `${quantita(quanti)} simboli`;
@@ -259,8 +293,8 @@ function fraseDelRuolo(grezzi: GrezziDelRuolo): string {
       // carte sole» e non «alle stesse condizioni», che sarebbe falso di una
       // rimozione contata insieme a una contromagia.
       return grezzi.incondizionata
-        ? `Risponde a una carta avversaria e può prendere quello che vuole: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che rispondono senza condizioni, sulle ${grezzi.copieNonTerra} che non sono terre.`
-        : `Risponde a una carta avversaria, ma solo se ha le caratteristiche giuste: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che rispondono anche loro a certe carte sole, sulle ${grezzi.copieNonTerra} che non sono terre.`;
+        ? `Risponde a una carta avversaria e può prendere quello che vuole: nel mazzo ${ciSonoCopieChe(grezzi.copieCheLoFanno, "risponde senza condizioni", "rispondono senza condizioni")}, sulle ${grezzi.copieNonTerra} che non sono terre.`
+        : `Risponde a una carta avversaria, ma solo se ha le caratteristiche giuste: nel mazzo ${ciSonoCopieChe(grezzi.copieCheLoFanno, "risponde a certe carte sole", "rispondono anche loro a certe carte sole")}, sulle ${grezzi.copieNonTerra} che non sono terre.`;
     case "vantaggio":
       // Due frasi e non una vaga che le copra tutt'e due: il vantaggio in carte
       // si guadagna in due modi (ticket 73) che al tavolo non si somigliano.
@@ -268,8 +302,8 @@ function fraseDelRuolo(grezzi: GrezziDelRuolo): string {
       // perché lo spazzino è simmetrico — Wrath of God prende anche le tue, e
       // il danno a tutto il campo tocca anche te.
       return grezzi.modo === "pesca"
-        ? `Ti rimette carte in mano, e chi ha più carte ha più scelte: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che lo fanno, sulle ${grezzi.copieNonTerra} che non sono terre.`
-        : `Spazza il campo, e una carta sola può prenderne più d'una: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che spazzano anche loro, sulle ${grezzi.copieNonTerra} che non sono terre.`;
+        ? `Ti rimette carte in mano, e chi ha più carte ha più scelte: nel mazzo ${ciSonoCopieChe(grezzi.copieCheLoFanno, "lo fa", "lo fanno")}, sulle ${grezzi.copieNonTerra} che non sono terre.`
+        : `Spazza il campo, e una carta sola può prenderne più d'una: nel mazzo ${ciSonoCopieChe(grezzi.copieCheLoFanno, "spazza", "spazzano anche loro")}, sulle ${grezzi.copieNonTerra} che non sono terre.`;
     case "corpo":
       return `Per ${grezzi.valoreDiMana} mana mette in campo un ${grezzi.forza ?? "?"}/${grezzi.costituzione ?? "?"}: quanto corpo rende per il mana che costa vale ${decimale(grezzi.efficienza)}, contro una media di ${decimale(grezzi.efficienzaMedia)} fra le creature del mazzo.`;
     case "posto":
@@ -888,7 +922,12 @@ export function frasePerLaCombo(grezzi: GrezziDellaCombo): string {
       ? "di averla in mano"
       : `di averle in mano ${TUTTE_E[grezzi.pezzi.length] ?? `tutte e ${grezzi.pezzi.length}`}`;
 
-  const conto = `${patto} Nel mazzo ci sono ${dentro} su ${grezzi.dimensioneMazzo} carte, e al turno ${grezzi.turno} hai ${conArticolo("il", percento(grezzi.probabilita))} ${tutte}.`;
+  // Il verbo si accorda col soggetto, che è l'elenco: con un pezzo solo lo
+  // governa il numero delle sue copie — e una limitata del formato ne ha una —,
+  // con due o più pezzi il soggetto è plurale comunque.
+  const quanteGovernano =
+    grezzi.pezzi.length === 1 ? grezzi.pezzi[0]!.copie : grezzi.pezzi.length;
+  const conto = `${patto} Nel mazzo ${esserci(quanteGovernano)} ${dentro} su ${grezzi.dimensioneMazzo} carte, e al turno ${grezzi.turno} hai ${conArticolo("il", percento(grezzi.probabilita))} ${tutte}.`;
 
   // Se qualche pezzo è rimasto fuori, il numero vale per **meno carte** di
   // quelle nominate, ed è quindi più alto di quello della combo vera. Dirlo
@@ -925,7 +964,14 @@ export function frasePerLeTerreScartate(grezzi: GrezziDelleTerreScartate): strin
   // Il mazzo **non** resta più corto: la base si rifà dalla curva, e le terre
   // tornano al loro numero. Quel che si perde è *quali* erano, e la frase deve
   // dire quello — dire «hai N carte in meno» sarebbe un allarme falso.
-  return `${soggetto} che il mazzo portava — ${quali} — ${una ? "non è quella che rimetto" : "non sono quelle che rimetto"} nel mazzo: la base di terre la scelgo io dalla curva, e ${copie(copieTotali)} scritte in una lista non le so ancora tenere. Il numero di terre torna quello che serve, la scelta è la mia.`;
+  // Lo stesso accordo del ticket 79: il participio e il pronome che seguono il
+  // conto delle copie stavano al plurale anche quando la copia è una sola — una
+  // terra di utilità limitata entra così, e la frase diceva «1 copia scritte».
+  const scritte =
+    copieTotali === 1
+      ? "1 copia scritta in una lista non la so ancora tenere"
+      : `${copie(copieTotali)} scritte in una lista non le so ancora tenere`;
+  return `${soggetto} che il mazzo portava — ${quali} — ${una ? "non è quella che rimetto" : "non sono quelle che rimetto"} nel mazzo: la base di terre la scelgo io dalla curva, e ${scritte}. Il numero di terre torna quello che serve, la scelta è la mia.`;
 }
 
 /**
