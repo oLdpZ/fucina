@@ -21,6 +21,36 @@ Vive in `src/tema/tema.ts` come `Tema`: `inclusioni`, `esclusioni`, `seme`
 
 Il tema **non dice come si vince**. Dice cosa c'è dentro.
 
+## Promessa
+
+**La riga in italiano che una voce della galleria mostra prima che la si
+tocchi** — che cosa fa questo mazzo, come lo direbbe un giocatore a un altro.
+Non porta numeri: le carte che il tema porta dentro stanno accanto e vengono dal
+pool, contate a ogni apertura.
+
+Una promessa non è una descrizione: è un **impegno che il tema deve poter
+mantenere**, e da qui viene la regola che la governa — *il tag più numeroso di
+una voce dev'essere uno di quelli che la sua promessa nomina.*
+
+Non è una regola sulla cardinalità. Una voce può essere dominata da un tag
+solo e stare benissimo: «Reggere l'urto» lo è al 76% da `previene-il-danno`,
+che **è** la sua promessa. Quel che rompe una promessa è che a comandare sia
+un tag che la promessa **non nomina**: è il guasto che il ticket 71 ha trovato
+su «Controllare», dove `rimozione-mirata` valeva il 54% dell'unione e la riga
+parlava di dire di no, spazzare e pescare. Il mazzo che ne usciva aveva purezza
+1,000 e non una contromagia: perfettamente dentro il tema e perfettamente fuori
+dalla promessa.
+
+Una promessa non si aggiusta **riscrivendo la frase** per farla combaciare con
+quel che il tema seleziona: a quel punto è il tema a dettare la promessa, e la
+galleria smette di essere fatta di risposte scelte. Si aggiusta il tema.
+
+E non si aggiusta nemmeno **stringendo il tema** fin sotto la soglia di
+«comodo»: una voce che fa scattare il verdetto *stretto* è l'esatto guasto che
+la galleria esiste per togliere — aprire l'app su un tema che avvisa. Fra le
+due, si tiene il tema largo e si accetta che il primo mazzo della frontiera sia
+un compromesso: è quel che la frontiera è lì per mostrare.
+
 ## Purezza
 
 **Quanta parte del mazzo appartiene al tema**, fra zero e uno. È uno dei due
