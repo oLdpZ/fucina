@@ -175,7 +175,7 @@ export type Buchi = {
   senzaPrezzo: number;
   /** Senza nessuno dei tag **nostri**: è il numero che il ticket 06 chiede. */
   senzaTagNostri: number;
-  /** Senza nemmeno un tag di nessuna delle due razze. */
+  /** Senza nemmeno un tag, né dei nostri né di Tagger. */
   senzaTag: number;
   /**
    * Quante carte si mostrano su un cartoncino e si prezzano su un altro: il
@@ -523,9 +523,9 @@ export function verificaRaccolto(quante: number, provenienza: string): void {
 
   throw new Error(
     `Da «${provenienza}» non è uscita nessuna carta delle edizioni ammesse. ` +
-      `Quasi sempre vuol dire che l'archivio non è quello giusto — la razza ` +
-      `sbagliata, o il file dei tag passato per errore a --da. Il pool non ` +
-      `viene toccato.`,
+      `Quasi sempre vuol dire che l'archivio non è quello giusto — un altro ` +
+      `archivio di Scryfall, o il file dei tag passato per errore a --da. Il pool ` +
+      `non viene toccato.`,
   );
 }
 

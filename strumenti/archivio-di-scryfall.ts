@@ -40,16 +40,14 @@ export const ARCHIVIO = "all-cards";
 export const DESCRITTORE = `https://api.scryfall.com/bulk-data/${ARCHIVIO}`;
 
 /**
- * Il nome che Scryfall dà all'archivio: la razza, l'istante in quattordici
+ * Il nome che Scryfall dà all'archivio: come si chiama, l'istante in quattordici
  * cifre, e l'estensione. **Ancorato** ai due capi — senza àncore basterebbe una
  * corsa di cifre in un punto qualunque del nome, ed è così che una cartella coi
  * numeri dentro dettava la data dei prezzi.
  */
-const IMPRONTA = new RegExp(
-  `^${ARCHIVIO}-(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})\\.jsonl(?:\\.gz)?$`,
-);
+const IMPRONTA = new RegExp(`^${ARCHIVIO}-(\\d{14})\\.jsonl(?:\\.gz)?$`);
 
-/** La stessa forma, ma con la razza lasciata libera: serve solo a dirlo meglio. */
+/** La stessa forma, ma col nome lasciato libero: serve solo a dirlo meglio. */
 const IMPRONTA_DI_UN_ALTRO = /^(.+)-\d{14}\.jsonl(?:\.gz)?$/;
 
 /**
@@ -69,7 +67,7 @@ export function dataDellArchivio(percorso: string): string {
     if (altro) {
       throw new Error(
         `«${nome}» non è l'archivio che serve: è «${altro[1]}», e a noi serve ` +
-          `«${ARCHIVIO}». Ogni altra razza è un archivio diverso — quello ` +
+          `«${ARCHIVIO}». Ogni altro nome è un archivio diverso — quello ` +
           `predefinito, per dire, tiene quasi solo le stampe inglesi, e ne ` +
           `uscirebbe un pool senza italiano di cui nessun resoconto si lamenta. ` +
           `Scaricalo da ${DESCRITTORE}`,
@@ -82,7 +80,17 @@ export function dataDellArchivio(percorso: string): string {
     );
   }
 
-  const [, anno, mese, giorno, ore, minuti, secondi] = impronta as unknown as string[];
+  // Le quattordici cifre arrivano in un pezzo solo e si tagliano qui. Prenderle
+  // come sei gruppi separati costringeva a un cast per convincere il compilatore
+  // che ci fossero tutti e sei, e in un file la cui tesi è «non si indovina» un
+  // cast è la cosa peggiore da scrivere.
+  const cifre = impronta[1] ?? "";
+  const anno = cifre.slice(0, 4);
+  const mese = cifre.slice(4, 6);
+  const giorno = cifre.slice(6, 8);
+  const ore = cifre.slice(8, 10);
+  const minuti = cifre.slice(10, 12);
+  const secondi = cifre.slice(12, 14);
   const istante = `${anno}-${mese}-${giorno}T${ore}:${minuti}:${secondi}.000+00:00`;
 
   // Quattordici cifre sono quattordici cifre: `20261301250000` ne ha il numero

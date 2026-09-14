@@ -1,5 +1,5 @@
 /**
- * I tag funzionali di **Scryfall Tagger**, la seconda razza di tag
+ * I tag funzionali di **Scryfall Tagger**, la seconda delle due sorte di tag
  * ([ADR-0003](../docs/adr/0003-tag-di-scryfall-affiancati-ai-nove.md)).
  *
  * I nove tag nostri nascono da regole meccaniche che si leggono in un

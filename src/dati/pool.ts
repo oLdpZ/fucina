@@ -60,7 +60,7 @@ export type Tag =
   | "rigenera";
 
 /**
- * Un tag di **Scryfall Tagger**, la seconda razza (ADR-0003): quel che la
+ * Un tag di **Scryfall Tagger**, la seconda delle due (ADR-0003): quel che la
  * comunità dice che una carta faccia — `counterspell`, `removal`,
  * `win-condition` — dove i nostri non arrivano.
  *
@@ -234,7 +234,7 @@ export type Carta = {
   tag: Tag[];
   /**
    * I nomi dei tag di **Scryfall Tagger** che la carta porta, in ordine
-   * alfabetico. Sono un'altra razza dai quindici qui sopra, e stanno in un
+   * alfabetico. Vengono da un'altra parte rispetto ai quindici qui sopra, e stanno in un
    * campo diverso apposta: chi legge il pool deve sapere da dove viene un tag
    * senza indovinarlo. I loro id stanno nel registro del pool.
    *

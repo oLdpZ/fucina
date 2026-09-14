@@ -239,7 +239,7 @@ copertura([
   ["le creature non nere", creature.length - diColore(creature, "B"), creature.length],
   ["le creature non bianche", creature.length - diColore(creature, "W"), creature.length],
   [
-    "una razza sola",
+    "un sottotipo solo",
     creature.filter((carta) => carta.sottotipi.some((sotto) => sotto.toLowerCase() === "goblin"))
       .length,
     creature.length,

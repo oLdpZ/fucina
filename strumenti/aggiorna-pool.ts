@@ -51,8 +51,8 @@ import {
  *
  * Con `--da <archivio>` legge un archivio Scryfall già sulla macchina invece
  * di scaricarlo — `.jsonl` o `.jsonl.gz`, **col nome che gli dà Scryfall e
- * della razza giusta**: serve per riprovare senza rifare quattrocento megabyte
- * di rete. Quale sia la razza giusta, e come si riconosce, lo dice
+ * **quello giusto**: serve per riprovare senza rifare quattrocento megabyte
+ * di rete. Quale sia quello giusto, e come si riconosce, lo dice
  * `archivio-di-scryfall.ts`; qui basta sapere che un archivio di un'altra si
  * ferma prima di riscrivere il pool. `--tag <archivio>`
  * fa lo stesso per l'archivio dei tag funzionali, che però pesa un
@@ -61,7 +61,7 @@ import {
  */
 
 /**
- * I tag funzionali di **Scryfall Tagger**, la seconda razza di tag
+ * I tag funzionali di **Scryfall Tagger**, la seconda delle due sorte di tag
  * (ADR-0003): `counterspell`, `removal`, `win-condition` — quel che i tag
  * nostri, che leggono le regole meccaniche, non sanno dire.
  *
@@ -269,7 +269,7 @@ async function daScryfall(
  * che Scryfall dà al file, perché il prezzo di ogni carta la porta con sé e
  * sbagliarla vorrebbe dire mentire. Chi la legge — e chi si ferma quando il
  * nome non si sa leggere, o dice un istante che non esiste, o è di un archivio
- * di un'altra razza — è `archivio-di-scryfall.ts`.
+ * che non è quello giusto — è `archivio-di-scryfall.ts`.
  */
 async function daArchivioLocale(
   percorso: string,

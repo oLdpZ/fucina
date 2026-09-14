@@ -47,7 +47,7 @@ describe("la data dei dati, letta dal nome dell'archivio", () => {
     );
   });
 
-  it("l'archivio della razza sbagliata si ferma, e il messaggio dice quale scaricare", () => {
+  it("l'archivio sbagliato si ferma, e il messaggio dice quale scaricare", () => {
     // `default-cards` preferisce l'inglese: passerebbe, e darebbe un pool con
     // `nomeItaliano` a null dappertutto senza che nessun resoconto lo dica.
     const guaio = (): unknown => dataDellArchivio("default-cards-20260906091709.jsonl.gz");
@@ -56,7 +56,7 @@ describe("la data dei dati, letta dal nome dell'archivio", () => {
     expect(guaio).toThrow(new RegExp(ARCHIVIO));
 
     // Anche una copia rinominata dell'archivio giusto si ferma: da fuori non si
-    // distingue da un archivio di un'altra razza, e indovinare costa un pool.
+    // distingue da un archivio che non è quello giusto, e indovinare costa un pool.
     expect(() => dataDellArchivio(`copia-di-${ARCHIVIO}-20260906091709.jsonl.gz`)).toThrow(
       new RegExp(ARCHIVIO),
     );

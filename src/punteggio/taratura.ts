@@ -526,7 +526,7 @@ export const CONDIZIONI_DELLO_SPAZZA_VIA: readonly string[] = [
  * | le creature di un colore | 60–83 su 335 | 0,179–0,248 |
  * | gli incantesimi | 147 su 570 | 0,258 |
  * | gli artefatti | 117 su 570 | 0,205 |
- * | una razza sola | 10 su 335 | 0,030 |
+ * | un sottotipo solo | 10 su 335 | 0,030 |
  *
  * Mediana 0,248, e di lì il numero. La media sarebbe 0,356, tirata su dalle due
  * condizioni al negativo che lasciano fuori un colore solo: sono due carte, e

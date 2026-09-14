@@ -185,7 +185,7 @@ rifiuta.
 
 **Quel che una carta sa fare**, in poche parole meccaniche.
 
-Ce ne sono di due razze, e vanno tenute distinte:
+Vengono da due parti, e vanno tenuti distinti:
 
 - i **quindici nostri**, ricavati da regole meccaniche deterministiche scritte
   in `strumenti/tag-di-sinergia.ts`, correggibili a mano una riga per volta;
@@ -193,7 +193,7 @@ Ce ne sono di due razze, e vanno tenute distinte:
   `pool.json`.
 
 L'app non interroga Scryfall a runtime: il determinismo non si tocca. Il perché
-di entrambe le razze sta in
+di entrambi sta in
 [ADR-0003](docs/adr/0003-tag-di-scryfall-affiancati-ai-nove.md), che parla di
 **nove** perché è del 3 settembre 2026: il vocabolario è stato riscritto col
 cambio di formato (ticket 06), la sostanza dell'ADR regge intera e solo il
