@@ -41,7 +41,7 @@
  * è un nome di carta, e un nome di carta nel sorgente qui non ci va.
  */
 
-import type { Carta } from "../dati/pool.js";
+import type { Carta, Tag } from "../dati/pool.js";
 import { valutaTema, type Ampiezza } from "./ampiezza.js";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type FiltroTema, type Tema } from "./tema.js";
 
@@ -60,6 +60,27 @@ export type VoceDiGalleria = {
   readonly nome: string;
   /** Una riga in italiano semplice: che cosa fa questo mazzo, senza gergo. */
   readonly promessa: string;
+  /**
+   * **I tag che la promessa nomina**, cioè il legame fra una frase italiana e
+   * il vocabolario — dichiarato qui perché una macchina lo possa leggere.
+   *
+   * Serve al criterio del ticket 71: *il tag più numeroso di una voce dev'essere
+   * uno di quelli che la sua promessa nomina*. Senza questo campo quel criterio
+   * resta un commento, e un commento non diventa rosso.
+   *
+   * Non è «i tag del tema» riscritti: le due liste possono divergere, e quando
+   * divergono lo dicono. Un tag del tema che non compare qui è roba che il mazzo
+   * prende senza averla promessa; un tag qui che non è nel tema è una promessa
+   * che il tema non mantiene. Nessuna delle due è per forza un guasto, e tutt'e
+   * due vanno guardate invece che pareggiate.
+   *
+   * **Si riempie leggendo la promessa, non il tema.** Allargare questo elenco
+   * finché il test passa è il modo esatto di rompere il criterio: a quel punto è
+   * il tema a dettare la promessa, ed è il guasto da cui tutto questo è nato.
+   * Il vocabolario è il giudice — `azione` di ogni tag in `vocabolario.ts` dice
+   * che cosa quel tag fa, e la promessa o lo dice o non lo dice.
+   */
+  readonly nominati: readonly Tag[];
   readonly tema: Tema;
 };
 
@@ -82,12 +103,25 @@ export const GALLERIA: readonly VoceDiGalleria[] = [
     nome: "Bruciare",
     promessa:
       "Il danno lo mandi dove vuoi tu: sulle sue creature o addosso a lui. Vinci in fretta, prima che si sistemi.",
+    nominati: ["danno-diretto"],
     tema: tema({ tag: ["danno-diretto"] }),
   },
   {
     nome: "Controllare",
     promessa:
       "Dici di no a quello che prova a fare, gli togli dal tavolo quel che è riuscito a giocare, e intanto peschi più carte di lui.",
+    /**
+     * Tre clausole, tre tag. «Dici di no a quello che prova a fare» è il
+     * controincantesimo; «gli togli dal tavolo quel che è riuscito a giocare»
+     * è lo spazzino; «peschi più carte di lui» è la pesca.
+     *
+     * **`rimozione-mirata` non è nominata**, e la differenza non è un cavillo:
+     * il vocabolario le dà come azione «tolgono di mezzo una carta sola»,
+     * mentre questa riga parla di *quel che è riuscito a giocare* — tutto, non
+     * uno. La voce che nomina la rimozione mirata è «Prosciugare», e infatti lo
+     * dice con le parole giuste: «dal tavolo **una alla volta**».
+     */
+    nominati: ["controincantesimo", "spazza-via", "pesca"],
     /**
      * **`rimozione-mirata` non è qui, ed è la correzione del ticket 71.**
      *
@@ -100,8 +134,10 @@ export const GALLERIA: readonly VoceDiGalleria[] = [
      * fuori dalla promessa.
      *
      * Il criterio che la sosta ne ha ricavato vale per **ogni voce di questa
-     * galleria**, e chi ne aggiunge una lo deve rileggere: **il tag più numeroso
-     * di una voce dev'essere uno di quelli che la sua promessa nomina.**
+     * galleria**: **il tag più numeroso di una voce dev'essere uno di quelli che
+     * la sua promessa nomina.** Dal ticket 77 non tocca più a chi legge
+     * ricordarsene — sta in `galleria.test.ts` e diventa rosso da solo, coi
+     * numeri della corsa scritti nel messaggio.
      *
      * Non è una regola sulla cardinalità, ed è per questo che si scrive così.
      * «Reggere l'urto» è dominato al 76% da `previene-il-danno` e sta benissimo,
@@ -129,36 +165,63 @@ export const GALLERIA: readonly VoceDiGalleria[] = [
     nome: "Prosciugare",
     promessa:
       "Non corri: gli levi le carte di mano e dal tavolo una alla volta, e quando non gli resta niente hai vinto.",
+    /**
+     * «Gli levi le carte di mano» è lo scarto; «dal tavolo una alla volta» è la
+     * rimozione mirata, detta con l'azione che il vocabolario le dà.
+     *
+     * **`si-cura-del-cimitero` sta nel tema e questa riga non lo nomina.** Non è
+     * una svista di questo elenco: la promessa non dice niente del cimitero, e
+     * scrivercelo per far tornare i conti sarebbe l'errore che il campo esiste
+     * per impedire. È il secondo tag per numerosità dentro il nero — sedici
+     * carte contro diciannove — e il giorno che scavalca, il test diventa rosso
+     * e chiede di scegliere: o la promessa lo nomina, o il tema lo lascia
+     * andare.
+     */
+    nominati: ["scarta", "rimozione-mirata"],
     tema: tema({ colori: ["B"], tag: ["scarta", "si-cura-del-cimitero", "rimozione-mirata"] }),
   },
   {
     nome: "Passare di sopra",
     promessa:
       "Creature che non riesce a bloccare: volano, o passano lo stesso. Poche ferite per turno, tutti i turni.",
+    nominati: ["evasione"],
     tema: tema({ tag: ["evasione"] }),
   },
   {
     nome: "Ingrossare",
     promessa:
       "Creature piccole che diventano grandi. Da sole non fanno paura: quel che le rende grosse lo giochi tu.",
+    nominati: ["potenzia"],
     tema: tema({ tag: ["potenzia"] }),
   },
   {
     nome: "Gli artefatti",
     promessa:
       "Carte che qualunque colore può giocare: il mazzo non deve decidere da che parte stare, e le terre sono un problema in meno.",
+    /**
+     * Vuoto, e giusto così: questa voce seleziona per **tipo**, non per tag. La
+     * promessa parla di che cosa vuol dire giocare artefatti — nessun colore da
+     * scegliere — e non nomina nessun mestiere, perché il tema non ne chiede
+     * nessuno. Senza tag non c'è un tag più numeroso, e il criterio su questa
+     * voce non ha niente da dire.
+     */
+    nominati: [],
     tema: tema({ tipi: ["Artifact"] }),
   },
   {
     nome: "La prigione",
     promessa:
       "Non ammazzi niente: gli impedisci di usarlo. Le creature restano ferme e le terre non producono.",
+    /** «Le creature restano ferme» è l'imbriglio; «le terre non producono» è l'attacco alla base di terre. */
+    nominati: ["imbriglia", "attacca-le-terre"],
     tema: tema({ tag: ["imbriglia", "attacca-le-terre"] }),
   },
   {
     nome: "Reggere l'urto",
     promessa:
       "Il danno non passa e le tue creature non muoiono. Vinci restando in piedi più a lungo di lui.",
+    /** «Il danno non passa» previene il danno; «le tue creature non muoiono» rigenera. */
+    nominati: ["previene-il-danno", "rigenera"],
     tema: tema({ tag: ["previene-il-danno", "rigenera"] }),
   },
 ];

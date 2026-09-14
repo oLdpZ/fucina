@@ -3,14 +3,23 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { TAG_IN_ORDINE } from "../catalogo/vocabolario.js";
 import { COMBO_VUOTA } from "../combo/combo.js";
 import { interpretaPool } from "../dati/carica-pool.js";
-import type { Carta } from "../dati/pool.js";
+import type { Carta, Tag } from "../dati/pool.js";
 import { DIMENSIONE_MAZZO } from "../mazzo/taratura.js";
 import { costruisciMazzo, type Opzioni, type Richiesta } from "../ricerca/costruisci.js";
 import { valutaTema } from "./ampiezza.js";
-import { GALLERIA, galleriaContata } from "./galleria.js";
-import { carteDelTema, eTerra, risolviTema, temaDichiarato } from "./tema.js";
+import { GALLERIA, galleriaContata, type VoceDiGalleria } from "./galleria.js";
+import {
+  carteDelTema,
+  eTerra,
+  FILTRO_TEMA_VUOTO,
+  risolviTema,
+  temaDichiarato,
+  TEMA_VUOTO,
+  type Tema,
+} from "./tema.js";
 
 /**
  * La galleria provata **sul pool vero**, e non su un pool inventato.
@@ -110,6 +119,133 @@ describe("la galleria dei temi", () => {
         .join("|"),
     );
     expect(new Set(impronte).size).toBe(QUANTE_VOCI);
+  });
+});
+
+/**
+ * Quante carte del pool una voce porta dentro **per un tag solo dei suoi**,
+ * contate come le conta il motore.
+ *
+ * Il conto si fa rifacendo il tema della voce con quell'unico tag, e non
+ * filtrando le carte a mano: le categorie di un `FiltroTema` si sommano in and,
+ * e «Prosciugare» è nera. Contare `rimozione-mirata` sul pool intero darebbe 69
+ * dove la voce ne vede 19, e su un numero sbagliato di cinquanta carte non si
+ * regge nessun criterio.
+ */
+function carteDellaVocePerTag(voce: VoceDiGalleria, tag: Tag): number {
+  const soloQuello: Tema = {
+    ...voce.tema,
+    inclusioni: { ...voce.tema.inclusioni, tag: [tag] },
+  };
+  return carteDelTema(CARTE, risolviTema(soloQuello, CARTE)).length;
+}
+
+/** Le carte che un tag porta dentro **su tutto il pool**, senza nessuna restrizione. */
+function carteDelPoolPerTag(tag: Tag): number {
+  const nudo: Tema = { ...TEMA_VUOTO, inclusioni: { ...FILTRO_TEMA_VUOTO, tag: [tag] } };
+  return carteDelTema(CARTE, risolviTema(nudo, CARTE)).length;
+}
+
+describe("ogni voce seleziona quel che la sua promessa nomina", () => {
+  /**
+   * **Il criterio del ticket 71**, e la ragione per cui è un test e non un
+   * commento.
+   *
+   * «Controllare» univa quattro tag e il più numeroso era `rimozione-mirata` —
+   * l'unico dei quattro che la promessa non nomina. Il mazzo che ne usciva aveva
+   * purezza 1,000 e non una contromagia: perfettamente dentro il tema e
+   * perfettamente fuori dalla promessa.
+   *
+   * Non è una regola sulla cardinalità. Una voce può essere dominata da un tag
+   * solo e stare benissimo — «Reggere l'urto» lo è al 76% da `previene-il-danno`,
+   * che **è** la sua promessa. Quel che rompe una promessa è che a comandare sia
+   * un tag che la promessa non nomina.
+   *
+   * Quel che deve reggere non è la cifra ma **l'ordine**, ed è per questo che qui
+   * non c'è scritto nessun numero: i conti si rifanno sul pool a ogni corsa.
+   * Sono già cambiati due volte in una settimana (ticket 73 e 75), e i margini
+   * sono sottili — tre carte su «Prosciugare», quattro su «Controllare».
+   */
+  it.each(GALLERIA.map((voce) => [voce.nome, voce] as const))(
+    "«%s» è comandata da un tag che la sua promessa nomina",
+    (_nome, voce) => {
+      const tag = voce.tema.inclusioni.tag;
+      // Una voce senza tag non ha un tag più numeroso, e il criterio su di lei
+      // non dice niente: «Gli artefatti» seleziona per tipo. Non è un caso
+      // fallito, è un caso vuoto, e passa senza chiedere niente.
+      if (tag.length === 0) return;
+
+      const conti = tag.map((t) => ({ tag: t, carte: carteDellaVocePerTag(voce, t) }));
+      const piuNumerose = Math.max(...conti.map((c) => c.carte));
+      // A pari merito comandano tutti: basta che uno di quelli in testa sia
+      // nominato, perché a comandare c'è allora un tag che la promessa nomina.
+      const inTesta = conti.filter((c) => c.carte === piuNumerose);
+
+      expect(
+        inTesta.some((c) => voce.nominati.includes(c.tag)),
+        `${voce.nome}: in testa ${inTesta.map((c) => `${c.tag} (${c.carte})`).join(", ")}, ` +
+          `ma la promessa nomina ${voce.nominati.join(", ") || "niente"}`,
+      ).toBe(true);
+    },
+  );
+
+  it("conta dentro le restrizioni della voce, non sul pool intero", () => {
+    // Senza questo niente terrebbe il conto dentro il tema: contare i tag sul
+    // pool intero lascerebbe il criterio verde e lo farebbe rispondere di una
+    // voce che non esiste. «Prosciugare» è nera, e la sua rimozione mirata è
+    // una parte di quella del pool — il numero giusto è il più piccolo.
+    const conRestrizioni = GALLERIA.filter(
+      (voce) =>
+        voce.tema.inclusioni.tag.length > 0 &&
+        (voce.tema.inclusioni.colori.length > 0 ||
+          voce.tema.inclusioni.tipi.length > 0 ||
+          voce.tema.inclusioni.sottotipi.length > 0),
+    );
+    // Se un giorno nessuna voce restringesse più niente, questo test passerebbe
+    // a vuoto senza dirlo: meglio rosso e da riscrivere.
+    expect(conRestrizioni.length).toBeGreaterThan(0);
+
+    const strette = conRestrizioni.flatMap((voce) =>
+      voce.tema.inclusioni.tag.map((tag) => ({
+        voce: voce.nome,
+        tag,
+        nella: carteDellaVocePerTag(voce, tag),
+        nelPool: carteDelPoolPerTag(tag),
+      })),
+    );
+
+    // Questa è la proprietà del **codice**, e vale per ogni tag di ogni voce:
+    // restringere non può far crescere un conto.
+    for (const { voce, tag, nella, nelPool } of strette) {
+      expect(nella, `${voce}/${tag}`).toBeLessThanOrEqual(nelPool);
+    }
+
+    // E questa è il canarino, chiesto **una volta sola** su tutta la galleria e
+    // non voce per voce. La differenza conta: che una restrizione tolga davvero
+    // delle carte dipende dal pool, non dal codice. Una voce rossa che chiedesse
+    // `danno-diretto` — tutte carte già rosse — avrebbe `nella === nelPool` sul
+    // suo unico tag pur contando benissimo, e chiederglielo la farebbe rossa per
+    // un fatto del pool invece che per un guasto.
+    expect(
+      strette.some(({ nella, nelPool }) => nella < nelPool),
+      "nessuna restrizione della galleria toglie niente a nessun tag: il conto non le sta guardando",
+    ).toBe(true);
+  });
+
+  it("nessuna voce nomina un tag che non esiste nel vocabolario", () => {
+    // Un refuso in `nominati` renderebbe il criterio verde per la ragione
+    // peggiore: un tag che non si chiama così non comanda mai niente.
+    for (const voce of GALLERIA) {
+      for (const tag of voce.nominati) {
+        expect(TAG_IN_ORDINE, `${voce.nome}: ${tag}`).toContain(tag);
+      }
+    }
+  });
+
+  it("nessuna voce nomina due volte lo stesso tag", () => {
+    for (const voce of GALLERIA) {
+      expect(new Set(voce.nominati).size, voce.nome).toBe(voce.nominati.length);
+    }
   });
 });
 
