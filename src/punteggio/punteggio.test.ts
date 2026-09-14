@@ -23,6 +23,7 @@ import { combina, valutaMazzo, type Punteggio } from "./punteggio.js";
 import {
   CURVA_ATTESA_LENTA,
   CURVA_ATTESA_VELOCE,
+  DENSITA_DI_MEZZA_SINERGIA,
   PESI_DELLA_VELOCITA,
   PESI_DELLE_COMPONENTI,
 } from "./taratura.js";
@@ -440,6 +441,28 @@ describe("salute dei colori", () => {
 });
 
 describe("densità di sinergia", () => {
+  /**
+   * Le carte che servono a fabbricare una densità **su ordinazione**: la carta
+   * `DOPPIA` porta tutt'e due i tag di un'attivazione, quindi due sue copie
+   * sono una coppia attiva; la `SORDA` non ne porta nessuno. Scegliendo quante
+   * copie dell'una e dell'altra si ottiene qualunque densità fra zero e uno.
+   */
+  const DOPPIA = magia({
+    nome: "Forno da Campo",
+    costoDiMana: "{1}{R}",
+    valoreDiMana: 2,
+    identitaDiColore: ["R"],
+    tipi: ["Artifact"],
+    tag: ["potenzia", "evasione"],
+  });
+  const SORDA: Carta = { ...DOPPIA, nome: "Forno Spento", tag: [] };
+
+  /** Un mazzo di 36 non-terre, `quante` delle quali si attivano a vicenda. */
+  const conDoppie = (quante: number): CopieDiCarta[] => [
+    { carta: DOPPIA, copie: quante },
+    { carta: SORDA, copie: 36 - quante },
+  ];
+
   it("conta di più dove le carte si attivano a vicenda", () => {
     expect(valuta(SINERGICO).punteggio.sinergia.grezzi.densita).toBeGreaterThan(
       valuta(MUTO).punteggio.sinergia.grezzi.densita,
@@ -458,15 +481,7 @@ describe("densità di sinergia", () => {
   it("una coppia di carte conta una volta sola, anche quando i motivi sono due", () => {
     // Una carta che porta tutt'e due i tag di un'attivazione la realizza in due
     // versi: due copie sono una coppia attiva, non due, e il motivo è uno.
-    const doppia = magia({
-      nome: "Forno da Campo",
-      costoDiMana: "{1}{R}",
-      valoreDiMana: 2,
-      identitaDiColore: ["R"],
-      tipi: ["Artifact"],
-      tag: ["potenzia", "evasione"],
-    });
-    const grezzi = valuta([{ carta: doppia, copie: 36 }]).punteggio.sinergia.grezzi;
+    const grezzi = valuta(conDoppie(36)).punteggio.sinergia.grezzi;
 
     expect(grezzi.coppieDiCopie).toBe(630);
     expect(grezzi.coppieAttive).toBe(630);
@@ -482,6 +497,43 @@ describe("densità di sinergia", () => {
     // Ogni pedina con ogni altare: 18×18 = 324. Le coppie fra due pedine o fra
     // due altari non si attivano — nessun tag della coppia ne attiva un altro.
     expect(grezzi.coppieAttive).toBe(324);
+  });
+
+  it("non arriva a uno nemmeno quando ogni coppia si attiva", () => {
+    // Trentasei copie della stessa carta a due tag: **tutte** le 630 coppie
+    // sono attive, la densità vale uno, ed è il massimo che esista.
+    const { valore, grezzi } = valuta(conDoppie(36)).punteggio.sinergia;
+    expect(grezzi.densita).toBe(1);
+    expect(valore).toBeLessThan(1);
+  });
+
+  it("vale mezzo alla densità dichiarata: sotto vale meno, sopra vale di più", () => {
+    // Il mezzo cade **dove la taratura dice**, ed è il solo significato che
+    // quel numero ha. Si verifica inquadrandolo invece di inseguirlo al
+    // decimale: i mazzi fabbricabili hanno densità a passi, e cercare quello
+    // che ci cade sopra legherebbe il test al valore di oggi.
+    const componenti = [...Array(35).keys()].map((i) => valuta(conDoppie(i + 2)).punteggio.sinergia);
+    const sotto = componenti.filter((c) => c.grezzi.densita < DENSITA_DI_MEZZA_SINERGIA);
+    const sopra = componenti.filter((c) => c.grezzi.densita > DENSITA_DI_MEZZA_SINERGIA);
+
+    expect(sotto.length).toBeGreaterThan(0);
+    expect(sopra.length).toBeGreaterThan(0);
+    for (const c of sotto) expect(c.valore).toBeLessThan(0.5);
+    for (const c of sopra) expect(c.valore).toBeGreaterThan(0.5);
+  });
+
+  it("sale sempre, e non smette di salire sopra nessuna soglia", () => {
+    // Nessun punto della scala è un traguardo: da un capo all'altro, ogni
+    // densità più alta vale **di più** di quella che la precede. È la
+    // proprietà per cui una ricerca che ottimizza non si accatasta da nessuna
+    // parte (ticket 72).
+    const valori: number[] = [];
+    for (let quante = 2; quante <= 36; quante++) {
+      valori.push(valuta(conDoppie(quante)).punteggio.sinergia.valore);
+    }
+    for (let i = 1; i < valori.length; i++) {
+      expect(valori[i]!).toBeGreaterThan(valori[i - 1]!);
+    }
   });
 });
 

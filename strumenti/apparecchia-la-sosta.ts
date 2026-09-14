@@ -5,7 +5,7 @@ import { COMBO_VUOTA } from "../src/combo/combo.ts";
 import type { Carta, Pool } from "../src/dati/pool.ts";
 import { costruisciMazzo, type Frontiera, type MazzoCostruito } from "../src/ricerca/costruisci.ts";
 import {
-  DENSITA_DI_SINERGIA_PIENA,
+  DENSITA_DI_MEZZA_SINERGIA,
   PESI_DELLE_COMPONENTI,
   QUOTA_DELLA_RIMOZIONE_CONDIZIONALE,
   QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE,
@@ -242,16 +242,13 @@ function componenti(mazzo: MazzoCostruito): string[] {
   const s = p.sinergia.grezzi;
   const q = p.qualita.grezzi;
 
-  const tetto = (valore: number, grezzo: number, soglia: number) =>
-    valore >= 1 ? ` ⚠️ **al tetto** (${conDecimali(grezzo, 3)} contro una soglia di ${soglia})` : "";
-
   return [
     `- **velocità ${conDecimali(p.velocita.valore, 3)}** — voto di chiusura ${conDecimali(v.votoDiChiusura, 3)}; mani tenibili ${perCento(v.quotaManiTenibili)}; partenze impiantate ${perCento(v.quotaPartenzeImpiantate)}`,
     `- **curva ${conDecimali(p.curva.valore, 3)}** — distanza dalla forma attesa ${conDecimali(c.distanza, 3)}, presa sul turno di riferimento ${c.turnoDiRiferimento.toFixed(1)}`,
     `  - quote vere:   ${c.caselle.map((casella, i) => `${casella} ${perCento(c.quote[i] ?? 0)}`).join(" · ")}`,
     `  - quote attese: ${c.caselle.map((casella, i) => `${casella} ${perCento(c.quoteAttese[i] ?? 0)}`).join(" · ")}`,
     `- **colori ${conDecimali(p.colori.valore, 3)}** — ${col.carteDifficili} carte che questa base non regge, su ${col.numeroTerre} terre`,
-    `- **sinergia ${conDecimali(p.sinergia.valore, 3)}** — densità **${conDecimali(s.densita, 4)}** (${s.coppieAttive} coppie attive su ${s.coppieDiCopie})${tetto(p.sinergia.valore, s.densita, DENSITA_DI_SINERGIA_PIENA)}`,
+    `- **sinergia ${conDecimali(p.sinergia.valore, 3)}** — densità **${conDecimali(s.densita, 4)}** (${s.coppieAttive} coppie attive su ${s.coppieDiCopie})`,
     ...(s.perCoppiaDiTag.length > 0
       ? [`  - da: ${s.perCoppiaDiTag.map((c) => `${c.uno}+${c.altro} (${c.coppie})`).join(" · ")}`]
       : []),
@@ -393,7 +390,7 @@ function main(): void {
     "",
     "| taratura | valore |",
     "| --- | --- |",
-    `| densità di sinergia piena | ${DENSITA_DI_SINERGIA_PIENA} |`,
+    `| densità a cui la sinergia vale mezzo | ${DENSITA_DI_MEZZA_SINERGIA} |`,
     `| quota della risposta condizionata — rimozione · contromagia · spazzino | ${QUOTA_DELLA_RIMOZIONE_CONDIZIONALE} · ${QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE} · ${QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE} |`,
     `| pesi delle componenti | ${Object.entries(PESI_DELLE_COMPONENTI).map(([k, v]) => `${k} ${v}`).join(" · ")} |`,
     `| turno di chiusura ottimo → pessimo | ${TURNO_DI_CHIUSURA_OTTIMO} → ${TURNO_DI_CHIUSURA_PESSIMO} |`,
@@ -407,6 +404,8 @@ function main(): void {
   ];
 
   const corpo: string[] = [];
+  /** Le densità di sinergia di **ogni** mazzo costruito, per guardarne la forma. */
+  const densita: number[] = [];
   const riassunto: string[] = [
     "## Il riassunto, per chi legge una riga sola",
     "",
@@ -434,6 +433,7 @@ function main(): void {
     process.stdout.write(`${frontiera.mazzi.length} mazzi in ${(ms / 1000).toFixed(1)} s\n`);
 
     corpo.push(...scriviProva(prova, frontiera, ms, carte));
+    for (const mazzo of frontiera.mazzi) densita.push(mazzo.punteggio.sinergia.grezzi.densita);
 
     const primo = frontiera.mazzi[0];
     const ultimo = frontiera.mazzi[frontiera.mazzi.length - 1];
@@ -452,9 +452,67 @@ function main(): void {
   riassunto.push("");
   riassunto.push("---");
   riassunto.push("");
+  riassunto.push(...laFormaDelleDensita(densita));
 
   writeFileSync(USCITA, [...intestazione, ...riassunto, ...corpo].join("\n"), "utf8");
   console.log(`\nScritto ${USCITA}`);
 }
+
+/**
+ * La forma della distribuzione delle densità di sinergia, in un istogramma.
+ *
+ * Sta qui per una ragione sola, ed è il ticket 72: una componente che satura
+ * **attira** i mazzi sul proprio bordo invece di misurarli, e il modo per
+ * accorgersene è guardare se le densità hanno una punta su un valore preciso.
+ * Un mucchio su una casella sola è il difetto che torna; una gobba larga è la
+ * scala che funziona.
+ */
+function laFormaDelleDensita(tutte: readonly number[]): string[] {
+  if (tutte.length === 0) return [];
+  const ordinate = [...tutte].sort((a, b) => a - b);
+  // Rango più vicino: `floor` sbaglierebbe di uno ogni volta che `q × quanti`
+  // è intero — con quattro mazzi il p75 tornerebbe il massimo invece del
+  // terzo. Questi numeri finiscono copiati nella taratura come prova, e una
+  // prova non può dipendere da quanti mazzi è uscito quel giorno.
+  const quantile = (q: number) =>
+    ordinate[Math.min(ordinate.length - 1, Math.max(0, Math.ceil(q * ordinate.length) - 1))]!;
+
+  const LARGHEZZA = 0.025;
+  const caselle = new Map<number, number>();
+  for (const d of ordinate) {
+    const casella = Math.floor(d / LARGHEZZA);
+    caselle.set(casella, (caselle.get(casella) ?? 0) + 1);
+  }
+  const massimo = Math.max(...caselle.values());
+
+  const righe: string[] = [
+    "## La forma delle densità di sinergia",
+    "",
+    `${ordinate.length} mazzi in tutto. Mediana **${conDecimali(quantile(0.5), 4)}**, ` +
+      `dal p25 al p75 **${conDecimali(quantile(0.25), 4)} → ${conDecimali(quantile(0.75), 4)}**, ` +
+      `dal minimo al massimo ${conDecimali(ordinate[0]!, 4)} → ${conDecimali(ordinate[ordinate.length - 1]!, 4)}.`,
+    "",
+    "Una punta su una casella sola vuol dire che il punteggio **attira** invece",
+    "di misurare, ed è il difetto che il ticket 72 ha chiuso: va guardata.",
+    "",
+    "| densità | mazzi | |",
+    "| --- | --- | --- |",
+  ];
+  const prima = Math.min(...caselle.keys());
+  const ultima = Math.max(...caselle.keys());
+  for (let casella = prima; casella <= ultima; casella++) {
+    const quanti = caselle.get(casella) ?? 0;
+    const barra = "█".repeat(Math.round((quanti / massimo) * 24));
+    righe.push(
+      `| ${conDecimali(casella * LARGHEZZA, 3)} – ${conDecimali((casella + 1) * LARGHEZZA, 3)} | ${quanti} | ${barra} |`,
+    );
+  }
+  righe.push("");
+  righe.push("---");
+  righe.push("");
+  return righe;
+}
+
+/* -------------------------------------------------------------------------- */
 
 main();

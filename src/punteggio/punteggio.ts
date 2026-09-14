@@ -48,7 +48,7 @@ import {
   COSTO_DI_BASE_DI_UNA_CARTA,
   CURVA_ATTESA_LENTA,
   CURVA_ATTESA_VELOCE,
-  DENSITA_DI_SINERGIA_PIENA,
+  DENSITA_DI_MEZZA_SINERGIA,
   EFFICIENZA_ATTESA,
   PESI_DELLA_VELOCITA,
   MODI_DI_RISPONDERE,
@@ -564,7 +564,16 @@ function sinergia(nonTerre: readonly CopieDiCarta[]): Componente<GrezziDiSinergi
 
   return {
     etichetta: "densità di sinergia",
-    valore: fraZeroEUno(densita / DENSITA_DI_SINERGIA_PIENA),
+    // Sale sempre, sempre più piano, e non arriva mai a uno: nessuna densità
+    // è un traguardo a cui la ricerca possa fermarsi (ticket 72). Vale mezzo
+    // dove la taratura dice, e lì sta tutto il significato di quel numero.
+    //
+    // `fraZeroEUno` non è un tetto — questa funzione a uno non ci arriva, e il
+    // ticket 72 è tutto qui. È la rete che hanno anche le altre componenti:
+    // una taratura è un numero che si corregge senza toccare il codice, e a
+    // taratura zero questo conto darebbe `0/0`. Un `NaN` attraverserebbe
+    // `combina` e avvelenerebbe l'ordine dei mazzi senza che niente protesti.
+    valore: fraZeroEUno(densita / (densita + DENSITA_DI_MEZZA_SINERGIA)),
     grezzi: {
       coppieDiCopie,
       coppieAttive,

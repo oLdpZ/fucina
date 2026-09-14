@@ -28,6 +28,28 @@ import type { Tag } from "../dati/pool.js";
  *
  * Sommano a uno perché così il totale sta anche lui fra zero e uno, e due
  * mazzi si confrontano a occhio senza sapere quanti pesi ci sono dietro.
+ *
+ * **Riguardati dopo il ticket 72, e lasciati come stanno.** Finché la sinergia
+ * valeva uno per quasi tutti i mazzi, il suo quindici per cento era una
+ * costante additiva: gli altri quattro pesi lavoravano rinormalizzati di
+ * fatto, ciascuno diviso per `0,85`. Tolto il tetto, quel quindici per cento
+ * torna in gioco davvero, e la domanda era se fosse troppo o troppo poco.
+ * Misurato sui trentacinque mazzi della sosta del 14 settembre 2026, quanto
+ * ciascuna componente **sposta il totale** fra il p25 e il p75:
+ *
+ * | componente | peso | escursione del quartile centrale | × peso |
+ * | --- | --- | --- | --- |
+ * | velocità | 0,30 | 0,547 → 0,680 | 0,0399 |
+ * | curva | 0,15 | 0,789 → 0,930 | 0,0212 |
+ * | colori | 0,20 | 0,818 → 0,892 | 0,0148 |
+ * | sinergia | 0,15 | 0,370 → 0,479 | **0,0163** |
+ * | qualità | 0,20 | 0,428 → 0,681 | 0,0506 |
+ *
+ * La sinergia è tornata a pesare quanto curva e colori, che è dove una
+ * componente su cinque deve stare, e ci è tornata **senza toccare i pesi**: era
+ * la forma a essere rotta, non il numero. Nessuno dei quattro cambia nemmeno
+ * per un'altra ragione — la rinormalizzazione di prima li divideva **tutti**
+ * per lo stesso `0,85`, e un fattore comune non sposta l'ordine fra due mazzi.
  */
 export const PESI_DELLE_COMPONENTI = {
   velocita: 0.3,
@@ -183,29 +205,24 @@ export const COPPIE_CHE_SI_ATTIVANO: readonly (readonly [Tag, Tag])[] = [
 ];
 
 /**
- * La densità di sinergia oltre la quale la componente vale uno.
+ * La densità di sinergia a cui la componente vale **mezzo**.
  *
  * La densità è la quota di coppie di copie non-terra che si attivano a
- * vicenda, e non arriva mai vicino a uno nemmeno in un mazzo costruito
- * apposta. Questo numero è il punto in cui si dice «basta così»: sopra,
- * aggiungere sinergia non è più il problema del mazzo.
+ * vicenda. La componente la legge così:
  *
- * **Misurato sul pool vero il 13 settembre 2026** (ticket 15), ed era il primo
- * indiziato per sua stessa ammissione. Valeva `0,15`, e a quel valore la
- * componente era **morta**: su trentotto mazzi misurati — gli otto temi della
- * galleria più i sei casi limite — trentasei valevano esattamente `1,000`. Il
- * quindici per cento del punteggio era una costante additiva, uguale per ogni
- * mazzo, che non distingueva niente da niente.
+ *     densità / (densità + questo numero)
  *
- * Le densità vere si dividono in due gobbe: trentatré mazzi fra **0,147 e
- * 0,20** (mediana 0,164) e cinque fra **0,31 e 0,80**, che sono i temi così
- * stretti da ripetere le stesse poche carte. La soglia vecchia cadeva sotto il
- * fondo della prima gobba — di lì il tetto per tutti.
+ * È una funzione che **sale sempre**, sempre più piano, e non arriva mai a
+ * uno: chi ha più sinergia prende sempre un po' di più, e nessun valore
+ * diventa una meta. Questo numero è l'unico punto che la funzione dichiara —
+ * dove vale mezzo — e non è un traguardo, è la scala: sotto si sale ripidi,
+ * sopra si sale piano.
  *
- * **0,30** sta nella valle fra le due, ed è dove il numero è stato messo. Ha
- * migliorato le cose e **non le ha sistemate**, e la seconda misura — lo stesso
- * banco, rifatto sul punteggio nuovo — dice perché, meglio di quanto sapesse
- * chi ha scelto il numero:
+ * **Prima era un tetto, e il tetto era l'idea sbagliata.** Fino al ticket 72 la
+ * componente valeva `densità / soglia` tagliato a uno, e il commento diceva
+ * «sopra, aggiungere sinergia non è più il problema del mazzo». Su questo pool
+ * quella frase non vale: la sosta l'ha misurata due volte, e la seconda misura
+ * dice che nessuna soglia la rende vera — la sposta soltanto.
  *
  * | | soglia 0,15 | soglia 0,30 |
  * | --- | --- | --- |
@@ -213,20 +230,30 @@ export const COPPIE_CHE_SI_ATTIVANO: readonly (readonly [Tag, Tag])[] = [
  * | densità mediana | 0,164 | **0,300** |
  * | densità dal p25 al p75 | 0,155 → 0,201 | **0,293 → 0,314** |
  *
- * La mediana è atterrata **esattamente sulla soglia**, e il quartile centrale
- * si è stretto attorno a lei. Non è una coincidenza ed è la cosa da capire:
- * `densità / soglia` tagliato a uno è una funzione che **satura**, la ricerca
- * spinge la densità fino al punto in cui smette di essere premiata e lì si
- * ferma. La soglia non misura i mazzi, **li attira**. Alzarla da 0,15 a 0,30 ha
- * spostato il mucchio da «tutti sopra» a «tutti sul bordo», che è meno peggio —
- * il fondo della scala ora si vede, il valore minimo è 0,475 — ma è lo stesso
- * difetto in un altro punto.
+ * A `0,15` la componente era morta: trentasei mazzi su trentotto valevano
+ * esattamente uno, e il quindici per cento del punteggio era una costante
+ * additiva che non distingueva niente da niente. Alzarla a `0,30` ha spostato
+ * il mucchio da «tutti sopra» a «tutti **esattamente sul bordo**»: la mediana è
+ * atterrata sulla soglia al terzo decimale, e il quartile centrale si è
+ * stretto attorno a lei. Non è una coincidenza: una funzione che satura smette
+ * di premiare a un punto preciso, e una ricerca che ottimizza ci si accatasta.
+ * La soglia non misurava i mazzi, **li attirava**.
  *
- * **Quindi il numero resta provvisorio, e il difetto non è nel numero**: è nella
- * forma. Una funzione che sale sempre, piano, senza un tetto da raggiungere,
- * non avrebbe un punto in cui accatastarsi. Vedi il ticket 72.
+ * **`0,30` resta, ma vuol dire un'altra cosa.** Era il fondo della valle fra le
+ * due gobbe delle densità vere — trentatré mazzi fra `0,147` e `0,20`, cinque
+ * fra `0,31` e `0,80`, questi ultimi i temi così stretti da ripetere le stesse
+ * poche carte. Come punto di mezza scala tiene le due gobbe una sotto e una
+ * sopra il mezzo, che è dove una scala serve.
+ *
+ * **Rimisurato con la forma nuova**, sui trentacinque mazzi della sosta del 14
+ * settembre 2026: le densità vanno da `0,095` a `0,770`, mediana `0,212`, dal
+ * p25 al p75 `0,176 → 0,276`. Il mucchio sul bordo non c'è più — dove prima
+ * diciassette mazzi su trentuno stavano appiccicati a `0,300`, adesso in quella
+ * casella ce n'è **uno**, e la gobba è larga un quarto di scala. La componente
+ * ne esce fra `0,240` e `0,720`: una scala che si usa tutta, con la coda dei
+ * temi strettissimi in cima e nessuno sul bordo, perché un bordo non c'è.
  */
-export const DENSITA_DI_SINERGIA_PIENA = 0.3;
+export const DENSITA_DI_MEZZA_SINERGIA = 0.3;
 
 /* ------------------------------------------------------------------------- *
  * Qualità delle singole carte
