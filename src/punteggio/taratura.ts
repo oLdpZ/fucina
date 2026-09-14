@@ -283,18 +283,46 @@ export const VALORE_DELLA_RISPOSTA = 0.5;
 /**
  * Quanto resta a una rimozione che colpisce solo certi bersagli.
  *
- * È il primo dei tre sconti, ed è l'unico **scelto** e non misurato: veniva da
- * prima che il pool fosse questo. Il ticket 73 ha misurato gli altri due sul
- * pool vero, e il confronto va scritto invece che nascosto — con quella stessa
- * misura, una rimozione che colpisce un colore solo ne coprirebbe circa un
- * quinto, cioè **0,2 e non 0,6**.
+ * **Misurata sul pool del 2026-09-14** (ticket 74), con la regola delle altre
+ * due: quante carte colpisce davvero, contro quante ne colpirebbe senza la sua
+ * condizione — le 335 creature per chi bersaglia creature, i 570 permanenti
+ * non-terra per chi bersaglia permanenti. Il colore è quello **stampato**, che è
+ * quello che una rimozione nomina: «destroy target black creature» non tocca la
+ * creatura verde che si attiva pagando nero.
  *
- * Non è stato cambiato qui, e per una ragione: toccarlo sposta ogni rimozione
- * del pool, che è la metà delle carte giocabili, e la disciplina della sosta
- * dice di misurare due volte quel che si sposta — prima e dopo. Ha il suo
- * ticket.
+ * | condizione | quante ne colpisce | quota |
+ * | --- | --- | --- |
+ * | una creatura che non è un artefatto | 306 su 335 | 0,913 |
+ * | una creatura che non è nera | 252 su 335 | 0,752 |
+ * | una creatura di un colore | 62–87 su 335 | 0,185–0,260 |
+ * | un permanente di un colore | 97–111 su 570 | 0,170–0,195 |
+ * | una creatura che vola | 50 su 335 | 0,149 |
+ * | un Muro | 24 su 335 | 0,072 |
+ *
+ * La **mediana** è 0,192, e di lì il numero — lo stesso della contromagia, e
+ * arrotondato come gli altri due, perché la terza cifra direbbe una precisione
+ * che questa misura non ha. Non la media (0,313), che le due condizioni **al
+ * negativo** tirano su da sole: chi lascia fuori una categoria copre quasi tutto
+ * per costruzione, e pesarle come un terzo del conto direbbe di ogni rimozione
+ * quel che vale solo per loro.
+ *
+ * Due condizioni si misurano ma **non fanno mediana**, e il banco lo stampa
+ * accanto: «non è un Muro» (0,928) e «di costituzione 3 o meno» (0,645). La
+ * frase c'è, ma nel pool nessuna carta la porta da sola — chi la pone la pone in
+ * combattimento, o su una creatura propria. Contarle direbbe della rimozione
+ * quel che varrebbe per una rimozione che il pool non ha, e sono le due righe
+ * più alte del campione. Fuori misura per la stessa ragione, e da sempre, le
+ * condizioni che non stanno nella carta ma nel turno: chi attacca, chi blocca,
+ * chi è TAPpato.
+ *
+ * Il numero di prima era **0,6**, e non veniva da nessuna misura: era scelto, da
+ * prima che il pool fosse questo. La misura ne lascia in piedi un terzo, e
+ * sposta ogni rimozione del pool — il tag più numeroso che ci sia. Quel che il
+ * taglio **non** butta via sta scritto in `CONDIZIONI_DELLA_RIMOZIONE`: la
+ * rimozione migliore del formato è un'aura, e la sua frase è stata tolta
+ * dall'elenco apposta perché non la prendesse.
  */
-export const QUOTA_DELLA_RIMOZIONE_CONDIZIONALE = 0.6;
+export const QUOTA_DELLA_RIMOZIONE_CONDIZIONALE = 0.2;
 
 /**
  * Le frasi che rendono **condizionale** una rimozione, lette dal testo inglese
@@ -314,6 +342,15 @@ export const QUOTA_DELLA_RIMOZIONE_CONDIZIONALE = 0.6;
  * value», «target white», «target green» — sono state tolte invece di restare a
  * far numero.
  *
+ * Due frasi sono state **aggiunte** il 14 settembre 2026 (ticket 74), e non per
+ * gusto: abbassando la quota da 0,6 a 0,2 ogni frase che manca all'elenco costa
+ * il doppio di prima. «attacking» e «blocking» prendono chi bersaglia *target
+ * attacking creature*, ma non chi la stessa cosa la scrive come innesco —
+ * «whenever this creature blocks or becomes blocked by…», «whenever this
+ * creature attacks and isn't blocked». Sono la stessa condizione scritta
+ * nell'altro modo, e senza queste due frasi due carte meccanicamente identiche a
+ * quelle già scontate valevano quattro volte tanto.
+ *
  * Fra le tolte c'è anche «enchanted creature», che pure di carte ne toccava
  * cinque: ci sarebbe finita dentro **Control Magic**, che in questo formato è
  * la rimozione migliore che ci sia. Un'aura si può disincantare, e in quel senso
@@ -330,6 +367,8 @@ export const CONDIZIONI_DELLA_RIMOZIONE: readonly string[] = [
   "with flying",
   "attacking",
   "blocking",
+  "becomes blocked by",
+  "isn't blocked",
   "tapped creature",
   "non-wall",
   "target wall",
@@ -383,13 +422,13 @@ export const CONDIZIONI_DEL_CONTROINCANTESIMO: readonly string[] = [
  * | una magia creatura | 335 | 0,465 |
  * | un istantaneo o un'aura che bersaglia roba tua | 164 | 0,228 |
  * | un incantesimo | 147 | 0,204 |
- * | una magia di un colore solo | 136–143 | 0,189–0,199 |
+ * | una magia di un colore solo | 134–137 | 0,186–0,190 |
  * | un istantaneo | 93 | 0,129 |
  * | una magia che distrugge una tua terra | 22 | 0,031 |
  * | un'abilità attivata di un artefatto | 0 | 0,000 |
  * | se stessa, e nient'altro | 0 | 0,000 |
  *
- * La **mediana** è 0,192, e di lì il numero. Non la media (0,166): una sola
+ * La **mediana** è 0,188, e di lì il numero. Non la media (0,165): una sola
  * condizione — la magia creatura — copre il doppio di tutte le altre, e una
  * media tirata da lei direbbe di ognuna quel che vale solo per quella.
  *
@@ -450,13 +489,13 @@ export const CONDIZIONI_DELLO_SPAZZA_VIA: readonly string[] = [
  * | condizione | quante ne prende | quota |
  * | --- | --- | --- |
  * | le creature che non sono bianche | 275 su 335 | 0,821 |
- * | le creature che non sono nere | 248 su 335 | 0,740 |
- * | le creature di un colore | 60–87 su 335 | 0,179–0,260 |
+ * | le creature che non sono nere | 252 su 335 | 0,752 |
+ * | le creature di un colore | 60–83 su 335 | 0,179–0,248 |
  * | gli incantesimi | 147 su 570 | 0,258 |
  * | gli artefatti | 117 su 570 | 0,205 |
  * | una razza sola | 10 su 335 | 0,030 |
  *
- * Mediana 0,258, e di lì il numero. La media sarebbe 0,356, tirata su dalle due
+ * Mediana 0,248, e di lì il numero. La media sarebbe 0,356, tirata su dalle due
  * condizioni al negativo che lasciano fuori un colore solo: sono due carte, e
  * pesarle come metà del conto direbbe degli altri quel che vale solo per loro.
  *

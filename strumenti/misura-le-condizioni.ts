@@ -9,7 +9,8 @@ import {
 } from "../src/punteggio/taratura.ts";
 
 /**
- * Misura sul pool vero gli sconti delle risposte condizionate (ticket 73).
+ * Misura sul pool vero gli sconti delle risposte condizionate (ticket 73 per
+ * la contromagia e lo spazzino, ticket 74 per la rimozione).
  *
  *     node strumenti/misura-le-condizioni.ts
  *
@@ -23,8 +24,11 @@ import {
  *    è troppo larga, e va tolta lei.
  * 2. **Quanto copre davvero una risposta condizionata?** Quante carte del pool
  *    annulla o spazza, contro quante ne prenderebbe senza la sua condizione.
- *    È la misura da cui vengono `QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE` e
- *    `QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE`, e va rifatta quando il pool cambia.
+ *    È la misura da cui vengono tutt'e tre le quote —
+ *    `QUOTA_DELLA_RIMOZIONE_CONDIZIONALE`,
+ *    `QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE` e
+ *    `QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE` — e va rifatta quando il pool
+ *    cambia. Nessuna delle tre è più un numero scelto.
  *
  * Gira sul computer del manutentore, **mai nel browser**: legge il pool e
  * stampa: non tocca niente e non decide niente. Le quote le sceglie una
@@ -44,8 +48,23 @@ const permanenti = nonTerre.filter(
   (carta) =>
     diTipo(carta, "creature") || diTipo(carta, "enchantment") || diTipo(carta, "artifact"),
 );
+/**
+ * Quante carte sono **di quel colore**, come lo intende una risposta che lo
+ * nomina: il colore **stampato**, cioè i simboli nel costo di mana.
+ *
+ * Non l'identità di colore, che è un'altra cosa e qui direbbe il falso. Una
+ * creatura verde che si attiva pagando mana nero ha il nero nell'identità, ma
+ * «destroy target black creature» non la tocca; e un artefatto incolore che
+ * produce mana rosso non lo colpisce nessuna Blast. Contate per identità, le
+ * righe di colore sovrastimano — quattro creature sul nero, sei sul rosso — e
+ * sono proprio quelle righe a fissare la mediana.
+ */
 const diColore = (dove: readonly Carta[], colore: string) =>
-  dove.filter((carta) => carta.identitaDiColore.includes(colore as never)).length;
+  dove.filter((carta) => carta.costoDiMana.includes(colore)).length;
+const diSottotipo = (dove: readonly Carta[], sottotipo: string) =>
+  dove.filter((carta) =>
+    carta.sottotipi.some((suo) => suo.toLowerCase() === sottotipo.toLowerCase()),
+  ).length;
 
 /** Quali carte di quel tag ogni frase prende, e quali non ne prende nessuna. */
 function frasiPerFrase(tag: Tag, condizioni: readonly string[]): void {
@@ -68,13 +87,24 @@ function frasiPerFrase(tag: Tag, condizioni: readonly string[]): void {
   }
 }
 
-/** La copertura di una condizione: quante ne prende su quante ne prenderebbe. */
-function copertura(righe: readonly (readonly [string, number, number])[]): void {
+/**
+ * La copertura di una condizione: quante ne prende su quante ne prenderebbe.
+ *
+ * Il quarto posto della riga, se c'è, dice **perché quella riga non fa
+ * mediana**: si stampa come le altre, con la sua ragione accanto, ma resta
+ * fuori dal conto. Serve alle condizioni che nel pool **non esistono da sole** —
+ * la frase c'è, ma ogni carta che la porta ne porta anche un'altra, più stretta
+ * e non misurabile. Contarle direbbe della rimozione quel che vale per una
+ * rimozione che il pool non ha.
+ */
+function copertura(
+  righe: readonly (readonly [string, number, number] | readonly [string, number, number, string])[],
+): void {
   const quote: number[] = [];
-  for (const [che, prese, tutte] of righe) {
-    quote.push(prese / tutte);
+  for (const [che, prese, tutte, fuori] of righe) {
+    if (fuori === undefined) quote.push(prese / tutte);
     console.log(
-      `${String(prese).padStart(4)} su ${String(tutte).padEnd(4)} ${(prese / tutte).toFixed(3)}  ${che}`,
+      `${String(prese).padStart(4)} su ${String(tutte).padEnd(4)} ${(prese / tutte).toFixed(3)}  ${che}${fuori === undefined ? "" : `   ← fuori mediana: ${fuori}`}`,
     );
   }
   quote.sort((uno, altro) => uno - altro);
@@ -104,6 +134,75 @@ const aure = nonTerre.filter((carta) =>
 const istanti = nonTerre.filter((carta) => diTipo(carta, "instant"));
 const incantesimi = nonTerre.filter((carta) => diTipo(carta, "enchantment"));
 const artefatti = nonTerre.filter((carta) => diTipo(carta, "artifact"));
+
+const artefattiCreatura = creature.filter((carta) => diTipo(carta, "artifact")).length;
+const muri = diSottotipo(creature, "wall");
+/**
+ * La creatura **vola** davvero, invece di nominare il volo di qualcun altro.
+ *
+ * Non basta cercare la parola: il testo del pool porta dentro anche le
+ * spiegazioni fra parentesi, e «creatures with flying or reach» sta scritto
+ * sotto ogni singolo volatore. Quel che distingue è la parola **prima**: chi
+ * vola lo dichiara e basta, chi lo nomina lo nomina sempre dopo un «with», un
+ * «gains», un «loses» o un «choose».
+ *
+ * Chi il volo se lo dà da sé pagando resta fuori, ed è voluto: la rimozione che
+ * colpisce chi vola lo trova a terra.
+ */
+const vola = (carta: Carta): boolean =>
+  [...carta.testo.matchAll(/\bflying\b/gi)].some(
+    (dove) => !/(with|gains?|loses?|choose|without) $/i.test(carta.testo.slice(0, dove.index)),
+  );
+const cheVolano = creature.filter(vola).length;
+// La costituzione bassa: le rimozioni del pool che pongono questa condizione
+// dicono «3 o meno», oppure la legano alla forza di chi le usa — che nel pool
+// arriva lì attorno.
+const diCostituzioneBassa = creature.filter(
+  (carta) => carta.costituzione !== null && Number(carta.costituzione) <= 3,
+).length;
+
+// Il denominatore di una rimozione è quel che colpirebbe **senza** la sua
+// condizione: le creature se bersaglia creature, i permanenti non-terra se
+// bersaglia permanenti. Le rimozioni del pool si condizionano sull'una o
+// sull'altro, e misurarle tutte sul denominatore più largo chiamerebbe
+// condizione anche la scelta del bersaglio, che condizione non è.
+console.log(
+  `\n==== quanto copre una rimozione condizionata (${creature.length} creature, ${permanenti.length} permanenti non-terra)`,
+);
+copertura([
+  ["una creatura che non è un artefatto", creature.length - artefattiCreatura, creature.length],
+  ["una creatura che non è nera", creature.length - diColore(creature, "B"), creature.length],
+  [
+    "una creatura che non è un Muro",
+    creature.length - muri,
+    creature.length,
+    "nel pool non esiste da sola: chi la pone la pone in combattimento",
+  ],
+  ["un Muro", muri, creature.length],
+  ["una creatura blu", diColore(creature, "U"), creature.length],
+  ["una creatura nera", diColore(creature, "B"), creature.length],
+  ["una creatura rossa", diColore(creature, "R"), creature.length],
+  ["un permanente blu", diColore(permanenti, "U"), permanenti.length],
+  ["un permanente nero", diColore(permanenti, "B"), permanenti.length],
+  ["un permanente rosso", diColore(permanenti, "R"), permanenti.length],
+  ["una creatura che vola", cheVolano, creature.length],
+  [
+    "una creatura di costituzione 3 o meno",
+    diCostituzioneBassa,
+    creature.length,
+    "nel pool non esiste da sola: una la pone in combattimento, l'altra su roba tua",
+  ],
+]);
+
+// Fuori misura restano le condizioni che non stanno nella carta ma nel turno:
+// chi colpisce solo chi attacca, chi blocca, chi è TAPpato. Sono condizionali,
+// e delle più strette che ci siano — la carta in mano a volte non trova niente
+// — ma il pool non le sa esprimere. Due righe qui sopra restano fuori dalla
+// mediana per la stessa ragione vista da vicino: la frase c'è, ma nel pool
+// nessuna carta la porta da sola.
+console.log(
+  "\nFuori misura: chi colpisce solo chi attacca, chi blocca o chi è TAPpato.\nContano come condizionali, ma la loro quota non è misurabile di qui.",
+);
 
 // Il denominatore è quel che la risposta prenderebbe **senza** la sua
 // condizione: tutte le carte non-terra per una contromagia secca, tutte le
