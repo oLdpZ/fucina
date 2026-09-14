@@ -1,5 +1,4 @@
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename } from "node:path";
 import { createInterface } from "node:readline";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
@@ -8,6 +7,7 @@ import { createGunzip } from "node:zlib";
 import { interpretaFormato } from "../src/dati/carica-formato.ts";
 import type { Formato } from "../src/dati/formato.ts";
 import type { Pool } from "../src/dati/pool.ts";
+import { DESCRITTORE, dataDellArchivio, verificaRaccolto } from "./archivio-di-scryfall.ts";
 import {
   confrontaPool,
   contaBuchi,
@@ -48,23 +48,15 @@ import {
  * comando solo, senza argomenti obbligatori e senza dipendenze da installare.
  *
  * Con `--da <archivio>` legge un archivio Scryfall già sulla macchina invece
- * di scaricarlo — `.jsonl` o `.jsonl.gz`, col nome che gli dà Scryfall: serve
- * per riprovare senza rifare quattrocento megabyte di rete. `--tag <archivio>`
+ * di scaricarlo — `.jsonl` o `.jsonl.gz`, **col nome che gli dà Scryfall e
+ * della razza giusta**: serve per riprovare senza rifare quattrocento megabyte
+ * di rete. Quale sia la razza giusta, e come si riconosce, lo dice
+ * `archivio-di-scryfall.ts`; qui basta sapere che un archivio di un'altra si
+ * ferma prima di riscrivere il pool. `--tag <archivio>`
  * fa lo stesso per l'archivio dei tag funzionali, che però pesa un
  * sessantesimo: con `--da` da solo i tag si riscaricano, ed è un costo che si
  * può pagare.
  */
-
-/**
- * L'archivio di **tutte** le carte in **tutte le lingue**.
- *
- * Non è quello che bastava allo Standard, ed è cinque volte più pesante. È il
- * prezzo del criterio: una carta è nel formato se ne esiste una stampa in
- * italiano, e l'archivio predefinito le stampe non inglesi le tiene solo
- * quando in inglese la carta non esiste affatto — cioè quasi mai, proprio per
- * le carte di cui qui si deve decidere.
- */
-const DESCRITTORE = "https://api.scryfall.com/bulk-data/all-cards";
 
 /**
  * I tag funzionali di **Scryfall Tagger**, la seconda razza di tag
@@ -128,6 +120,13 @@ async function principale(): Promise<void> {
     : await daScryfall(formato);
 
   console.log(`Trovate ${grezze.length} stampe nelle edizioni ammesse.`);
+
+  // Zero stampe si dice **qui**, e non più avanti. Più avanti `preparaPool`
+  // confronta i nomi del documento di formato con quelli che ha in mano, e da
+  // un archivio vuoto non ne riconosce nessuno: il comando moriva dicendo che
+  // il documento nomina carte che non esistono, cioè accusando l'unico dei due
+  // file scritto a mano — e l'unico dei due che fosse giusto (ticket 18).
+  verificaRaccolto(grezze.length, daFile ?? DESCRITTORE);
 
   // I tag si chiedono per le carte che abbiamo in mano e non per tutta la
   // storia di Magic: Tagger copre trent'anni, questo formato ne copre uno, e
@@ -260,25 +259,16 @@ async function daScryfall(
 
 /**
  * L'archivio già sul disco. La data dei dati non si inventa: si legge dal nome
- * che Scryfall dà al file (`default-cards-20260902090548.jsonl`), perché il
- * prezzo di ogni carta la porta con sé e sbagliarla vorrebbe dire mentire.
+ * che Scryfall dà al file, perché il prezzo di ogni carta la porta con sé e
+ * sbagliarla vorrebbe dire mentire. Chi la legge — e chi si ferma quando il
+ * nome non si sa leggere, o dice un istante che non esiste, o è di un archivio
+ * di un'altra razza — è `archivio-di-scryfall.ts`.
  */
 async function daArchivioLocale(
   percorso: string,
   formato: Formato,
 ): Promise<{ grezze: CartaScryfall[]; aggiornatoIl: string }> {
-  // Solo il nome del file, non l'intero percorso: una cartella che si chiama
-  // con dei numeri darebbe una data plausibile e falsa, e quella data finisce
-  // sul prezzo di ogni carta.
-  const impronta = /-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(basename(percorso));
-  if (!impronta) {
-    throw new Error(
-      `Dal nome «${percorso}» non si legge la data dei dati. ` +
-        `Serve il nome che gli dà Scryfall, tipo all-cards-20260906091709.jsonl.gz`,
-    );
-  }
-  const [, anno, mese, giorno, ore, minuti, secondi] = impronta;
-  const aggiornatoIl = `${anno}-${mese}-${giorno}T${ore}:${minuti}:${secondi}.000+00:00`;
+  const aggiornatoIl = dataDellArchivio(percorso);
 
   console.log(`Leggo ${percorsoLeggibile(percorso)} (dati del ${aggiornatoIl})…`);
   return {
