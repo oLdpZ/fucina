@@ -114,16 +114,34 @@ export function MazziSalvati({
   const [nome, setNome] = useState(aperto?.nome ?? "");
   const [avviso, setAvviso] = useState<string | null>(null);
   const [guasto, setGuasto] = useState<string | null>(null);
+  /**
+   * La notizia che sta **sul mazzo che è stato toccato**, e il suo posto
+   * nell'elenco: `null` quando non ce n'è nessuna.
+   *
+   * Non è un doppione degli avvisi qui sopra, è l'altro posto. Quelli stanno in
+   * cima, dove si preme «Salva» e «Importa», ed è lì che chi li ha premuti sta
+   * già guardando. L'elenco no: un mazzo che non si apre sta in fondo, e chi ha
+   * scorso fin lì per toccarlo vedrebbe la pagina non cambiare e nient'altro —
+   * il rimedio pensato per non nascondere una cosa la nasconderebbe meglio di
+   * prima (ticket 28).
+   */
+  const [avvisoSulMazzo, setAvvisoSulMazzo] = useState<{ id: string; testo: string } | null>(null);
   const [daImportare, setDaImportare] = useState("");
 
   /**
    * Quel che è andato bene e quel che non è andato si dicono **insieme**: un
    * «salvato» rimasto lì sopra un «non si è potuto salvare» direbbe all'utente
    * due cose opposte nello stesso momento.
+   *
+   * E si dicono in **un posto solo**: la notizia appesa a un mazzo dell'elenco
+   * se ne va appena un altro gesto ne produce una nuova, o resterebbe lì sotto
+   * a raccontare di un mazzo che nessuno sta più guardando — quando non di uno
+   * appena cancellato.
    */
   const racconta = (fatto: string | null, male: string | null) => {
     setAvviso(fatto);
     setGuasto(male);
+    setAvvisoSulMazzo(null);
   };
 
   // L'elenco si rilegge dal deposito, che è la sola verità: due schede aperte
@@ -242,20 +260,38 @@ export function MazziSalvati({
   }, [mazzo, terreDelPool, terreVolute, euroPerLeTerre, formato]);
 
   /**
-   * Quel che un gesto ha fatto, e le terre che gli è costato: dette insieme.
+   * Quel che un gesto ha fatto, e le terre che gli è costato: dette insieme, in
+   * cima alla schermata, dove il gesto è stato fatto.
    *
-   * Ci passano **tutte** le strade che rimettono un mazzo in mano — si importa,
-   * si riapre dall'elenco, si salva — e non solo l'importazione: un mazzo
-   * arrivato da un amico resta nel deposito con le sue terre dentro, e
-   * riaprirlo le riperde uguale; un mazzo montato a mano dal catalogo le perde
-   * nell'istante in cui lo si salva. Tacerlo da qualche parte vorrebbe dire
-   * avvisare solo nei casi in cui il file è ancora intero.
+   * Sono i due gesti che si danno da qui: si importa, si salva. Il terzo
+   * rientro — si riapre dall'elenco — dice le stesse cose con lo stesso modello
+   * di frase, ma le dice sul mazzo toccato (`apriDallElenco`), che è dove quel
+   * gesto è stato fatto. Tacerlo in uno dei tre vorrebbe dire avvisare solo nei
+   * casi in cui il file è ancora intero: un mazzo arrivato da un amico resta
+   * nel deposito con le sue terre dentro, e riaprirlo le riperde uguale; un
+   * mazzo montato a mano dal catalogo le perde nell'istante in cui lo si salva.
    *
    * Quale delle due notizie si legga per prima non lo decide questa schermata:
    * lo decide il modello di frase, che è lo stesso per tutti e tre.
    */
   const raccontaLeTerreScartate = (scartate: TerreScartate, annuncio: string | null): void => {
     racconta(fraseConLeTerreScartate({ annuncio, terre: scartate }), null);
+  };
+
+  /**
+   * Aprire un mazzo dall'elenco, e dire lì quel che è costato.
+   *
+   * La frase è la stessa degli altri due rientri — stesso modello, stesse
+   * parole — e cambia solo dove si posa: accanto al mazzo che è stato toccato,
+   * perché è lì che si sta guardando e perché è lì che la pagina è rimasta
+   * ferma. Quando non c'è niente da dire non si dice niente e si va al mazzo:
+   * una schermata che parla sempre non la legge più nessuno.
+   */
+  const apriDallElenco = (salvato: MazzoSalvato): void => {
+    const scartate = apriMazzo(salvato, true);
+    const detto = fraseConLeTerreScartate({ annuncio: null, terre: scartate });
+    racconta(null, null);
+    if (detto !== null) setAvvisoSulMazzo({ id: salvato.id, testo: detto });
   };
 
   const salva = async () => {
@@ -377,24 +413,39 @@ export function MazziSalvati({
           <ul>
             {salvati.map((salvato) => (
               <li key={salvato.id} data-aperto={salvato.id === aperto?.id}>
-                <button
-                  type="button"
-                  class="nome-salvato"
-                  onClick={() => raccontaLeTerreScartate(apriMazzo(salvato, true), null)}
-                >
-                  <span class="nome">{salvato.nome}</span>
-                  <span class="dettagli">
-                    {copieDi(salvato)} carte · salvato il {dataInItaliano(salvato.salvatoIl)}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  class="cancella"
-                  onClick={() => void cancella(salvato)}
-                  aria-label={`Cancella ${salvato.nome}`}
-                >
-                  Cancella
-                </button>
+                <div class="riga">
+                  <button
+                    type="button"
+                    class="nome-salvato"
+                    onClick={() => apriDallElenco(salvato)}
+                  >
+                    <span class="nome">{salvato.nome}</span>
+                    <span class="dettagli">
+                      {copieDi(salvato)} carte · salvato il {dataInItaliano(salvato.salvatoIl)}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="cancella"
+                    onClick={() => void cancella(salvato)}
+                    aria-label={`Cancella ${salvato.nome}`}
+                  >
+                    Cancella
+                  </button>
+                </div>
+                {/*
+                  La riga c'è **sempre**, anche vuota: una zona `role="status"`
+                  che nasce già piena non viene letta ad alta voce da quasi
+                  nessun lettore di schermo — annunciano quel che cambia dentro
+                  una zona che c'era, non la zona. Nata insieme alla sua frase,
+                  questa tornerebbe al silenzio da cui il ticket 28 parte, per
+                  chi la pagina la ascolta invece di guardarla. Vuota non
+                  occupa spazio e non dice niente: se ne occupa il foglio di
+                  stile.
+                */}
+                <p class="avviso-sul-mazzo" role="status">
+                  {avvisoSulMazzo?.id === salvato.id ? avvisoSulMazzo.testo : ""}
+                </p>
               </li>
             ))}
           </ul>

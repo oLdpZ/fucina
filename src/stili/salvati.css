@@ -93,12 +93,17 @@
 }
 
 .elenco-salvati li {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--passo) * 2);
   background: var(--superficie);
   border: 1px solid var(--bordo);
   border-radius: var(--raggio);
+}
+
+/* Il nome e il «Cancella» stanno affiancati; quel che il mazzo ha da dire va
+   sotto, dove c'è la riga intera per dirlo. */
+.elenco-salvati li .riga {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--passo) * 2);
 }
 
 /* Il mazzo che si sta guardando si riconosce senza doverlo leggere. */
@@ -128,6 +133,24 @@
   color: var(--inchiostro-tenue);
   font-family: var(--carattere-dati);
   font-size: var(--dati-minuscolo);
+}
+
+/* La notizia appesa al mazzo che è stato toccato: dentro il suo riquadro, così
+   si legge di chi parla senza doverlo dedurre, e incolonnata col nome che la
+   riguarda — lo stesso rientro dei bottoni qui sopra. */
+.elenco-salvati .avviso-sul-mazzo {
+  margin: 0;
+  padding: 0 calc(var(--passo) * 4) calc(var(--passo) * 3);
+  color: var(--inchiostro-tenue);
+  font-size: var(--testo-piccolo);
+}
+
+/* Quando non c'è niente da dire non si vede e non si sente, ma **resta**: è
+   una zona viva, e i lettori di schermo annunciano quel che cambia dentro una
+   zona che c'era già. Si spegne con lo spazio, non con `display: none`, che la
+   toglierebbe anche dall'albero che quei lettori leggono. */
+.elenco-salvati .avviso-sul-mazzo:empty {
+  padding: 0;
 }
 
 .elenco-salvati .cancella {
