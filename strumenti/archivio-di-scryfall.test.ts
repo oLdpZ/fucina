@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ARCHIVIO, dataDellArchivio, verificaRaccolto } from "./archivio-di-scryfall.ts";
+import { ARCHIVIO, dataDellArchivio } from "./archivio-di-scryfall.ts";
 
 /** Il nome che Scryfall dà davvero all'archivio che ci serve. */
 const BUONO = `${ARCHIVIO}-20260906091709.jsonl.gz`;
@@ -60,19 +60,5 @@ describe("la data dei dati, letta dal nome dell'archivio", () => {
     expect(() => dataDellArchivio(`copia-di-${ARCHIVIO}-20260906091709.jsonl.gz`)).toThrow(
       new RegExp(ARCHIVIO),
     );
-  });
-});
-
-describe("l'archivio che non produce carte", () => {
-  it("tace quando qualche carta è uscita", () => {
-    expect(() => verificaRaccolto(1, BUONO)).not.toThrow();
-  });
-
-  it("accusa l'archivio, non il documento di formato", () => {
-    const guaio = (): void => verificaRaccolto(0, BUONO);
-
-    expect(guaio).toThrow(new RegExp(BUONO.replaceAll(".", "\\.")));
-    expect(guaio).toThrow(/archivio/i);
-    expect(guaio).not.toThrow(/documento/i);
   });
 });

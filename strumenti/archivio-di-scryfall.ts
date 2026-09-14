@@ -117,24 +117,3 @@ export function dataDellArchivio(percorso: string): string {
 
   return istante;
 }
-
-/**
- * Che dall'archivio sia uscita almeno una carta.
- *
- * Si chiede **prima** di preparare il pool, e la ragione è tutta nell'ordine.
- * Più avanti `preparaPool` confronta i nomi del documento di formato con quelli
- * che ha in mano, e se l'archivio è vuoto non ne trova nessuno: il comando
- * moriva dicendo «Il documento di formato nomina 19 carte che non esistono»,
- * cioè accusando l'unico dei due file scritto a mano — e l'unico dei due che
- * fosse giusto (ticket 18).
- */
-export function verificaRaccolto(quante: number, provenienza: string): void {
-  if (quante > 0) return;
-
-  throw new Error(
-    `Da «${provenienza}» non è uscita nessuna carta delle edizioni ammesse. ` +
-      `Quasi sempre vuol dire che l'archivio non è quello giusto — la razza ` +
-      `sbagliata, o il file dei tag passato per errore a --da. Il pool non ` +
-      `viene toccato.`,
-  );
-}

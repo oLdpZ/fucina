@@ -7,7 +7,7 @@ import { createGunzip } from "node:zlib";
 import { interpretaFormato } from "../src/dati/carica-formato.ts";
 import type { Formato } from "../src/dati/formato.ts";
 import type { Pool } from "../src/dati/pool.ts";
-import { DESCRITTORE, dataDellArchivio, verificaRaccolto } from "./archivio-di-scryfall.ts";
+import { DESCRITTORE, dataDellArchivio } from "./archivio-di-scryfall.ts";
 import {
   confrontaPool,
   contaBuchi,
@@ -18,6 +18,8 @@ import {
   raccontaFigure,
   raccontaLingue,
   raccontaPosta,
+  verificaPoolNonVuoto,
+  verificaRaccolto,
   type CartaScryfall,
 } from "./prepara-pool.ts";
 import { leggiCorrezioni, raccontaCorrezioni, TAG } from "./tag-di-sinergia.ts";
@@ -164,6 +166,11 @@ async function principale(): Promise<void> {
     process.exitCode = 1;
   }
 
+  // Il pool vuoto si ferma **qui**, dove si sa ancora di chi è la colpa: le
+  // stampe c'erano (`verificaRaccolto` l'ha già chiesto), quindi è il criterio
+  // a non averne ammessa nessuna, e il manutentore va mandato al documento e
+  // non a riscaricare l'archivio.
+  verificaPoolNonVuoto(preparazione.pool, formato);
   scriviPool(preparazione.pool);
 
   const conTag = preparazione.pool.carte.filter((c) => c.tagScryfall.length > 0).length;
@@ -466,10 +473,13 @@ function poolPrecedente(): Pool | null {
  * si modifica a mano, ma si deve poter *leggere* cosa è cambiato.
  */
 function scriviPool(pool: Pool): void {
-  // Un pool vuoto vuol dire che qualcosa è andato storto a monte, e scriverlo
-  // cancellerebbe in silenzio l'unico file che fa funzionare l'app offline.
+  // L'ultima rete, e non più una diagnosi: chi sa *perché* il pool è vuoto —
+  // l'archivio o il criterio — l'ha già chiesto e l'ha già detto, ognuno con la
+  // sua frase. Se si arriva qui è perché nessuna delle due ha parlato, e allora
+  // l'unica cosa vera da dire è che scrivere cancellerebbe in silenzio l'unico
+  // file che fa funzionare l'app offline.
   if (pool.carte.length === 0) {
-    throw new Error("Dall'archivio non è uscita nessuna carta: il pool non viene toccato.");
+    throw new Error("Il pool è vuoto e nessuno sa dire perché: il file non viene toccato.");
   }
 
   mkdirSync(qui("../public/dati"), { recursive: true });

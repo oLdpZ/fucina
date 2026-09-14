@@ -18,6 +18,8 @@ import {
   raccontaFigure,
   raccontaLingue,
   raccontaPosta,
+  verificaPoolNonVuoto,
+  verificaRaccolto,
   type CartaScryfall,
 } from "./prepara-pool.ts";
 import { indicizzaTag } from "./tag-di-scryfall.ts";
@@ -1112,5 +1114,41 @@ describe("il pool dice da quale documento viene", () => {
     const dopo = preparaPool(FRAMMENTO, { formato: conUnBando, aggiornatoIl: QUANDO });
 
     expect(dopo.pool.improntaDelDocumento).not.toBe(preparazione().pool.improntaDelDocumento);
+  });
+});
+
+describe("l'archivio che non produce nessuna stampa", () => {
+  it("tace quando qualche stampa è uscita", () => {
+    expect(() => verificaRaccolto(1, "un archivio qualunque")).not.toThrow();
+  });
+
+  it("accusa l'archivio, non il documento di formato", () => {
+    // Senza questa guardia il primo a protestare era `verificaCarteEsistenti`,
+    // che diceva «il documento nomina N carte che non esistono»: accusava
+    // l'unico dei due file scritto a mano, e l'unico dei due che fosse giusto.
+    const guaio = (): void => verificaRaccolto(0, "un archivio qualunque");
+
+    expect(guaio).toThrow(/un archivio qualunque/);
+    expect(guaio).toThrow(/archivio/i);
+    expect(guaio).not.toThrow(/documento/i);
+  });
+});
+
+describe("il pool che esce vuoto dice di chi è la colpa", () => {
+  it("tace quando qualche carta il criterio l'ha ammessa", () => {
+    expect(() => verificaPoolNonVuoto(preparazione().pool, FORMATO)).not.toThrow();
+  });
+
+  it("accusa il criterio, e non l'archivio che le carte le aveva date", () => {
+    // Il caso vero: l'archivio è quello giusto e di stampe ne ha date, ma il
+    // criterio non ne ammette nessuna. Dire «dall'archivio non è uscita nessuna
+    // carta» sarebbe falso, e manderebbe il manutentore a riscaricare
+    // quattrocento megabyte buoni (rilievo della review del ticket 18).
+    const vuoto = { ...preparazione().pool, carte: [] };
+    const guaio = (): void => verificaPoolNonVuoto(vuoto, FORMATO);
+
+    expect(guaio).toThrow(/criterio/i);
+    expect(guaio).toThrow(new RegExp(FORMATO.criterio.regola));
+    expect(guaio).not.toThrow(/archivio/i);
   });
 });

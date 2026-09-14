@@ -503,6 +503,58 @@ export function preparaPool(
  * `stampa-italiana` voglia dire «esiste una stampa in italiano» è la
  * definizione della regola, non una lista di carte.
  */
+/**
+ * Che dall'archivio sia uscita almeno una stampa.
+ *
+ * È la **prima** delle due domande sul vuoto, e si fa appena finito il
+ * setaccio. Più giù `preparaPool` confronta i nomi del documento di formato con
+ * quelli che ha in mano, e da un archivio vuoto non ne riconosce nessuno: il
+ * comando moriva dicendo «Il documento di formato nomina N carte che non
+ * esistono», cioè accusando l'unico dei due file scritto a mano — e l'unico dei
+ * due che fosse giusto (ticket 18).
+ *
+ * Sta qui e non accanto al lettore dell'archivio perché la ragione per cui
+ * esiste è tutta in *quest'ordine*: è la guardia che deve parlare prima di
+ * `verificaCarteEsistenti`. La seconda domanda è `verificaPoolNonVuoto`, qui
+ * sotto.
+ */
+export function verificaRaccolto(quante: number, provenienza: string): void {
+  if (quante > 0) return;
+
+  throw new Error(
+    `Da «${provenienza}» non è uscita nessuna carta delle edizioni ammesse. ` +
+      `Quasi sempre vuol dire che l'archivio non è quello giusto — la razza ` +
+      `sbagliata, o il file dei tag passato per errore a --da. Il pool non ` +
+      `viene toccato.`,
+  );
+}
+
+/**
+ * Che il pool preparato abbia dentro almeno una carta.
+ *
+ * Un pool vuoto scritto sul disco cancellerebbe in silenzio l'unico file che fa
+ * funzionare l'app offline, quindi qualcuno lo deve fermare. Ma **questa** è la
+ * seconda delle due domande che si fanno, e la differenza fra le due è tutta
+ * nella frase che dicono.
+ *
+ * La prima — zero stampe lette — è dell'archivio, e la fa `verificaRaccolto`.
+ * Questa arriva dopo, e allora le stampe c'erano: è il **criterio** a non
+ * averne ammessa nessuna. Dire qui «dall'archivio non è uscita nessuna carta»
+ * sarebbe falso, e manderebbe il manutentore a riscaricare quattrocento
+ * megabyte perfettamente buoni invece che ad aprire il documento di formato,
+ * che è l'unico dei due a poter essere sbagliato a questo punto.
+ */
+export function verificaPoolNonVuoto(pool: Pool, formato: Formato): void {
+  if (pool.carte.length > 0) return;
+
+  throw new Error(
+    `Il criterio «${formato.criterio.regola}» non ha ammesso nessuna delle carte ` +
+      `lette: il pool non viene toccato. Le stampe c'erano — quante lo dice la ` +
+      `riga qui sopra — e nessuna ha passato la regola. Da guardare sono le ` +
+      `edizioni ammesse e il criterio nel documento di formato.`,
+  );
+}
+
 function ammessaDalCriterio(stampe: CartaScryfall[], formato: Formato): boolean {
   switch (formato.criterio.regola) {
     case "stampa-italiana":
