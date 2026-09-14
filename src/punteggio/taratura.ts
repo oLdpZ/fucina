@@ -386,9 +386,13 @@ export const CONDIZIONI_DELLA_RIMOZIONE: readonly string[] = [
  * portavano nessuna — «target white spell» fra loro — sono state tolte invece
  * di restare a far numero.
  *
- * L'ultima frase è la più stretta di tutte e vale una carta sola: c'è chi
- * annulla **se stesso** e nient'altro. Senza di lei passava per contromagia
- * piena, e in un mazzo ce ne finivano quattro copie.
+ * Una frase è stata **tolta** il 14 settembre 2026 (ticket 75): «when you cast
+ * this spell, counter it», che valeva la carta che annulla **se stessa** e
+ * nient'altro. Il 73 l'aveva messa per condizionarla al massimo, ma il guasto
+ * stava un passo prima — quella carta un `controincantesimo` non ce l'ha da
+ * fare, e adesso il tag non ce l'ha più. Tolto il tag, la frase non toccava più
+ * nessuna carta, e una frase che non tocca niente esce invece di restare a far
+ * numero.
  *
  * Restano incondizionate, e sono sei, le contromagie che annullano
  * **qualunque** cosa: quelle secche e quelle che chiedono un pedaggio. Il
@@ -407,7 +411,6 @@ export const CONDIZIONI_DEL_CONTROINCANTESIMO: readonly string[] = [
   "target green spell",
   "activated ability",
   "destroy a land you control",
-  "when you cast this spell, counter it",
 ];
 
 /**
@@ -426,9 +429,12 @@ export const CONDIZIONI_DEL_CONTROINCANTESIMO: readonly string[] = [
  * | un istantaneo | 93 | 0,129 |
  * | una magia che distrugge una tua terra | 22 | 0,031 |
  * | un'abilità attivata di un artefatto | 0 | 0,000 |
- * | se stessa, e nient'altro | 0 | 0,000 |
  *
- * La **mediana** è 0,188, e di lì il numero. Non la media (0,165): una sola
+ * La **mediana** è 0,188, e di lì il numero. La riga in meno del ticket 75 non
+ * l'ha mossa: valeva 0,000 e stava a un capo del campione. Ha mosso la media, da
+ * 0,165 a 0,181, ed è la **riga** tolta a spostarla e non il tag tolto a Mana
+ * Vortex: il denominatore sono le 720 carte non-terra, non le contromagie, e
+ * quello non cambia. Non la media (0,181), comunque: una sola
  * condizione — la magia creatura — copre il doppio di tutte le altre, e una
  * media tirata da lei direbbe di ognuna quel che vale solo per quella.
  *

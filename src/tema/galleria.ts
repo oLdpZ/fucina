@@ -91,7 +91,8 @@ export const GALLERIA: readonly VoceDiGalleria[] = [
     /**
      * **`rimozione-mirata` non è qui, ed è la correzione del ticket 71.**
      *
-     * C'era, e con lei il tema uniti 128 carte di cui il 54% erano quelle: ogni
+     * C'era, e con lei il tema uniti 128 carte di cui il 54% erano quelle — è
+     * quel che la sosta del ticket 71 vide, sul pool di quel giorno: ogni
      * creatura che tappa per tirare un danno addosso a un'altra è rimozione per
      * davvero e entrava di diritto. Il mazzo che usciva sul pool vero non aveva
      * **nessuna contromagia e nessuna pesca** — era un mazzo di creature verdi e
@@ -107,8 +108,16 @@ export const GALLERIA: readonly VoceDiGalleria[] = [
      * perché quel tag **è** la sua promessa — «il danno non passa». Qui il tag
      * dominante era l'unico dei quattro che la promessa non nominava.
      *
-     * Tolta lei restano 63 carte e il più numeroso è `spazza-via`, che la
-     * promessa nomina: «gli togli dal tavolo quel che è riuscito a giocare».
+     * Tolta lei il più numeroso è `spazza-via`, che la promessa nomina: «gli
+     * togli dal tavolo quel che è riuscito a giocare». Sul pool del 2026-09-14
+     * sono 55 carte in tutto — `spazza-via` 24, `controincantesimo` 20, `pesca`
+     * 11.
+     *
+     * Quei tre numeri si muovono ogni volta che una correzione dei tag li tocca,
+     * e si sono mossi due volte in una settimana (ticket 73 e 75): quel che deve
+     * reggere non è la cifra ma **l'ordine**, cioè che a comandare resti un tag
+     * che la promessa nomina. Chi li trova diversi non ha trovato un guasto; chi
+     * trova `spazza-via` scavalcato, sì.
      *
      * Le rimozioni a bersaglio singolo non spariscono dall'app: chi le vuole le
      * trova nel catalogo e le mette a mano, e il motore le pesca comunque quando

@@ -228,7 +228,6 @@ copertura([
     nonTerre.length,
   ],
   ["un'abilità attivata di un artefatto", 0, nonTerre.length],
-  ["se stessa, e nient'altro", 0, nonTerre.length],
 ]);
 
 console.log(

@@ -90,6 +90,34 @@ Drain Power: +accelerazione-di-mana     # «you add the mana lost this way»
 Puppet Master: +si-cura-del-cimitero
 
 
+# Tag che leggono la parola e non su chi cade l'effetto (ticket 75, 2026-09-14).
+# La regola meccanica trova «draws a card» o «counter it» nel testo e non sa
+# chiedersi di chi si stia parlando: distinguerlo vuol dire leggere il soggetto
+# di ogni frase, che è lavoro da motore di regole (ADR-0002). Sta qui perché è
+# esattamente il caso che la seconda sorgente di Q13 esiste per coprire.
+Martyr's Cry: -pesca            # a pescare è chi ha perso le creature: è il prezzo, non il premio
+Underworld Dreams: -pesca       # non pesca, punisce chi pesca
+Mana Vortex: -controincantesimo # l'unica magia che annulla è se stessa
+#
+# Stessa passata, il resto della famiglia. La regola del `pesca` cerca «draw» e
+# «card» nella stessa frase, e prende anche chi la pesca la **salta**, chi la
+# **punisce** e chi la **rimpiazza**. Il tag vive in `MODI_DI_VANTAGGIO` e paga
+# `VALORE_DEL_VANTAGGIO_CARTE`: vuol dire vantaggio in carte, non la parola
+# «pescare». Chi non ne porta non lo prende.
+Island Sanctuary: -pesca        # salta la pescata per non farsi attaccare: la perde, non la fa
+Fasting: -pesca                 # salta il passo di pescata, e pescare la distrugge
+Chains of Mephistopheles: -pesca # è odio per la pescata: la trasforma in uno scarto
+#
+# E le due che pescano davvero ma non aggiungono niente, per la stessa ragione
+# per cui i tutori qui sotto restano senza `pesca`: scelgono una carta, non ne
+# mettono in mano una in più.
+Aladdin's Lamp: -pesca          # rimpiazza la pescata con una pescata scelta: il conto non cambia
+Jandor's Ring: -pesca           # scarti quella pescata e ne peschi una: uno a uno
+#
+# Sindbad **resta** con `pesca`: scarta quel che pesca solo se non è una terra,
+# quindi una carta in più la può dare davvero, e ripetutamente.
+
+
 # ---------------------------------------------------------------------------
 # Quel che si è deciso di NON correggere, e perché
 # ---------------------------------------------------------------------------
