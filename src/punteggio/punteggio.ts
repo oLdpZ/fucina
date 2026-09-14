@@ -44,9 +44,6 @@ import {
 } from "../mazzo/base-di-terre.js";
 import { simulaGoldfish, type EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import {
-  CONDIZIONI_DELLA_RIMOZIONE,
-  CONDIZIONI_DEL_CONTROINCANTESIMO,
-  CONDIZIONI_DELLO_SPAZZA_VIA,
   COPPIE_CHE_SI_ATTIVANO,
   COSTO_DI_BASE_DI_UNA_CARTA,
   CURVA_ATTESA_LENTA,
@@ -54,12 +51,10 @@ import {
   DENSITA_DI_SINERGIA_PIENA,
   EFFICIENZA_ATTESA,
   PESI_DELLA_VELOCITA,
+  MODI_DI_RISPONDERE,
+  MODI_DI_VANTAGGIO,
   PESI_DELLE_COMPONENTI,
   PESO_DELLA_CORSA,
-  QUOTA_DELLA_RIMOZIONE_CONDIZIONALE,
-  QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE,
-  QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE,
-  TAG_DI_VANTAGGIO_CARTE,
   TURNO_DI_CHIUSURA_OTTIMO,
   TURNO_DI_CHIUSURA_PESSIMO,
   TURNO_MAZZO_LENTO,
@@ -67,6 +62,7 @@ import {
   VALORE_DEL_CORPO,
   VALORE_DELLA_RISPOSTA,
   VALORE_DEL_VANTAGGIO_CARTE,
+  type ModoDiUnTag,
 } from "./taratura.js";
 
 /**
@@ -595,81 +591,30 @@ function eCreatura(carta: Carta): boolean {
 }
 
 /**
- * I due modi di rispondere a una carta avversaria, e a quali condizioni
- * ciascuno smette di rispondere a tutto.
+ * Il migliore dei mestieri che la carta sa fare, fra quelli dati, e alle
+ * condizioni che il suo testo porta: uno se lo fa su quel che vuole, meno se il
+ * testo pone condizioni, zero se non ne fa nessuno.
  *
- * Sono lo stesso mestiere in due momenti — toglierla di mezzo quando è già in
- * campo, fermarla prima che ci arrivi — e per questo stanno in una tabella
- * sola: la domanda «quanto è condizionato?» si fa una volta e si risponde con
- * l'elenco che tocca. Le frasi e le quote stanno tutte in `taratura.ts`.
- */
-const MODI_DI_RISPONDERE: readonly {
-  tag: Tag;
-  condizioni: readonly string[];
-  quota: number;
-}[] = [
-  {
-    tag: "rimozione-mirata",
-    condizioni: CONDIZIONI_DELLA_RIMOZIONE,
-    quota: QUOTA_DELLA_RIMOZIONE_CONDIZIONALE,
-  },
-  {
-    tag: "controincantesimo",
-    condizioni: CONDIZIONI_DEL_CONTROINCANTESIMO,
-    quota: QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE,
-  },
-];
-
-/**
- * Se il testo della carta porta una delle frasi che condizionano quel mestiere,
- * quanto ne resta; uno se non ne porta nessuna.
- */
-function quotaDellaCondizione(testo: string, condizioni: readonly string[], quota: number): number {
-  return condizioni.some((frase) => testo.includes(frase)) ? quota : 1;
-}
-
-/**
- * Quanto vale una carta come risposta: uno se risponde a quel che vuole, meno
- * se il testo pone condizioni, zero se non risponde a niente.
+ * Il **migliore** e non la somma: una carta che annulla il blu e in più
+ * distrugge un permanente blu è la stessa carta giocata in due modi, e chi la
+ * lancia sceglie. Sommarli direbbe che in una partita le fa tutt'e due, e non
+ * è vero nemmeno una volta.
  *
- * Una carta che sa fare tutt'e due i mestieri vale per il **migliore** dei due
- * e non per la somma: le due metà sono la stessa carta giocata in due modi, e
- * chi la lancia sceglie. Sommarle direbbe che la carta fa due cose in una
- * partita, e non è vero nemmeno una volta.
+ * Le frasi si cercano nel testo **intero** della carta e non nella metà che
+ * riguarda quel mestiere: separare le metà vorrebbe dire capire dove finisce
+ * una clausola, che è un lavoro da motore di regole (ADR-0002) e non da
+ * ricerca di frasi. La conseguenza è che su una carta a due metà gli elenchi si
+ * mescolano — e quel che tiene è proprio il massimo: alla carta resta la quota
+ * del mestiere che se la cava meglio, non quella che il testo dell'altra metà
+ * le avrebbe cucito addosso.
  */
-function valoreDellaRisposta(carta: Carta): number {
+function migliorQuota(carta: Carta, modi: readonly ModoDiUnTag[]): number {
   const testo = carta.testo.toLowerCase();
   let migliore = 0;
-  for (const modo of MODI_DI_RISPONDERE) {
+  for (const modo of modi) {
     if (!carta.tag.includes(modo.tag)) continue;
-    migliore = Math.max(migliore, quotaDellaCondizione(testo, modo.condizioni, modo.quota));
-  }
-  return migliore;
-}
-
-/**
- * Quanto vale il vantaggio in carte che la carta porta.
- *
- * Vale uno chi ne rimette in mano senza condizioni. Chi lo porta **spazzando
- * via il campo** lo porta per quante carte prende con una sola, e uno spazzino
- * che prende una categoria sola ne prende poche: la sua quota è scontata come
- * quella di una risposta condizionale, e per la stessa ragione.
- */
-function valoreDelVantaggio(carta: Carta): number {
-  const testo = carta.testo.toLowerCase();
-  let migliore = 0;
-  for (const tag of TAG_DI_VANTAGGIO_CARTE) {
-    if (!carta.tag.includes(tag)) continue;
-    migliore = Math.max(
-      migliore,
-      tag === "spazza-via"
-        ? quotaDellaCondizione(
-            testo,
-            CONDIZIONI_DELLO_SPAZZA_VIA,
-            QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE,
-          )
-        : 1,
-    );
+    const condizionato = modo.condizioni.some((frase) => testo.includes(frase));
+    migliore = Math.max(migliore, condizionato ? modo.quota : 1);
   }
   return migliore;
 }
@@ -682,8 +627,8 @@ function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
       (carta.valoreDiMana + COSTO_DI_BASE_DI_UNA_CARTA)
     : 0;
   const corpo = fraZeroEUno(efficienza / EFFICIENZA_ATTESA);
-  const risposta = valoreDellaRisposta(carta);
-  const vantaggio = valoreDelVantaggio(carta);
+  const risposta = migliorQuota(carta, MODI_DI_RISPONDERE);
+  const vantaggio = migliorQuota(carta, MODI_DI_VANTAGGIO);
 
   return {
     nome: carta.nome,

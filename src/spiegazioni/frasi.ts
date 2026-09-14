@@ -193,12 +193,16 @@ export function elenco(voci: readonly string[]): string {
  * singole carte** e della **salute dei colori**.
  */
 export type GrezziDelRuolo =
-  /** Toglie di mezzo le carte avversarie: in campo, o prima che ci arrivino. */
+  /** Risponde alle carte avversarie: in campo, o prima che ci arrivino. */
   | {
       ruolo: "risposta";
       /** Falsa quando il testo della carta pone condizioni a chi può colpire. */
       incondizionata: boolean;
-      /** Le copie del mazzo che fanno lo stesso mestiere, alle stesse condizioni. */
+      /**
+       * Le copie del mazzo che rispondono anche loro, **condizionate come
+       * questa o no**: è una conta sui due modi insieme — chi toglie di mezzo e
+       * chi annulla — e non sulle carte che pongono la stessa condizione.
+       */
       copieCheLoFanno: number;
       copieNonTerra: number;
     }
@@ -241,9 +245,15 @@ export type GrezziDiPresenza = {
 function fraseDelRuolo(grezzi: GrezziDelRuolo): string {
   switch (grezzi.ruolo) {
     case "risposta":
+      // «Risponde» e non «toglie di mezzo»: da quando questo ruolo raccoglie
+      // anche le contromagie (ticket 73), una carta su due qui dentro non
+      // toglie niente dal campo — ferma la carta prima che ci arrivi. E la
+      // conta accanto tiene insieme i due modi, quindi dice «anche loro a certe
+      // carte sole» e non «alle stesse condizioni», che sarebbe falso di una
+      // rimozione contata insieme a una contromagia.
       return grezzi.incondizionata
-        ? `Toglie di mezzo una carta avversaria e può colpire quello che vuole: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che lo sanno fare, sulle ${grezzi.copieNonTerra} che non sono terre.`
-        : `Toglie di mezzo una carta avversaria, ma solo se ha le caratteristiche giuste: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che lo sanno fare alle stesse condizioni, sulle ${grezzi.copieNonTerra} che non sono terre.`;
+        ? `Risponde a una carta avversaria e può prendere quello che vuole: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che rispondono senza condizioni, sulle ${grezzi.copieNonTerra} che non sono terre.`
+        : `Risponde a una carta avversaria, ma solo se ha le caratteristiche giuste: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che rispondono anche loro a certe carte sole, sulle ${grezzi.copieNonTerra} che non sono terre.`;
     case "vantaggio":
       return `Ti rimette carte in mano, e chi ha più carte ha più scelte: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che lo fanno, sulle ${grezzi.copieNonTerra} che non sono terre.`;
     case "corpo":

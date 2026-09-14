@@ -121,7 +121,7 @@ describe("perché la carta è nel mazzo", () => {
     expect(frase).toContain("fuori tema");
   });
 
-  it("dice la rimozione, e distingue quella che colpisce sempre", () => {
+  it("dice la risposta, e distingue quella che colpisce sempre", () => {
     const sempre = frasePerLaPresenza({
       ...base,
       ruolo: { ruolo: "risposta", incondizionata: true, copieCheLoFanno: 6, copieNonTerra: 38 },

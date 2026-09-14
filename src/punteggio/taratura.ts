@@ -264,13 +264,18 @@ export const EFFICIENZA_ATTESA = 2;
  * dell'avversario: vale quasi quanto un corpo pieno. Se però colpisce solo
  * certi bersagli, in partita a volte non colpisce niente.
  *
- * Risposta e non «rimozione»: dal 14 settembre 2026 (ticket 73) lo stesso
- * mestiere lo fanno tre tag e non uno — la rimozione mirata toglie di mezzo
- * quel che è già in campo, il controincantesimo lo ferma prima che ci arrivi.
- * Sono lo stesso mestiere fatto in due momenti, e valgono lo stesso peso: una
- * carta che li sa fare tutt'e due vale per il **migliore** dei due e non per la
- * somma, perché le due metà sono la stessa carta giocata in due modi e si
- * sceglie.
+ * Risposta e non «rimozione»: dal 14 settembre 2026 (ticket 73) questo peso lo
+ * prendono **due** tag e non uno — la rimozione mirata toglie di mezzo quel che
+ * è già in campo, il controincantesimo lo ferma prima che ci arrivi. Sono lo
+ * stesso mestiere fatto in due momenti, e valgono lo stesso peso: una carta che
+ * li sa fare tutt'e due vale per il **migliore** dei due e non per la somma,
+ * perché le due metà sono la stessa carta giocata in due modi e si sceglie.
+ * Stanno scritti in `MODI_DI_RISPONDERE`, qui sotto.
+ *
+ * Il terzo tag che risponde — lo spazzino — **non** prende questo peso e resta
+ * dov'era, nel vantaggio in carte: quel che lui porta è di prendere più carte
+ * con una sola, ed è esattamente quel che la sua condizione gli toglie. Vedi
+ * `MODI_DI_VANTAGGIO`.
  */
 export const VALORE_DEL_CORPO = 0.6;
 export const VALORE_DELLA_RISPOSTA = 0.5;
@@ -472,5 +477,58 @@ export const QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE = 0.25;
  */
 export const VALORE_DEL_VANTAGGIO_CARTE = 0.25;
 
-/** I tag che valgono come vantaggio in carte. */
-export const TAG_DI_VANTAGGIO_CARTE: readonly Tag[] = ["pesca", "spazza-via"];
+/* ------------------------------------------------------------------------- *
+ * Chi fa che mestiere, e a quali condizioni smette di farlo per intero
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Un mestiere che un tag fa, con l'elenco di frasi che lo condizionano e quel
+ * che ne resta quando una di quelle frasi c'è.
+ *
+ * L'elenco vuoto vuol dire **senza condizioni possibili**: quel tag vale sempre
+ * uno, e lo dice invece di lasciarlo dedurre. La quota accanto a un elenco
+ * vuoto non si legge mai, e per questo si scrive uno.
+ */
+export type ModoDiUnTag = {
+  tag: Tag;
+  condizioni: readonly string[];
+  quota: number;
+};
+
+/**
+ * I tag che **rispondono** alla carta dell'avversario, e a che condizioni.
+ *
+ * Sta qui e non nel motore per la ragione di tutto questo file: chi aggiunge un
+ * tag a questa tabella deve dire nello stesso momento da quali frasi si fa
+ * condizionare e quanto gliene resta. Un tag aggiunto altrove, senza queste due
+ * colonne, varrebbe uno in silenzio — che è il modo in cui uno sconto misurato
+ * si perde senza che nessuno se ne accorga.
+ */
+export const MODI_DI_RISPONDERE: readonly ModoDiUnTag[] = [
+  {
+    tag: "rimozione-mirata",
+    condizioni: CONDIZIONI_DELLA_RIMOZIONE,
+    quota: QUOTA_DELLA_RIMOZIONE_CONDIZIONALE,
+  },
+  {
+    tag: "controincantesimo",
+    condizioni: CONDIZIONI_DEL_CONTROINCANTESIMO,
+    quota: QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE,
+  },
+];
+
+/**
+ * I tag che valgono come **vantaggio in carte**, e a che condizioni.
+ *
+ * `pesca` non si condiziona: chi rimette carte in mano lo fa e basta. Lo
+ * spazzino sì, e alla quota misurata sul pool vero — quel che porta è prendere
+ * più carte con una sola, e prenderne una categoria sola è meno di quello.
+ */
+export const MODI_DI_VANTAGGIO: readonly ModoDiUnTag[] = [
+  { tag: "pesca", condizioni: [], quota: 1 },
+  {
+    tag: "spazza-via",
+    condizioni: CONDIZIONI_DELLO_SPAZZA_VIA,
+    quota: QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE,
+  },
+];

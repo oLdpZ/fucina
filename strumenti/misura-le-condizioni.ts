@@ -81,9 +81,15 @@ function copertura(righe: readonly (readonly [string, number, number])[]): void 
   const media = quote.reduce((somma, quota) => somma + quota, 0) / quote.length;
   // La mediana, non la media: una condizione sola che copre il doppio delle
   // altre tirerebbe la media a dire di ognuna quel che vale solo per lei.
-  console.log(
-    `  mediana ${quote[Math.floor(quote.length / 2)]!.toFixed(3)} · media ${media.toFixed(3)}`,
-  );
+  //
+  // Con un numero **pari** di condizioni è la media dei due di mezzo, e va
+  // scritto: le quote misurate qui si scelgono leggendo questa riga, e prendere
+  // il più alto dei due la spingerebbe in su ogni volta che si aggiunge una
+  // frase all'elenco.
+  const mezzo = Math.floor(quote.length / 2);
+  const mediana =
+    quote.length % 2 === 1 ? quote[mezzo]! : (quote[mezzo - 1]! + quote[mezzo]!) / 2;
+  console.log(`  mediana ${mediana.toFixed(3)} · media ${media.toFixed(3)}`);
 }
 
 console.log(`pool del ${pool.generatoIl}: ${carte.length} carte, ${nonTerre.length} non-terra`);
