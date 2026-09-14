@@ -281,6 +281,14 @@ describe("perché tante copie", () => {
     expect(frase).not.toContain("Infinity");
     expect(frase).toContain("le 7 le ha scelte l'app");
   });
+
+  it("con una copia sola l'articolo e il pronome si accordano, e il numero non resta nudo", () => {
+    // «le 1 le ha scelte l'app» era plurale attorno a un numero singolare, col
+    // numero per giunta nudo: nel resto del file si dice «1 copia» (ticket 80).
+    const frase = frasePerLeCopie({ ...base, copie: 1, massimo: Number.POSITIVE_INFINITY });
+    expect(frase).toContain("1 copia l'ha scelta l'app");
+    expect(frase).not.toContain("le 1");
+  });
 });
 
 describe("perché una carta del tema è rimasta fuori", () => {

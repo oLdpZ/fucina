@@ -362,7 +362,16 @@ export type GrezziDelleCopie = {
 export function frasePerLeCopie(grezzi: GrezziDelleCopie): string {
   const effetto = `Con ${copie(grezzi.copie)} su ${grezzi.dimensioneMazzo} carte, entro il turno ${grezzi.turno} te ne capita almeno una ${conArticolo("il", percento(grezzi.probabilitaDiPescarla))} delle volte, e a quel turno il mana per lanciarla c'è ${conArticolo("il", percento(grezzi.probabilitaDiMana))} delle volte.`;
   if (!Number.isFinite(grezzi.massimo)) {
-    return `${effetto} Di questa carta il regolamento non limita le copie: le ${grezzi.copie} le ha scelte l'app.`;
+    // Con una copia sola «le 1 le ha scelte» metteva articolo e pronome al
+    // plurale attorno a un numero singolare, e lasciava per giunta il numero
+    // nudo dove tutto il resto del file dice «1 copia». Il singolare non è il
+    // plurale con le desinenze cambiate: l'articolo davanti sparisce, perché
+    // «la 1 copia» si leggerebbe *la una copia*.
+    const scelte =
+      grezzi.copie === 1
+        ? `${copie(grezzi.copie)} l'ha scelta`
+        : `le ${grezzi.copie} le ha scelte`;
+    return `${effetto} Di questa carta il regolamento non limita le copie: ${scelte} l'app.`;
   }
   if (grezzi.copie >= grezzi.massimo) {
     return `${effetto} Di più non se ne possono mettere: il regolamento ne concede ${grezzi.massimo}.`;
