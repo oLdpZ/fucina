@@ -485,6 +485,12 @@ describe("densità di sinergia", () => {
   });
 });
 
+/** Il valore che la qualità dà a una carta sola, letto dai suoi valori grezzi. */
+function valoreDellaCarta(carta: Carta): number {
+  const grezzi = valuta([{ carta, copie: 36 }]).punteggio.qualita.grezzi;
+  return grezzi.perCarta.find((riga) => riga.nome === carta.nome)!.valore;
+}
+
 describe("qualità delle singole carte", () => {
   it("premia le creature efficienti per il loro costo", () => {
     expect(valuta(EFFICIENTE).punteggio.qualita.valore).toBeGreaterThan(
@@ -588,9 +594,96 @@ describe("qualità delle singole carte", () => {
       { carta: pesca, copie: 2 },
     ]).punteggio.qualita.grezzi;
 
-    expect(grezzi.rimozioniIncondizionate).toBe(4);
-    expect(grezzi.rimozioniCondizionali).toBe(3);
+    expect(grezzi.risposteIncondizionate).toBe(4);
+    expect(grezzi.risposteCondizionali).toBe(3);
     expect(grezzi.carteDiVantaggio).toBe(2);
+  });
+
+  it("vale di più una contromagia che annulla tutto di una che annulla una cosa sola", () => {
+    const tutto = magia({
+      nome: "Annulla",
+      costoDiMana: "{U}{U}",
+      valoreDiMana: 2,
+      identitaDiColore: ["U"],
+      tipi: ["Instant"],
+      testo: "Counter target spell.",
+      tag: ["controincantesimo"],
+    });
+    const unaCosaSola: Carta = {
+      ...tutto,
+      nome: "Annulla Quasi Niente",
+      testo: "Whenever a player casts an enchantment spell, counter it.",
+    };
+
+    expect(valoreDellaCarta(tutto)).toBeGreaterThan(valoreDellaCarta(unaCosaSola));
+    expect(valoreDellaCarta(unaCosaSola)).toBeGreaterThan(0);
+  });
+
+  it("vale di più uno spazzino che pulisce il tavolo di uno che prende una categoria sola", () => {
+    const tavolo = magia({
+      nome: "Spazzata",
+      costoDiMana: "{2}{W}{W}",
+      valoreDiMana: 4,
+      identitaDiColore: ["W"],
+      tipi: ["Sorcery"],
+      testo: "Destroy all creatures. They can't be regenerated.",
+      tag: ["spazza-via"],
+    });
+    const unaCategoria: Carta = {
+      ...tavolo,
+      nome: "Spazzata Parziale",
+      testo: "Destroy all black creatures.",
+    };
+
+    expect(valoreDellaCarta(tavolo)).toBeGreaterThan(valoreDellaCarta(unaCategoria));
+    expect(valoreDellaCarta(unaCategoria)).toBeGreaterThan(0);
+  });
+
+  it("una carta che annulla **e** rimuove vale per il suo mestiere migliore, non per la somma", () => {
+    // Le due metà sono la stessa carta giocata in due modi, e si sceglie: se si
+    // sommassero, una carta che ne fa una sola varrebbe meno di quel che fa.
+    const soloRimozione = magia({
+      nome: "Soffio",
+      costoDiMana: "{R}",
+      valoreDiMana: 1,
+      identitaDiColore: ["R"],
+      tipi: ["Instant"],
+      testo: "Destroy target blue permanent.",
+      tag: ["rimozione-mirata"],
+    });
+    const tutt2: Carta = {
+      ...soloRimozione,
+      nome: "Soffio Doppio",
+      testo: "Choose one — Counter target blue spell. Destroy target blue permanent.",
+      tag: ["rimozione-mirata", "controincantesimo"],
+    };
+
+    expect(valoreDellaCarta(tutt2)).toBe(valoreDellaCarta(soloRimozione));
+  });
+
+  it("conta come risposte anche le contromagie, e alle loro condizioni", () => {
+    const contromagia = magia({
+      nome: "Annulla",
+      costoDiMana: "{U}{U}",
+      valoreDiMana: 2,
+      identitaDiColore: ["U"],
+      tipi: ["Instant"],
+      testo: "Counter target spell.",
+      tag: ["controincantesimo"],
+    });
+    const timida: Carta = {
+      ...contromagia,
+      nome: "Annulla Timida",
+      testo: "Counter target creature spell.",
+    };
+
+    const grezzi = valuta([
+      { carta: contromagia, copie: 2 },
+      { carta: timida, copie: 4 },
+    ]).punteggio.qualita.grezzi;
+
+    expect(grezzi.risposteIncondizionate).toBe(2);
+    expect(grezzi.risposteCondizionali).toBe(4);
   });
 
   it("le creature che contano zero abbassano l'efficienza media, non spariscono dal conto", () => {

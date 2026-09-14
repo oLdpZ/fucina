@@ -19,8 +19,8 @@
  * 4. **densità di sinergia** — quante coppie di copie condividono tag che si
  *    attivano a vicenda;
  * 5. **qualità delle singole carte** — euristiche deterministiche: efficienza
- *    forza+costituzione per costo, rimozione incondizionata contro
- *    condizionale, vantaggio in carte.
+ *    forza+costituzione per costo, risposta incondizionata contro condizionale,
+ *    vantaggio in carte.
  *
  * **Mai popolarità, mai prezzo, mai un peso appreso da dati esterni** (Q13,
  * Q16). In questo modulo il prezzo e la rarità di una carta non si leggono
@@ -45,6 +45,8 @@ import {
 import { simulaGoldfish, type EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import {
   CONDIZIONI_DELLA_RIMOZIONE,
+  CONDIZIONI_DEL_CONTROINCANTESIMO,
+  CONDIZIONI_DELLO_SPAZZA_VIA,
   COPPIE_CHE_SI_ATTIVANO,
   COSTO_DI_BASE_DI_UNA_CARTA,
   CURVA_ATTESA_LENTA,
@@ -55,14 +57,16 @@ import {
   PESI_DELLE_COMPONENTI,
   PESO_DELLA_CORSA,
   QUOTA_DELLA_RIMOZIONE_CONDIZIONALE,
+  QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE,
+  QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE,
   TAG_DI_VANTAGGIO_CARTE,
   TURNO_DI_CHIUSURA_OTTIMO,
   TURNO_DI_CHIUSURA_PESSIMO,
   TURNO_MAZZO_LENTO,
   TURNO_MAZZO_VELOCE,
   VALORE_DEL_CORPO,
+  VALORE_DELLA_RISPOSTA,
   VALORE_DEL_VANTAGGIO_CARTE,
-  VALORE_DELLA_RIMOZIONE,
 } from "./taratura.js";
 
 /**
@@ -154,9 +158,16 @@ export type QualitaDiUnaCarta = {
   efficienza: number;
   /** L'efficienza portata fra zero e uno. */
   corpo: number;
-  /** Quanto vale come rimozione: uno se incondizionata, meno se condizionale, zero se non lo è. */
-  rimozione: number;
-  /** Uno se la carta porta vantaggio in carte. */
+  /**
+   * Quanto vale come **risposta** alla carta dell'avversario — toglierla di
+   * mezzo, o annullarla prima che arrivi: uno se colpisce quel che vuole, meno
+   * se il testo pone condizioni, zero se la carta non risponde a niente.
+   */
+  risposta: number;
+  /**
+   * Quanto vale il vantaggio in carte: uno quando la carta ne rimette in mano
+   * senza condizioni, meno quando spazza via una categoria sola.
+   */
   vantaggio: number;
   valore: number;
 };
@@ -166,8 +177,8 @@ export type GrezziDiQualita = {
   /** L'efficienza media delle sole creature, pesata per copie. */
   efficienzaMedia: number;
   /** Le tre conte che seguono sono **in copie**, non in nomi di carta. */
-  rimozioniIncondizionate: number;
-  rimozioniCondizionali: number;
+  risposteIncondizionate: number;
+  risposteCondizionali: number;
   carteDiVantaggio: number;
 };
 
@@ -584,15 +595,83 @@ function eCreatura(carta: Carta): boolean {
 }
 
 /**
- * Quanto vale una rimozione: uno se colpisce quel che vuole, meno se il testo
- * porta una delle condizioni dichiarate in `taratura.ts`, zero se la carta non
- * è una rimozione.
+ * I due modi di rispondere a una carta avversaria, e a quali condizioni
+ * ciascuno smette di rispondere a tutto.
+ *
+ * Sono lo stesso mestiere in due momenti — toglierla di mezzo quando è già in
+ * campo, fermarla prima che ci arrivi — e per questo stanno in una tabella
+ * sola: la domanda «quanto è condizionato?» si fa una volta e si risponde con
+ * l'elenco che tocca. Le frasi e le quote stanno tutte in `taratura.ts`.
  */
-function valoreDellaRimozione(carta: Carta): number {
-  if (!carta.tag.includes("rimozione-mirata")) return 0;
+const MODI_DI_RISPONDERE: readonly {
+  tag: Tag;
+  condizioni: readonly string[];
+  quota: number;
+}[] = [
+  {
+    tag: "rimozione-mirata",
+    condizioni: CONDIZIONI_DELLA_RIMOZIONE,
+    quota: QUOTA_DELLA_RIMOZIONE_CONDIZIONALE,
+  },
+  {
+    tag: "controincantesimo",
+    condizioni: CONDIZIONI_DEL_CONTROINCANTESIMO,
+    quota: QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE,
+  },
+];
+
+/**
+ * Se il testo della carta porta una delle frasi che condizionano quel mestiere,
+ * quanto ne resta; uno se non ne porta nessuna.
+ */
+function quotaDellaCondizione(testo: string, condizioni: readonly string[], quota: number): number {
+  return condizioni.some((frase) => testo.includes(frase)) ? quota : 1;
+}
+
+/**
+ * Quanto vale una carta come risposta: uno se risponde a quel che vuole, meno
+ * se il testo pone condizioni, zero se non risponde a niente.
+ *
+ * Una carta che sa fare tutt'e due i mestieri vale per il **migliore** dei due
+ * e non per la somma: le due metà sono la stessa carta giocata in due modi, e
+ * chi la lancia sceglie. Sommarle direbbe che la carta fa due cose in una
+ * partita, e non è vero nemmeno una volta.
+ */
+function valoreDellaRisposta(carta: Carta): number {
   const testo = carta.testo.toLowerCase();
-  const condizionale = CONDIZIONI_DELLA_RIMOZIONE.some((frase) => testo.includes(frase));
-  return condizionale ? QUOTA_DELLA_RIMOZIONE_CONDIZIONALE : 1;
+  let migliore = 0;
+  for (const modo of MODI_DI_RISPONDERE) {
+    if (!carta.tag.includes(modo.tag)) continue;
+    migliore = Math.max(migliore, quotaDellaCondizione(testo, modo.condizioni, modo.quota));
+  }
+  return migliore;
+}
+
+/**
+ * Quanto vale il vantaggio in carte che la carta porta.
+ *
+ * Vale uno chi ne rimette in mano senza condizioni. Chi lo porta **spazzando
+ * via il campo** lo porta per quante carte prende con una sola, e uno spazzino
+ * che prende una categoria sola ne prende poche: la sua quota è scontata come
+ * quella di una risposta condizionale, e per la stessa ragione.
+ */
+function valoreDelVantaggio(carta: Carta): number {
+  const testo = carta.testo.toLowerCase();
+  let migliore = 0;
+  for (const tag of TAG_DI_VANTAGGIO_CARTE) {
+    if (!carta.tag.includes(tag)) continue;
+    migliore = Math.max(
+      migliore,
+      tag === "spazza-via"
+        ? quotaDellaCondizione(
+            testo,
+            CONDIZIONI_DELLO_SPAZZA_VIA,
+            QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE,
+          )
+        : 1,
+    );
+  }
+  return migliore;
 }
 
 function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
@@ -603,8 +682,8 @@ function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
       (carta.valoreDiMana + COSTO_DI_BASE_DI_UNA_CARTA)
     : 0;
   const corpo = fraZeroEUno(efficienza / EFFICIENZA_ATTESA);
-  const rimozione = valoreDellaRimozione(carta);
-  const vantaggio = carta.tag.some((tag) => TAG_DI_VANTAGGIO_CARTE.includes(tag)) ? 1 : 0;
+  const risposta = valoreDellaRisposta(carta);
+  const vantaggio = valoreDelVantaggio(carta);
 
   return {
     nome: carta.nome,
@@ -612,7 +691,7 @@ function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
     creatura,
     efficienza,
     corpo,
-    rimozione,
+    risposta,
     vantaggio,
     // I tre mestieri si sommano **pesati**, e nessuno dei tre da solo arriva al
     // tetto: una creatura che pesca entrando dev'essere meglio della stessa
@@ -622,7 +701,7 @@ function qualitaDiUnaCarta(voce: CopieDiCarta): QualitaDiUnaCarta {
     // deve dire.
     valore: fraZeroEUno(
       VALORE_DEL_CORPO * corpo +
-        VALORE_DELLA_RIMOZIONE * rimozione +
+        VALORE_DELLA_RISPOSTA * risposta +
         VALORE_DEL_VANTAGGIO_CARTE * vantaggio,
     ),
   };
@@ -671,10 +750,10 @@ function qualita(nonTerre: readonly CopieDiCarta[]): Componente<GrezziDiQualita>
           : creature.reduce((somma, riga) => somma + riga.efficienza * riga.copie, 0) /
             copieDiCreature,
       // Contate **in copie**, come ogni altro numero di questo modulo: chi
-      // scriverà la frase dirà «quattro rimozioni», che è quello che l'utente
-      // vede in mano, non «una rimozione» perché il nome è uno solo.
-      rimozioniIncondizionate: copieDove((riga) => riga.rimozione === 1),
-      rimozioniCondizionali: copieDove((riga) => riga.rimozione > 0 && riga.rimozione < 1),
+      // scriverà la frase dirà «quattro risposte», che è quello che l'utente
+      // vede in mano, non «una risposta» perché il nome è uno solo.
+      risposteIncondizionate: copieDove((riga) => riga.risposta === 1),
+      risposteCondizionali: copieDove((riga) => riga.risposta > 0 && riga.risposta < 1),
       carteDiVantaggio: copieDove((riga) => riga.vantaggio > 0),
     },
   };

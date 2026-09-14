@@ -7,6 +7,9 @@ import { costruisciMazzo, type Frontiera, type MazzoCostruito } from "../src/ric
 import {
   DENSITA_DI_SINERGIA_PIENA,
   PESI_DELLE_COMPONENTI,
+  QUOTA_DELLA_RIMOZIONE_CONDIZIONALE,
+  QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE,
+  QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE,
   TURNO_DI_CHIUSURA_OTTIMO,
   TURNO_DI_CHIUSURA_PESSIMO,
   TURNO_MAZZO_LENTO,
@@ -252,7 +255,7 @@ function componenti(mazzo: MazzoCostruito): string[] {
     ...(s.perCoppiaDiTag.length > 0
       ? [`  - da: ${s.perCoppiaDiTag.map((c) => `${c.uno}+${c.altro} (${c.coppie})`).join(" · ")}`]
       : []),
-    `- **qualità ${conDecimali(p.qualita.valore, 3)}** — efficienza media delle creature ${conDecimali(q.efficienzaMedia, 3)}; rimozioni ${q.rimozioniIncondizionate} incondizionate e ${q.rimozioniCondizionali} condizionali; ${q.carteDiVantaggio} copie di vantaggio in carte`,
+    `- **qualità ${conDecimali(p.qualita.valore, 3)}** — efficienza media delle creature ${conDecimali(q.efficienzaMedia, 3)}; risposte ${q.risposteIncondizionate} incondizionate e ${q.risposteCondizionali} condizionali; ${q.carteDiVantaggio} copie di vantaggio in carte`,
   ];
 }
 
@@ -391,6 +394,7 @@ function main(): void {
     "| taratura | valore |",
     "| --- | --- |",
     `| densità di sinergia piena | ${DENSITA_DI_SINERGIA_PIENA} |`,
+    `| quota della risposta condizionata — rimozione · contromagia · spazzino | ${QUOTA_DELLA_RIMOZIONE_CONDIZIONALE} · ${QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE} · ${QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE} |`,
     `| pesi delle componenti | ${Object.entries(PESI_DELLE_COMPONENTI).map(([k, v]) => `${k} ${v}`).join(" · ")} |`,
     `| turno di chiusura ottimo → pessimo | ${TURNO_DI_CHIUSURA_OTTIMO} → ${TURNO_DI_CHIUSURA_PESSIMO} |`,
     `| turno mazzo veloce → lento | ${TURNO_MAZZO_VELOCE} → ${TURNO_MAZZO_LENTO} |`,

@@ -124,11 +124,11 @@ describe("perché la carta è nel mazzo", () => {
   it("dice la rimozione, e distingue quella che colpisce sempre", () => {
     const sempre = frasePerLaPresenza({
       ...base,
-      ruolo: { ruolo: "rimozione", incondizionata: true, copieCheLoFanno: 6, copieNonTerra: 38 },
+      ruolo: { ruolo: "risposta", incondizionata: true, copieCheLoFanno: 6, copieNonTerra: 38 },
     });
     const aVolte = frasePerLaPresenza({
       ...base,
-      ruolo: { ruolo: "rimozione", incondizionata: false, copieCheLoFanno: 2, copieNonTerra: 38 },
+      ruolo: { ruolo: "risposta", incondizionata: false, copieCheLoFanno: 2, copieNonTerra: 38 },
     });
     expect(sempre).toContain("6 copie");
     expect(aVolte).toContain("2 copie");

@@ -193,9 +193,9 @@ export function elenco(voci: readonly string[]): string {
  * singole carte** e della **salute dei colori**.
  */
 export type GrezziDelRuolo =
-  /** Toglie di mezzo le carte avversarie. */
+  /** Toglie di mezzo le carte avversarie: in campo, o prima che ci arrivino. */
   | {
-      ruolo: "rimozione";
+      ruolo: "risposta";
       /** Falsa quando il testo della carta pone condizioni a chi può colpire. */
       incondizionata: boolean;
       /** Le copie del mazzo che fanno lo stesso mestiere, alle stesse condizioni. */
@@ -240,7 +240,7 @@ export type GrezziDiPresenza = {
 /** Che mestiere fa la carta, detto senza gergo e con un numero dentro. */
 function fraseDelRuolo(grezzi: GrezziDelRuolo): string {
   switch (grezzi.ruolo) {
-    case "rimozione":
+    case "risposta":
       return grezzi.incondizionata
         ? `Toglie di mezzo una carta avversaria e può colpire quello che vuole: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che lo sanno fare, sulle ${grezzi.copieNonTerra} che non sono terre.`
         : `Toglie di mezzo una carta avversaria, ma solo se ha le caratteristiche giuste: nel mazzo ci sono ${copie(grezzi.copieCheLoFanno)} che lo sanno fare alle stesse condizioni, sulle ${grezzi.copieNonTerra} che non sono terre.`;

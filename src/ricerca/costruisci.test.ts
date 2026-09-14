@@ -618,13 +618,28 @@ describe("la frontiera: il tasso di cambio fra tema e potenza", () => {
     // che lì il margine di scambio è piccolo. Ma **aprirsi deve poterlo**, se no
     // il fulcro del progetto non ha niente da mostrare. Il tema nero è quello
     // che nel pool finto ha più margine, e qui si guarda proprio lui.
-    const mazzi = costruisciMazzo(richiesta({ tema: NERO }), POOL, SVELTA).mazzi;
+    //
+    // Su **più semi** e non su uno: quanto si apra dipende dal caso seminato, e
+    // misurato sul pool finto un seme solo non dice niente — otto semi provati,
+    // e la stessa frontiera va da due gradini a quattro senza che sia cambiato
+    // niente se non il seme (ticket 73). Un seme solo qui dentro asserirebbe la
+    // fortuna di quel seme, e cadrebbe alla prima taratura che sposta di un
+    // niente la scelta delle carte. La proprietà è che **qualche volta si
+    // apre**; che scenda sempre e salga sempre, invece, vale per ogni seme, e
+    // si chiede per ognuno.
+    const SEMI = [1, 2, 3, 4, 5, 6, 7, 8];
 
-    expect(mazzi.length).toBeGreaterThan(2);
-    for (let i = 1; i < mazzi.length; i++) {
-      expect(mazzi[i]!.purezza).toBeLessThan(mazzi[i - 1]!.purezza);
-      expect(mazzi[i]!.potenza).toBeGreaterThan(mazzi[i - 1]!.potenza);
+    let ilPiuAmpio = 0;
+    for (const seme of SEMI) {
+      const mazzi = costruisciMazzo(richiesta({ tema: NERO, seme }), POOL, SVELTA).mazzi;
+      ilPiuAmpio = Math.max(ilPiuAmpio, mazzi.length);
+      for (let i = 1; i < mazzi.length; i++) {
+        expect(mazzi[i]!.purezza).toBeLessThan(mazzi[i - 1]!.purezza);
+        expect(mazzi[i]!.potenza).toBeGreaterThan(mazzi[i - 1]!.potenza);
+      }
     }
+
+    expect(ilPiuAmpio).toBeGreaterThan(2);
   });
 
   it("nessun mazzo compare due volte: pesi diversi che danno lo stesso mazzo valgono uno", () => {

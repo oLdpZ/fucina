@@ -260,12 +260,35 @@ export const EFFICIENZA_ATTESA = 2;
  * arrivasse, ogni creatura da un 3/3 in su si mangerebbe il bonus contro il
  * tetto e una creatura che pesca varrebbe quanto la stessa creatura muta.
  *
- * Una rimozione non ha forza né costituzione, ma toglie di mezzo la carta
+ * Una **risposta** non ha forza né costituzione, ma toglie di mezzo la carta
  * dell'avversario: vale quasi quanto un corpo pieno. Se però colpisce solo
  * certi bersagli, in partita a volte non colpisce niente.
+ *
+ * Risposta e non «rimozione»: dal 14 settembre 2026 (ticket 73) lo stesso
+ * mestiere lo fanno tre tag e non uno — la rimozione mirata toglie di mezzo
+ * quel che è già in campo, il controincantesimo lo ferma prima che ci arrivi.
+ * Sono lo stesso mestiere fatto in due momenti, e valgono lo stesso peso: una
+ * carta che li sa fare tutt'e due vale per il **migliore** dei due e non per la
+ * somma, perché le due metà sono la stessa carta giocata in due modi e si
+ * sceglie.
  */
 export const VALORE_DEL_CORPO = 0.6;
-export const VALORE_DELLA_RIMOZIONE = 0.5;
+export const VALORE_DELLA_RISPOSTA = 0.5;
+
+/**
+ * Quanto resta a una rimozione che colpisce solo certi bersagli.
+ *
+ * È il primo dei tre sconti, ed è l'unico **scelto** e non misurato: veniva da
+ * prima che il pool fosse questo. Il ticket 73 ha misurato gli altri due sul
+ * pool vero, e il confronto va scritto invece che nascosto — con quella stessa
+ * misura, una rimozione che colpisce un colore solo ne coprirebbe circa un
+ * quinto, cioè **0,2 e non 0,6**.
+ *
+ * Non è stato cambiato qui, e per una ragione: toccarlo sposta ogni rimozione
+ * del pool, che è la metà delle carte giocabili, e la disciplina della sosta
+ * dice di misurare due volte quel che si sposta — prima e dopo. Ha il suo
+ * ticket.
+ */
 export const QUOTA_DELLA_RIMOZIONE_CONDIZIONALE = 0.6;
 
 /**
@@ -306,6 +329,142 @@ export const CONDIZIONI_DELLA_RIMOZIONE: readonly string[] = [
   "non-wall",
   "target wall",
 ];
+
+/* --- Le contromagie e gli spazzini, alle loro condizioni ------------------ */
+
+/**
+ * Le frasi che rendono **condizionale** una contromagia, lette dal testo
+ * inglese come quelle della rimozione.
+ *
+ * **Misurate sul pool del 2026-09-14** (ticket 73), con la stessa regola di
+ * `CONDIZIONI_DELLA_RIMOZIONE`: ogni frase qui sotto porta dentro almeno una
+ * carta che senza di lei passerebbe per incondizionata, e quelle che non ne
+ * portavano nessuna — «target white spell» fra loro — sono state tolte invece
+ * di restare a far numero.
+ *
+ * L'ultima frase è la più stretta di tutte e vale una carta sola: c'è chi
+ * annulla **se stesso** e nient'altro. Senza di lei passava per contromagia
+ * piena, e in un mazzo ce ne finivano quattro copie.
+ *
+ * Restano incondizionate, e sono sei, le contromagie che annullano
+ * **qualunque** cosa: quelle secche e quelle che chiedono un pedaggio. Il
+ * pedaggio non è una condizione — la carta arriva su tutto, e tardi arriva su
+ * niente — ed è la stessa scelta di sempre: meglio dire «incondizionata» a una
+ * che non lo è del tutto, che inventare condizioni che non ci sono.
+ */
+export const CONDIZIONI_DEL_CONTROINCANTESIMO: readonly string[] = [
+  "creature spell",
+  "instant spell",
+  "instant or aura spell",
+  "enchantment spell",
+  "target blue spell",
+  "target red spell",
+  "target black spell",
+  "target green spell",
+  "activated ability",
+  "destroy a land you control",
+  "when you cast this spell, counter it",
+];
+
+/**
+ * Quanto resta a una contromagia che annulla **una cosa sola**.
+ *
+ * **Misurata sul pool del 2026-09-14**, 720 carte non-terra (ticket 73). La
+ * misura è quante di quelle carte la contromagia annulla davvero, contro le 720
+ * che «Counter target spell» annulla tutte:
+ *
+ * | condizione | quante ne annulla | quota |
+ * | --- | --- | --- |
+ * | una magia creatura | 335 | 0,465 |
+ * | un istantaneo o un'aura che bersaglia roba tua | 164 | 0,228 |
+ * | un incantesimo | 147 | 0,204 |
+ * | una magia di un colore solo | 136–143 | 0,189–0,199 |
+ * | un istantaneo | 93 | 0,129 |
+ * | una magia che distrugge una tua terra | 22 | 0,031 |
+ * | un'abilità attivata di un artefatto | 0 | 0,000 |
+ * | se stessa, e nient'altro | 0 | 0,000 |
+ *
+ * La **mediana** è 0,192, e di lì il numero. Non la media (0,166): una sola
+ * condizione — la magia creatura — copre il doppio di tutte le altre, e una
+ * media tirata da lei direbbe di ognuna quel che vale solo per quella.
+ *
+ * Il numero è basso, e va detto che cosa **non** butta via. Una carta che
+ * annulla il blu e in più distrugge un permanente blu è anche una rimozione, e
+ * vale per il mestiere migliore dei due: la quota qui sotto non la tocca, la
+ * sconta la rimozione alla sua. È la cautela che il ticket 73 chiedeva per
+ * nome, e regge perché la risposta si prende al massimo e non a somma.
+ */
+export const QUOTA_DEL_CONTROINCANTESIMO_CONDIZIONALE = 0.2;
+
+/**
+ * Le frasi che rendono **condizionale** uno spazzino: prende una categoria
+ * sola, o una parte del campo, o roba propria.
+ *
+ * **Misurate sul pool del 2026-09-14** (ticket 73) con la regola di sempre. Due
+ * cose vanno dette perché non si riscoprano:
+ *
+ * - «destroy all artifacts.» porta il punto per forza. Senza, la frase prende
+ *   anche lo spazzino che distrugge artefatti, creature e incantesimi insieme,
+ *   che è il contrario di condizionale — il punto distingue chi si ferma lì da
+ *   chi tira il respiro e continua.
+ * - «without flying» e «with flying» sono state **provate e tolte**. Toccavano
+ *   le due magie che fanno danno a ogni creatura e a ogni giocatore, che in
+ *   questo formato sono fra le più forti che esistano e chiudono anche la
+ *   partita. È la stessa scelta fatta per «enchanted creature» in
+ *   `CONDIZIONI_DELLA_RIMOZIONE`: chiamare mezzo spazzino la carta che vince la
+ *   partita sarebbe un errore più grosso di quello che si voleva evitare.
+ *
+ * Restano incondizionati, e sono otto, gli spazzini che puliscono il tavolo:
+ * quelli che distruggono ogni creatura, ogni terra o ogni permanente, e quelli
+ * che fanno danno a tutto il campo.
+ */
+export const CONDIZIONI_DELLO_SPAZZA_VIA: readonly string[] = [
+  "all black creatures",
+  "all white creatures",
+  "nonblack creatures",
+  "nonwhite creatures",
+  "all enchantments",
+  "destroy all artifacts.",
+  "all goblins",
+  "all forests",
+  "all plains",
+  "all islands",
+  "target mountains",
+  "that didn't attack",
+  "were blocked by",
+];
+
+/**
+ * Quanto resta a uno spazzino che prende **una categoria sola**.
+ *
+ * **Misurata sul pool del 2026-09-14** (ticket 73), come quella delle
+ * contromagie: quante carte prende davvero, contro quelle che prenderebbe lo
+ * spazzino senza la sua condizione — le 335 creature per chi spazza creature,
+ * i 570 permanenti non-terra per chi spazza permanenti.
+ *
+ * | condizione | quante ne prende | quota |
+ * | --- | --- | --- |
+ * | le creature che non sono bianche | 275 su 335 | 0,821 |
+ * | le creature che non sono nere | 248 su 335 | 0,740 |
+ * | le creature di un colore | 60–87 su 335 | 0,179–0,260 |
+ * | gli incantesimi | 147 su 570 | 0,258 |
+ * | gli artefatti | 117 su 570 | 0,205 |
+ * | una razza sola | 10 su 335 | 0,030 |
+ *
+ * Mediana 0,258, e di lì il numero. La media sarebbe 0,356, tirata su dalle due
+ * condizioni al negativo che lasciano fuori un colore solo: sono due carte, e
+ * pesarle come metà del conto direbbe degli altri quel che vale solo per loro.
+ *
+ * Fuori misura restano le condizioni che il pool non sa esprimere: chi spazza
+ * un tipo di terra, e chi prende la parte di campo che non ha attaccato o che
+ * è stata bloccata. Contano come condizionali — perché lo sono — ma la loro
+ * quota non è stata misurata, e non fa media.
+ */
+export const QUOTA_DELLO_SPAZZA_VIA_CONDIZIONALE = 0.25;
+
+/* ------------------------------------------------------------------------- *
+ * Vantaggio in carte
+ * ------------------------------------------------------------------------- */
 
 /**
  * Quanto vale, in più, una carta che porta vantaggio in carte — pesca, oppure

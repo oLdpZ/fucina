@@ -155,12 +155,12 @@ function spiegaCarta(
   const turno = probabilita?.turno ?? Math.max(1, carta.valoreDiMana);
 
   const ruolo: GrezziDelRuolo =
-    riga !== undefined && riga.rimozione > 0
+    riga !== undefined && riga.risposta > 0
       ? {
-          ruolo: "rimozione",
-          incondizionata: riga.rimozione >= 1,
+          ruolo: "risposta",
+          incondizionata: riga.risposta >= 1,
           copieCheLoFanno:
-            riga.rimozione >= 1 ? qualita.rimozioniIncondizionate : qualita.rimozioniCondizionali,
+            riga.risposta >= 1 ? qualita.risposteIncondizionate : qualita.risposteCondizionali,
           copieNonTerra: mazzo.base.copieNonTerra,
         }
       : riga !== undefined && riga.vantaggio > 0
