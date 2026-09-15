@@ -12,18 +12,18 @@
  *   fuori **apposta**: una carta messa a una copia non fa un formato nuovo, e
  *   se entrasse ogni ripensamento del gruppo chiuderebbe in silenzio tutti i
  *   mazzi salvati.
- * - **qui — «questo pool l'ha prodotto questo documento?»** Guarda *tutto* quel
- *   che decide chi entra nel pool e con quale copia, limitate e bandite
- *   comprese. Devono entrare proprio perché non si applicano a runtime: il pool
- *   se le porta dentro cotte, scritte una volta al momento della generazione, e
- *   da lì in poi nessuno le rilegge. Un nome aggiunto alle bandite e un
- *   `npm run build` senza `npm run dati` darebbero un'app che mostra la lista
- *   nuova e mette in catalogo la carta appena bandita.
+ * - **qui — «questo pool l'ha prodotto questo documento?»** Guarda quel che
+ *   decide chi entra nel pool e con quale copia, e quelle voci non si possono
+ *   applicare dopo: per cambiarle serve un archivio di Scryfall, cioè un pool
+ *   nuovo. Oggi le due impronte guardano quasi le stesse voci — qui entrano
+ *   anche le **lingue**, che scelgono la copia e non il gioco — ma restano due
+ *   perché rispondono a due domande, e il giorno che una delle due cresce non
+ *   deve trascinarsi dietro l'altra.
  *
  * La prima si mostra e viaggia dentro i mazzi salvati; questa non si mostra a
- * nessuno: sta nel pool, la confronta la compilazione per fermarla, e la
- * confronta l'app per non aprire accanto al documento un pool arrivato dalla
- * rete che viene da un altro (`aggiornamento.ts`, ticket 32).
+ * nessuno: sta nel pool e nel listino dei prezzi, la confronta la compilazione
+ * per fermarla, e la confronta l'app per non applicare al pool un documento o un
+ * listino arrivati dalla rete che vengono da un altro gioco (`aggiornamento.ts`).
  *
  * ## Che cosa ci entra, e chi lo decide
  *
@@ -32,14 +32,21 @@
  * - il **criterio**, che decide quali carte esistono;
  * - le **edizioni** — codice e lingue ammesse, queste ultime nell'ordine
  *   dichiarato, perché quell'ordine è la preferenza e decide quale copia
- *   descrive la carta;
- * - le **limitate**, che scrivono il tetto di copie su ogni carta;
- * - le **bandite**, che tengono delle carte fuori dal catalogo.
+ *   descrive la carta.
  *
- * Restano fuori le voci che si mostrano e non decidono: il nome del formato, la
- * data della lista, la fonte, il regolamento di riferimento, i «perché», le
- * divergenze e le domande ancora aperte. Correggere un refuso in un «perché»
- * non cambia una carta del pool, e non deve costringere a riscaricare
+ * Le **limitate** e le **bandite** ne sono uscite col ticket 11
+ * ([ADR-0008](../../docs/adr/0008-limitate-e-bandite-le-applica-l-app.md)).
+ * Finché il pool se le portava dentro cotte, un nome aggiunto alle bandite
+ * voleva dire un pool nuovo, e l'impronta doveva accorgersene. Adesso il pool
+ * porta **tutte** le carte che il criterio ammette, e le limitate e le bandite
+ * le applica l'app leggendo il documento (`pool-in-vigore.ts`): un documento
+ * più fresco che bandisce una carta in più si usa accanto al pool che c'è,
+ * senza ricompilare niente.
+ *
+ * Restano fuori anche le voci che si mostrano e non decidono: il nome del
+ * formato, la data della lista, la fonte, il regolamento di riferimento, i
+ * «perché», le divergenze e le domande ancora aperte. Correggere un refuso in un
+ * «perché» non cambia una carta del pool, e non deve costringere a riscaricare
  * quattrocento megabyte di archivio.
  *
  * La `SPARTIZIONE` qui sotto **è** questa decisione, scritta invece che
@@ -80,8 +87,11 @@ type Spartizione<T> = {
 export const SPARTIZIONE = {
   /** Il documento intero. */
   documento: {
-    fanno: ["criterio", "edizioni", "limitate", "bandite"],
+    fanno: ["criterio", "edizioni"],
     nonFanno: [
+      // Le applica l'app sopra il pool, che le porta tutte (ADR-0008).
+      "limitate",
+      "bandite",
       "nome",
       "daConfermare",
       "aggiornatoIl",
@@ -116,21 +126,23 @@ export const SPARTIZIONE = {
     nonFanno: ["codice", "nome", "perché", "daConfermare"],
   } satisfies Spartizione<EdizioneEsclusa>,
 
-  /** Un elenco di carte — le limitate, le bandite. */
+  /**
+   * Un elenco di carte — le limitate, le bandite. Niente di suo fa il pool:
+   * l'elenco intero lo applica l'app (ADR-0008).
+   */
   elenco: {
-    fanno: ["carte"],
-    nonFanno: ["perché", "daConfermare"],
+    fanno: [],
+    nonFanno: ["carte", "perché", "daConfermare"],
   } satisfies Spartizione<ElencoDiCarte>,
 
   /**
-   * La riga che nomina una carta. Oggi è il **nome** e basta: la riga dice che
-   * quella carta è limitata, o che non si gioca, e il resto lo spiega. Il
-   * giorno che una limitata potesse valere due copie invece di una, quel numero
-   * andrebbe qui — ed è esattamente quel che la spartizione costringe a dire.
+   * La riga che nomina una carta. Come l'elenco che la contiene, non fa il pool.
+   * Il giorno che una voce guadagnasse un campo che il pool dovesse cuocere —
+   * e non l'app applicare — questa riga è dove si dice.
    */
   voce: {
-    fanno: ["carta"],
-    nonFanno: ["perché", "divergenza", "daConfermare"],
+    fanno: [],
+    nonFanno: ["carta", "perché", "divergenza", "daConfermare"],
   } satisfies Spartizione<VoceDiCarta>,
 };
 
@@ -150,16 +162,15 @@ export function improntaDelDocumento(formato: Formato): string {
 /**
  * Il documento ridotto alle sole cose che fanno il pool, in una forma stabile.
  *
- * Le edizioni si mettono in ordine di codice e le carte in ordine alfabetico,
- * perché il documento lo scrive una mano: due righe scambiate di posto sono una
- * correzione di stile e non un pool diverso. Le **lingue** invece restano
- * nell'ordine dichiarato — lì l'ordine è la preferenza, e cambiarlo cambia
- * quale copia descrive la carta.
+ * Le edizioni si mettono in ordine di codice, perché il documento lo scrive una
+ * mano: due righe scambiate di posto sono una correzione di stile e non un pool
+ * diverso. Le **lingue** invece restano nell'ordine dichiarato — lì l'ordine è
+ * la preferenza, e cambiarlo cambia quale copia descrive la carta.
  *
- * Codici ed elenchi si ripuliscono come li ripulisce la preparazione: uno
- * spazio in coda a «it » è invisibile a chi scrive, e la preparazione lo toglie
- * prima di guardarci dentro. Se qui non lo togliessimo, un pool giusto
- * risulterebbe di un altro documento.
+ * Codici e lingue si ripuliscono come li ripulisce la preparazione: uno spazio
+ * in coda a «it » è invisibile a chi scrive, e la preparazione lo toglie prima
+ * di guardarci dentro. Se qui non lo togliessimo, un pool giusto risulterebbe di
+ * un altro documento.
  */
 function testoDelDocumento(formato: Formato): string {
   const edizioni = formato.edizioni
@@ -170,18 +181,7 @@ function testoDelDocumento(formato: Formato): string {
     )
     .sort();
 
-  const nomi = (elenco: Formato["limitate"]) =>
-    elenco.carte
-      .map((voce) => voce.carta.trim())
-      .sort()
-      .join("+");
-
-  return [
-    `criterio=${formato.criterio.regola}`,
-    `edizioni=${edizioni.join("|")}`,
-    `limitate=${nomi(formato.limitate)}`,
-    `bandite=${nomi(formato.bandite)}`,
-  ].join("\n");
+  return [`criterio=${formato.criterio.regola}`, `edizioni=${edizioni.join("|")}`].join("\n");
 }
 
 /**
@@ -214,9 +214,9 @@ export function verificaAllineamento(
   throw new Error(
     `${preambolo}\n` +
       "\n" +
-      "Le limitate e le bandite entrano nel pool quando lo si genera, e a\n" +
-      "runtime nessuno le rilegge: compilare così darebbe un'app che mostra la\n" +
-      "lista nuova e mette in catalogo le carte che quella lista bandisce.\n" +
+      "Il criterio e le edizioni decidono quali carte il pool contiene e quale\n" +
+      "copia le descrive e le prezza: compilare così darebbe un'app che applica\n" +
+      "il documento a un catalogo che non è il suo.\n" +
       "\n" +
       "Il documento di formato lo scrive una mano e non lo genera nessun\n" +
       "comando: a doversi rifare è il pool. Lancia «npm run dati», poi ricompila.",

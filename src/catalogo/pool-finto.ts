@@ -34,9 +34,10 @@ type Abbozzo = {
   /**
    * La carta è **limitata** dal documento di formato: una copia sola per mazzo.
    *
-   * Nel pool vero questo numero lo scrive la preparazione leggendo il documento
-   * di formato, e nessuna riga di codice sa quali carte siano limitate. Qui lo
-   * scrive il test, che è l'unico posto in cui il formato lo si inventa apposta.
+   * Nel pool in vigore questo numero lo scrive l'app leggendo il documento di
+   * formato (`pool-in-vigore.ts`), e nessuna riga di codice sa quali carte
+   * siano limitate. Qui lo scrive il test, che è l'unico posto in cui il
+   * formato lo si inventa apposta.
    */
   limitata?: boolean;
   /** La carta è nella Reserved List: serve ai test del tetto di spesa. */
@@ -84,7 +85,7 @@ function carta(abbozzo: Abbozzo): Carta {
     terra: null,
     // Il tetto lo scrive la stessa regola che lo scrive nel pool vero: un pool
     // finto che se lo calcolasse a modo suo proverebbe un gioco diverso. Le
-    // limitate lo scavalcano come nel pool vero, dove a scavalcarlo è il
+    // limitate lo scavalcano come nel pool in vigore, dove a scavalcarlo è il
     // documento di formato.
     tettoDiCopie:
       abbozzo.limitata === true ? COPIE_DI_UNA_LIMITATA : leggiTettoDiCopie(testo, tipi),

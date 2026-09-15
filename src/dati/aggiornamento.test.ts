@@ -3,298 +3,368 @@ import { describe, expect, it, vi } from "vitest";
 import { POOL_FINTO } from "../catalogo/pool-finto.js";
 import {
   TETTO_DEPOSITO,
-  cercaAggiornamento,
-  piuFresco,
-  poolDaAprire,
-  scegliPool,
+  aggiornaInSottofondo,
+  datiDaAprire,
+  piuFresca,
+  valutaFormato,
+  valutaListino,
+  type DatiAperti,
+  type LettureDellApertura,
+  type TubiDelSottofondo,
 } from "./aggiornamento.js";
+import type { Formato } from "./formato.js";
+import { improntaDelDocumento } from "./impronta-del-documento.js";
+import { listinoDelPool, type ListinoScritto } from "./listino.js";
 import type { Pool } from "./pool.js";
 
 /**
- * Storie 18 e 19, e la decisione Q29: i dati stanno dentro l'app, e se c'è rete
- * l'app ne cerca di più freschi **in sottofondo**. Se non li trova — rete
- * assente, risposta rotta, nessuno che pubblica più niente per un anno — quel
- * che l'app ha già resta buono e intero.
+ * Il ticket 11: l'aggiornamento in sottofondo si restringe. Il pool si congela
+ * nell'app, e l'app chiede alla rete due cose sole — il documento di formato e i
+ * prezzi. Senza rete resta corretta; un aggiornamento rotto non peggiora quel
+ * che ha, e lo dice.
  *
- * Qui si prova la decisione, non il tubo: quale pool si apre, e cosa si fa di
- * quello che arriva dalla rete. Lo scaricamento entra come funzione, così i
- * casi che contano — la rete che non c'è, la risposta malformata — si provano
- * senza rete e senza aspettare.
+ * Qui si prova la decisione, non il tubo: la rete e il deposito entrano come
+ * funzioni, così i casi che contano si provano senza rete e senza aspettare.
+ * Il documento è inventato e nomina carte del pool finto: quali carte siano
+ * limitate o bandite davvero lo sa solo il documento vero (ADR-0004).
  */
 
-/** L'impronta del documento di formato che l'app ha in mano. */
-const DOCUMENTO = "documento-in-mano";
+const voce = (carta: string) => ({ carta, perché: "Per prova.", divergenza: null, daConfermare: null });
 
-/**
- * Un pool datato, con carte vere del pool finto. Viene dal documento in mano,
- * se non si dice altro: così la data resta l'unica cosa in gioco.
- */
-function poolDel(giorno: string, impronta: string = DOCUMENTO): Pool {
-  return {
-    generatoIl: giorno,
-    improntaDelDocumento: impronta,
-    registroTagScryfall: [],
-    carte: [...POOL_FINTO],
-  };
+const FORMATO: Formato = {
+  nome: "Formato di prova",
+  daConfermare: null,
+  aggiornatoIl: "2026-09-07",
+  fonte: "Il gruppo del giovedì",
+  regolamentoDiRiferimento: "",
+  criterio: { regola: "solo-edizioni", descrizione: "Tutto quel che sta lì.", daConfermare: null },
+  edizioni: [{ codice: "prova", nome: "Prova", perché: "È l'era.", lingue: ["en"], daConfermare: null }],
+  edizioniEscluse: [],
+  limitate: { perché: "Troppo forti.", daConfermare: null, carte: [voce("Goblin Chieftain")] },
+  bandite: { perché: "La posta.", daConfermare: null, carte: [voce("Lightning Strike")] },
+};
+
+/** Lo stesso documento, più fresco, con un bando in più e un nome nuovo. */
+const PIU_FRESCO: Formato = {
+  ...FORMATO,
+  nome: "Il nome deciso al tavolo",
+  aggiornatoIl: "2026-10-01",
+  bandite: { ...FORMATO.bandite, carte: [...FORMATO.bandite.carte, voce("Skirk Prospector")] },
+};
+
+/** Un documento più fresco, ma di un altro gioco: altre edizioni. */
+const DI_UN_ALTRO_GIOCO: Formato = {
+  ...PIU_FRESCO,
+  edizioni: [...FORMATO.edizioni, { ...FORMATO.edizioni[0]!, codice: "altra" }],
+};
+
+const POOL: Pool = {
+  generatoIl: "2026-09-02T09:05:48.145+00:00",
+  improntaDelDocumento: improntaDelDocumento(FORMATO),
+  registroTagScryfall: [],
+  carte: [...POOL_FINTO],
+};
+
+/** Il listino come arriverebbe dalla rete: JSON, con la data scelta. */
+function listino(giorno: string, taglia = 0): ListinoScritto {
+  const scritto = listinoDelPool(POOL);
+  return { ...scritto, generatoIl: giorno, prezzi: scritto.prezzi.slice(taglia) };
 }
 
-const VECCHIO = poolDel("2026-08-01T00:00:00.000+00:00");
-const NUOVO = poolDel("2026-09-02T09:05:48.145+00:00");
-/** Il pool più fresco di tutti, ma prodotto da un documento che l'app non ha ancora. */
-const DI_UN_ALTRO_DOCUMENTO = poolDel("2026-09-10T00:00:00.000+00:00", "documento-che-verrà");
-/** Un pool scritto prima che il legame col documento esistesse. */
-const SENZA_IMPRONTA = poolDel("2026-09-10T00:00:00.000+00:00", "");
+const FRESCO = "2026-09-15T09:00:00.000+00:00";
+const PIU_FRESCO_ANCORA = "2026-09-20T09:00:00.000+00:00";
 
-describe("quale pool è più fresco", () => {
-  it("riconosce una data più recente", () => {
-    expect(piuFresco(NUOVO, VECCHIO)).toBe(true);
+/** Il documento come arriverebbe dalla rete o dal deposito: JSON. */
+const grezzo = (formato: Formato): unknown => JSON.parse(JSON.stringify(formato));
+
+describe("quale data è più fresca", () => {
+  it("riconosce una data più recente, anche scritta in un altro modo", () => {
+    expect(piuFresca("2026-10-01", "2026-09-07")).toBe(true);
+    expect(piuFresca(FRESCO, POOL.generatoIl)).toBe(true);
   });
 
-  it("a parità di data non cambia nulla: scaricare due volte lo stesso non è un aggiornamento", () => {
-    expect(piuFresco(NUOVO, NUOVO)).toBe(false);
+  it("a parità di data non cambia nulla, e non torna indietro nel tempo", () => {
+    expect(piuFresca("2026-09-07", "2026-09-07")).toBe(false);
+    expect(piuFresca(POOL.generatoIl, FRESCO)).toBe(false);
   });
 
-  it("non torna mai indietro nel tempo", () => {
-    expect(piuFresco(VECCHIO, NUOVO)).toBe(false);
-  });
-
-  it("una data che non si capisce non vince mai", () => {
-    expect(piuFresco(poolDel("chissà"), VECCHIO)).toBe(false);
-  });
-
-  it("ma una data buona batte una data che non si capisce", () => {
-    expect(piuFresco(NUOVO, poolDel("chissà"))).toBe(true);
+  it("una data che non si capisce non vince mai, ma una buona la batte", () => {
+    expect(piuFresca("chissà", "2026-09-07")).toBe(false);
+    expect(piuFresca("2026-09-07", "chissà")).toBe(true);
   });
 });
 
-describe("quale pool si apre", () => {
-  it("senza niente sul dispositivo si aprono i dati inclusi nell'app", () => {
-    expect(scegliPool(VECCHIO, null, DOCUMENTO)).toEqual({ pool: VECCHIO, dimentica: false });
-  });
-
-  it("i dati scaricati la volta scorsa vincono, se sono più freschi", () => {
-    expect(scegliPool(VECCHIO, NUOVO, DOCUMENTO)).toEqual({ pool: NUOVO, dimentica: false });
-  });
-
-  it("un'app aggiornata rende inutili i dati conservati, e li dimentica", () => {
-    // Capita davvero: l'utente reinstalla l'app dopo un aggiornamento del pool.
-    // Tenersi la copia vecchia sarebbe occupare spazio per niente.
-    expect(scegliPool(NUOVO, VECCHIO, DOCUMENTO)).toEqual({ pool: NUOVO, dimentica: true });
-  });
-
-  it("se i dati inclusi non si leggono, si aprono quelli sul dispositivo", () => {
-    // Il file del pacchetto può mancare o essere arrivato a metà. Se sul
-    // dispositivo c'è una copia buona, buttarla via per mostrare una schermata
-    // di guasto sarebbe perdere dati che l'app aveva (ticket 05).
-    expect(scegliPool(null, NUOVO, DOCUMENTO)).toEqual({ pool: NUOVO, dimentica: false });
-  });
-
-  it("senza nulla da nessuna delle due parti non si inventa un pool", () => {
-    expect(scegliPool(null, null, DOCUMENTO)).toEqual({ pool: null, dimentica: false });
-  });
-
-  it("a parità di data si preferiscono i dati inclusi e si libera lo spazio", () => {
-    expect(scegliPool(NUOVO, poolDel(NUOVO.generatoIl), DOCUMENTO)).toEqual({
-      pool: NUOVO,
-      dimentica: true,
+describe("un documento di formato arrivato dalla rete", () => {
+  it("si prende se è più fresco e si applica al pool", () => {
+    expect(valutaFormato(grezzo(PIU_FRESCO), FORMATO, POOL)).toEqual({
+      tipo: "preso",
+      dato: PIU_FRESCO,
     });
   });
 
-  it("un pool conservato che viene da un altro documento non si apre, e si dimentica", () => {
-    // Ticket 32: il pool scaricato entra nel deposito prima che il service
-    // worker attivi il guscio col documento nuovo. Aperto accanto al documento
-    // vecchio, un mazzo salvato in quel momento si porterebbe dietro l'identità
-    // di un formato che non è quello delle sue carte. Al giro dopo, col guscio
-    // nuovo, l'aggiornamento in sottofondo lo riprende.
-    expect(scegliPool(VECCHIO, DI_UN_ALTRO_DOCUMENTO, DOCUMENTO)).toEqual({
-      pool: VECCHIO,
-      dimentica: true,
-    });
+  it("non cambia niente se è quello in uso", () => {
+    expect(valutaFormato(grezzo(FORMATO), FORMATO, POOL).tipo).toBe("nulla-di-nuovo");
   });
 
-  it("nemmeno quando i dati inclusi mancano", () => {
-    // Un pool di un altro documento nel deposito e un deploy che serve la
-    // pagina dell'app al posto di `pool.json`: aprirlo vorrebbe dire le carte di
-    // un gioco sotto il nome e l'impronta di un altro. Meglio il guasto del file
-    // incluso, che è quello che il manutentore può riparare.
-    expect(scegliPool(null, DI_UN_ALTRO_DOCUMENTO, DOCUMENTO)).toEqual({
-      pool: null,
-      dimentica: true,
-    });
-  });
-
-  it("un pool conservato che non dice da dove viene continua ad aprirsi", () => {
-    // Chi ha l'app da prima del legame fra i due file non perde
-    // l'aggiornamento in sottofondo che aveva già preso.
-    expect(scegliPool(VECCHIO, SENZA_IMPRONTA, DOCUMENTO)).toEqual({
-      pool: SENZA_IMPRONTA,
-      dimentica: false,
-    });
-  });
-
-  it("ma non al posto di dati inclusi che non si leggono", () => {
-    // Ticket 81. Un aggiornamento c'è solo se c'è un pool da aggiornare: senza
-    // quello incluso, un pool che non dice da dove viene è un catalogo di cui
-    // non si sa il gioco — un pool dell'era Standard, magari, con le bandite
-    // dentro, sotto il nome del formato di adesso. Si dice il guasto del file
-    // incluso, e quel pool si dimentica.
-    expect(scegliPool(null, SENZA_IMPRONTA, DOCUMENTO)).toEqual({
-      pool: null,
-      dimentica: true,
-    });
-  });
-});
-
-describe("il controllo di freschezza", () => {
-  it("prende i dati più freschi quando ci sono", async () => {
-    const esito = await cercaAggiornamento(VECCHIO, DOCUMENTO, async () => NUOVO);
-    expect(esito).toEqual({ tipo: "preso", pool: NUOVO });
-  });
-
-  it("non fa nulla quando in rete non c'è niente di più nuovo", async () => {
-    const esito = await cercaAggiornamento(NUOVO, DOCUMENTO, async () => VECCHIO);
-    expect(esito.tipo).toBe("nulla-di-nuovo");
-  });
-
-  it("non prende i dati di un documento che l'app non ha ancora in mano", async () => {
-    // È la finestra del ticket 32 vista da dentro la sessione: il pool nuovo è
-    // già in rete, il guscio col documento nuovo non è ancora attivo. Mostrarlo
-    // subito vorrebbe dire il catalogo di un documento sotto il nome e
-    // l'impronta di un altro; alla prossima apertura arriva insieme al suo.
-    const esito = await cercaAggiornamento(VECCHIO, DOCUMENTO, async () => DI_UN_ALTRO_DOCUMENTO);
-    expect(esito.tipo).toBe("di-un-altro-documento");
-  });
-
-  it("prende i dati freschi che non dicono da dove vengono", async () => {
-    const esito = await cercaAggiornamento(VECCHIO, DOCUMENTO, async () => SENZA_IMPRONTA);
-    expect(esito).toEqual({ tipo: "preso", pool: SENZA_IMPRONTA });
-  });
-
-  it("senza rete l'app resta intera: si dice che non è riuscito, e basta", async () => {
-    const esito = await cercaAggiornamento(NUOVO, DOCUMENTO, async () => {
-      throw new TypeError("Failed to fetch");
-    });
-    expect(esito.tipo).toBe("non-riuscito");
-    expect(esito).toHaveProperty("motivo");
-  });
-
-  it("una risposta malformata non fa cadere niente né sostituisce i dati buoni", async () => {
-    for (const spazzatura of [null, "<!doctype html>", { carte: [] }, { generatoIl: 1 }]) {
-      const esito = await cercaAggiornamento(NUOVO, DOCUMENTO, async () => spazzatura);
-      expect(esito.tipo).toBe("non-riuscito");
+  it("si rifiuta, con la sua ragione, se arriva rotto", () => {
+    for (const rotto of [undefined, "<!doctype html>", {}, { ...grezzo(PIU_FRESCO) as object, bandite: 7 }]) {
+      const valutato = valutaFormato(rotto, FORMATO, POOL);
+      expect(valutato.tipo).toBe("rifiutato");
+      expect(valutato).toHaveProperty("motivo", expect.stringMatching(/documento di formato|elenco/));
     }
   });
 
-  it("un pool arrivato vuoto non svuota il catalogo", async () => {
-    const esito = await cercaAggiornamento(NUOVO, DOCUMENTO, async () => ({
-      generatoIl: "2027-01-01T00:00:00.000+00:00",
-      carte: [],
-    }));
-    expect(esito.tipo).toBe("non-riuscito");
+  it("si rifiuta se nomina una carta che il pool non ha, e la nomina", () => {
+    const storto = { ...PIU_FRESCO, bandite: { ...PIU_FRESCO.bandite, carte: [voce("Skirk Prospectr")] } };
+    expect(valutaFormato(grezzo(storto), FORMATO, POOL)).toEqual({
+      tipo: "rifiutato",
+      motivo: expect.stringContaining("Skirk Prospectr"),
+    });
+  });
+
+  it("si rifiuta se è di un altro gioco: serve un'app aggiornata", () => {
+    expect(valutaFormato(grezzo(DI_UN_ALTRO_GIOCO), FORMATO, POOL)).toEqual({
+      tipo: "rifiutato",
+      motivo: expect.stringContaining("app aggiornata"),
+    });
+  });
+
+  it("si rifiuta se porta una data che non si legge, invece di vincere per sempre", () => {
+    expect(valutaFormato(grezzo({ ...PIU_FRESCO, aggiornatoIl: "autunno" }), FORMATO, POOL).tipo).toBe(
+      "rifiutato",
+    );
   });
 });
 
+describe("un listino arrivato dalla rete", () => {
+  it("si prende se è più fresco dei prezzi in uso", () => {
+    const valutato = valutaListino(listino(FRESCO), POOL.generatoIl, POOL);
+    expect(valutato.tipo).toBe("preso");
+  });
+
+  it("non cambia niente se è del giorno dei prezzi in uso", () => {
+    expect(valutaListino(listino(POOL.generatoIl), POOL.generatoIl, POOL).tipo).toBe("nulla-di-nuovo");
+  });
+
+  it("si confronta coi prezzi in uso, non con quelli del pool", () => {
+    expect(valutaListino(listino(FRESCO), PIU_FRESCO_ANCORA, POOL).tipo).toBe("nulla-di-nuovo");
+  });
+
+  it("si rifiuta se è incompleto, anche quando è più fresco", () => {
+    expect(valutaListino(listino(FRESCO, 3), POOL.generatoIl, POOL)).toEqual({
+      tipo: "rifiutato",
+      motivo: expect.stringContaining("incompleto"),
+    });
+  });
+
+  it("si rifiuta se arriva rotto", () => {
+    expect(valutaListino("<!doctype html>", POOL.generatoIl, POOL).tipo).toBe("rifiutato");
+  });
+});
+
+/** Letture finte dell'apertura: quelle vere, su dati inclusi buoni e deposito vuoto. */
+function letture(cambi: Partial<LettureDellApertura> = {}): LettureDellApertura & {
+  dimenticati: string[];
+} {
+  const dimenticati: string[] = [];
+  return {
+    pool: async () => POOL,
+    formato: async () => FORMATO,
+    formatoConservato: async () => null,
+    listinoConservato: async () => null,
+    dimenticaFormato: async () => void dimenticati.push("formato"),
+    dimenticaListino: async () => void dimenticati.push("listino"),
+    sgombera: async () => {},
+    ...cambi,
+    dimenticati,
+  };
+}
+
 describe("l'apertura dell'app", () => {
-  it("parte dai dati sul dispositivo quando sono i più freschi", async () => {
-    const aperto = await poolDaAprire(
-      DOCUMENTO,
-      async () => VECCHIO,
-      async () => NUOVO,
-    );
-    expect(aperto.generatoIl).toBe(NUOVO.generatoIl);
+  it("senza niente sul dispositivo apre i dati inclusi, coi prezzi del pool", async () => {
+    expect(await datiDaAprire(letture())).toEqual({ pool: POOL, formato: FORMATO, listino: null });
   });
 
-  it("parte dai dati inclusi quando quelli sul dispositivo sono di un altro documento", async () => {
-    const aperto = await poolDaAprire(
-      DOCUMENTO,
-      async () => VECCHIO,
-      async () => DI_UN_ALTRO_DOCUMENTO,
-    );
-    expect(aperto).toEqual(VECCHIO);
+  it("apre il documento conservato, se è più fresco", async () => {
+    const aperti = await datiDaAprire(letture({ formatoConservato: async () => grezzo(PIU_FRESCO) }));
+    expect(aperti.formato).toEqual(PIU_FRESCO);
   });
 
-  it("senza dati inclusi, un pool di un altro documento non copre il guasto", async () => {
-    await expect(
-      poolDaAprire(
-        DOCUMENTO,
-        async () => {
-          throw new Error("Il file del pool delle carte non si legge.");
+  it("dimentica il documento conservato che un'app aggiornata ha superato", async () => {
+    const lette = letture({
+      formato: async () => PIU_FRESCO,
+      formatoConservato: async () => grezzo(FORMATO),
+    });
+    const aperti = await datiDaAprire(lette);
+    expect(aperti.formato).toEqual(PIU_FRESCO);
+    expect(lette.dimenticati).toEqual(["formato"]);
+  });
+
+  it("dimentica il documento conservato che non si applica più al pool", async () => {
+    const lette = letture({ formatoConservato: async () => grezzo(DI_UN_ALTRO_GIOCO) });
+    expect((await datiDaAprire(lette)).formato).toEqual(FORMATO);
+    expect(lette.dimenticati).toEqual(["formato"]);
+  });
+
+  it("se il documento incluso non si legge, apre quello conservato", async () => {
+    const aperti = await datiDaAprire(
+      letture({
+        formato: async () => {
+          throw new Error("Il documento di formato non si legge.");
         },
-        async () => DI_UN_ALTRO_DOCUMENTO,
+        formatoConservato: async () => grezzo(FORMATO),
+      }),
+    );
+    expect(aperti.formato).toEqual(FORMATO);
+  });
+
+  it("se il documento incluso non si legge e non c'è altro, dice il suo guasto", async () => {
+    await expect(
+      datiDaAprire(
+        letture({
+          formato: async () => {
+            throw new Error("Il documento di formato non si legge.");
+          },
+        }),
       ),
-    ).rejects.toThrow(/non si legge/);
+    ).rejects.toThrow(/documento di formato/);
+  });
+
+  it("se il pool incluso non si legge, dice il suo guasto: non c'è un altro pool", async () => {
+    await expect(
+      datiDaAprire(
+        letture({
+          pool: async () => {
+            throw new Error("Il file del pool delle carte non si legge.");
+          },
+        }),
+      ),
+    ).rejects.toThrow(/pool delle carte/);
+  });
+
+  it("apre il listino conservato, se è più fresco dei prezzi del pool", async () => {
+    const aperti = await datiDaAprire(letture({ listinoConservato: async () => listino(FRESCO) }));
+    expect(aperti.listino?.generatoIl).toBe(FRESCO);
+  });
+
+  it("dimentica il listino conservato che non è più fresco, o che è incompleto", async () => {
+    for (const vecchio of [listino(POOL.generatoIl), listino(FRESCO, 2)]) {
+      const lette = letture({ listinoConservato: async () => vecchio });
+      expect((await datiDaAprire(lette)).listino).toBeNull();
+      expect(lette.dimenticati).toEqual(["listino"]);
+    }
   });
 
   it("un deposito che non risponde mai non impedisce all'app di aprirsi", async () => {
-    // Non è un caso di scuola: su alcuni browser `indexedDB.open()` resta muto
-    // per sempre in contesti ristretti. Aspettarlo vorrebbe dire una schermata
-    // «Carico le carte…» che non finisce, con i dati inclusi già pronti a un
-    // passo di distanza.
+    // Su alcuni browser `indexedDB.open()` resta muto per sempre in contesti
+    // ristretti: aspettarlo vorrebbe dire una schermata «Carico le carte…» che
+    // non finisce.
     vi.useFakeTimers();
     try {
-      const apertura = poolDaAprire(
-        DOCUMENTO,
-        async () => VECCHIO,
-        () => new Promise<null>(() => {}),
+      const apertura = datiDaAprire(
+        letture({
+          formatoConservato: () => new Promise(() => {}),
+          listinoConservato: () => new Promise(() => {}),
+        }),
       );
       await vi.advanceTimersByTimeAsync(TETTO_DEPOSITO + 1);
-      await expect(apertura).resolves.toEqual(VECCHIO);
+      await expect(apertura).resolves.toEqual({ pool: POOL, formato: FORMATO, listino: null });
     } finally {
       vi.useRealTimers();
     }
   });
 
   it("un deposito che si rompe non impedisce all'app di aprirsi", async () => {
-    const aperto = await poolDaAprire(
-      DOCUMENTO,
-      async () => VECCHIO,
-      async () => {
-        throw new Error("deposito negato");
+    const rotto = async () => {
+      throw new Error("deposito negato");
+    };
+    const aperti = await datiDaAprire(
+      letture({ formatoConservato: rotto, listinoConservato: rotto, sgombera: rotto }),
+    );
+    expect(aperti.formato).toEqual(FORMATO);
+  });
+});
+
+/** Tubi finti del sottofondo, che ricordano quel che si è conservato. */
+function tubi(
+  formato: unknown | "non-arriva",
+  prezzi: unknown | "non-arriva",
+): TubiDelSottofondo & { conservati: string[] } {
+  const conservati: string[] = [];
+  const arrivo = (dati: unknown) =>
+    dati === "non-arriva" ? { arrivato: false as const } : { arrivato: true as const, dati };
+  return {
+    scaricaFormato: async () => arrivo(formato),
+    scaricaListino: async () => arrivo(prezzi),
+    conservaFormato: async () => (conservati.push("formato"), true),
+    conservaListino: async () => (conservati.push("listino"), true),
+    conservati,
+  };
+}
+
+const IN_USO: DatiAperti = { pool: POOL, formato: FORMATO, listino: null };
+
+describe("l'aggiornamento in sottofondo", () => {
+  it("senza rete non cambia niente e non dice niente: l'app è corretta così", async () => {
+    const tubo = tubi("non-arriva", "non-arriva");
+    expect(await aggiornaInSottofondo(IN_USO, tubo)).toEqual({
+      formato: null,
+      listino: null,
+      rifiuti: [],
+    });
+    expect(tubo.conservati).toEqual([]);
+  });
+
+  it("chiede il documento e i prezzi, e non le carte", async () => {
+    // I tubi sono due e nessuno riguarda il pool: è la forma stessa del tipo a
+    // dirlo, e qui lo si guarda da fuori.
+    const tubo = tubi("non-arriva", "non-arriva");
+    expect(Object.keys(tubo).filter((nome) => nome.startsWith("scarica")).sort()).toEqual([
+      "scaricaFormato",
+      "scaricaListino",
+    ]);
+  });
+
+  it("prende il documento più fresco, e lo conserva per la prossima apertura", async () => {
+    const tubo = tubi(grezzo(PIU_FRESCO), "non-arriva");
+    const esito = await aggiornaInSottofondo(IN_USO, tubo);
+    expect(esito.formato).toEqual(PIU_FRESCO);
+    expect(tubo.conservati).toEqual(["formato"]);
+  });
+
+  it("prende i prezzi più freschi, e li conserva", async () => {
+    const tubo = tubi("non-arriva", listino(FRESCO));
+    const esito = await aggiornaInSottofondo(IN_USO, tubo);
+    expect(esito.listino?.generatoIl).toBe(FRESCO);
+    expect(tubo.conservati).toEqual(["listino"]);
+  });
+
+  it("un aggiornamento rotto non si prende e non si conserva, ma si dice", async () => {
+    const tubo = tubi("<!doctype html>", listino(FRESCO, 5));
+    const esito = await aggiornaInSottofondo(IN_USO, tubo);
+    expect(esito.formato).toBeNull();
+    expect(esito.listino).toBeNull();
+    expect(esito.rifiuti.map((rifiuto) => rifiuto.cosa)).toEqual(["documento", "listino"]);
+    expect(tubo.conservati).toEqual([]);
+  });
+
+  it("i prezzi si confrontano con quelli già presi, non con quelli del pool", async () => {
+    const giaPresi = await aggiornaInSottofondo(IN_USO, tubi("non-arriva", listino(PIU_FRESCO_ANCORA)));
+    const esito = await aggiornaInSottofondo(
+      { ...IN_USO, listino: giaPresi.listino },
+      tubi("non-arriva", listino(FRESCO)),
+    );
+    expect(esito.listino).toBeNull();
+    expect(esito.rifiuti).toEqual([]);
+  });
+
+  it("un tubo che solleva vale un file che non arriva", async () => {
+    const esito = await aggiornaInSottofondo(IN_USO, {
+      ...tubi("non-arriva", "non-arriva"),
+      scaricaFormato: async () => {
+        throw new TypeError("Failed to fetch");
       },
-    );
-    expect(aperto).toEqual(VECCHIO);
-  });
-
-  it("senza dati inclusi, un pool che non dice da dove viene non copre il guasto", async () => {
-    await expect(
-      poolDaAprire(
-        DOCUMENTO,
-        async () => {
-          throw new Error("Il file del pool delle carte non si legge.");
-        },
-        async () => SENZA_IMPRONTA,
-      ),
-    ).rejects.toThrow(/non si legge/);
-  });
-
-  it("l'impronta del documento può arrivare dopo le letture dei pool", async () => {
-    const aperto = await poolDaAprire(
-      Promise.resolve(DOCUMENTO),
-      async () => VECCHIO,
-      async () => DI_UN_ALTRO_DOCUMENTO,
-    );
-    expect(aperto).toEqual(VECCHIO);
-  });
-
-  it("se il documento non si legge, il guasto che si dice è il suo", async () => {
-    await expect(
-      poolDaAprire(
-        Promise.reject(new Error("Il documento di formato non si legge.")),
-        async () => VECCHIO,
-        async () => null,
-      ),
-    ).rejects.toThrow(/documento di formato/);
-  });
-
-  it("senza dati da nessuna delle due parti si dice il guasto del file incluso", async () => {
-    await expect(
-      poolDaAprire(
-        DOCUMENTO,
-        async () => {
-          throw new Error("Il file del pool delle carte non si legge.");
-        },
-        async () => null,
-      ),
-    ).rejects.toThrow(/non si legge/);
+    });
+    expect(esito).toEqual({ formato: null, listino: null, rifiuti: [] });
   });
 });

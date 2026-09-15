@@ -64,10 +64,11 @@ function improntaScrittaNelPool(): unknown {
  * I due file di `DATI_INCLUSI` viaggiano insieme e finora niente controllava che
  * il primo l'avesse prodotto il secondo. Il legame è vero e sta tutto in un
  * ordine di comandi — `npm run dati`, poi `npm run build` — che nessuno ricorda
- * per sempre: le limitate e le bandite entrano nel pool quando lo si genera e a
- * runtime nessuno le rilegge, quindi saltare il primo comando spedisce un'app
- * che mostra la lista nuova e mette in catalogo le carte che quella lista
- * bandisce.
+ * per sempre. Dal ticket 11 il legame è più stretto di prima e più largo di
+ * prima insieme: le limitate e le bandite le applica l'app (ADR-0008), quindi
+ * cambiarle non chiede un pool nuovo; il criterio e le edizioni invece sì, e
+ * saltare il primo comando dopo averli cambiati spedisce un'app che applica il
+ * documento a un catalogo che non è il suo — e che ogni documento rifiuta.
  *
  * Sta nella **compilazione** e non in un comando a parte per la ragione di
  * sempre: un controllo che qualcuno deve ricordarsi di lanciare è lo stesso

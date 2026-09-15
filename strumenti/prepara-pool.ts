@@ -12,7 +12,7 @@ import type {
 import type { Formato } from "../src/dati/formato.ts";
 import { verificaCarteEsistenti } from "../src/dati/carica-formato.ts";
 import { improntaDelDocumento } from "../src/dati/impronta-del-documento.ts";
-import { COPIE_DI_UNA_LIMITATA, leggiTettoDiCopie } from "../src/mazzo/copie.ts";
+import { leggiTettoDiCopie } from "../src/mazzo/copie.ts";
 import { applicaCorrezioni, tagMeccanici, type Correzione } from "./tag-di-sinergia.ts";
 import { registroDeiTag, type IndiceTag } from "./tag-di-scryfall.ts";
 
@@ -123,9 +123,10 @@ export type CartaScryfall = {
 };
 
 /**
- * L'esito della preparazione. Oltre al pool porta i **nomi banditi**: non
- * entrano nel file dell'app, ma servono al diario per distinguere una carta
- * bandita da una che il criterio non ammette.
+ * L'esito della preparazione. Oltre al pool porta i **nomi banditi**: nel pool
+ * ci sono — il bando lo applica l'app, leggendo il documento (ADR-0008) — e il
+ * diario li nomina a parte, perché sono le carte del file che il catalogo non
+ * mostrerà.
  *
  * E porta i nomi delle **correzioni orfane**: le righe del file dei tag scritte
  * a mano che non trovano più la loro carta. Vanno dette a schermo, mai ingoiate.
@@ -407,7 +408,12 @@ export function preparaPool(
   // momento in cui si può ancora distinguere da una carta che non c'è.
   verificaCarteEsistenti(formato, perNome.keys());
 
-  const limitate = new Set(formato.limitate.carte.map((voce) => voce.carta));
+  // Le limitate e le bandite **non si applicano qui** (ADR-0008). Il pool si
+  // congela nell'app e il documento di formato si aggiorna da solo: una carta
+  // tolta di qui non potrebbe tornare il giorno che il gruppo la sbandisce, e un
+  // tetto scritto qui non scenderebbe il giorno che la limita. Il pool porta
+  // tutto quel che il criterio ammette, con il tetto che il gioco dà a ogni
+  // carta, e il resto lo fa l'app (`src/dati/pool-in-vigore.ts`).
   const daBandire = new Set(formato.bandite.carte.map((voce) => voce.carta));
 
   const carte: Carta[] = [];
@@ -418,12 +424,9 @@ export function preparaPool(
   for (const [nome, stampe] of perNome) {
     if (!ammessaDalCriterio(stampe, formato)) continue;
     // La bandita si conta **dopo** il criterio: una carta che il formato
-    // bandisce ma che il criterio non ammetterebbe comunque non è sparita dal
-    // pool per via del bando, e dirlo nel diario sarebbe una mezza verità.
-    if (daBandire.has(nome)) {
-      bandite.push(nome);
-      continue;
-    }
+    // bandisce ma che il criterio non ammetterebbe comunque nel pool non c'è, e
+    // dirla bandita nel diario sarebbe una mezza verità.
+    if (daBandire.has(nome)) bandite.push(nome);
 
     /* --- Passi 2 e 3: cosa si mostra, e quanto costa --------------------- */
     // Le copie che il gruppo ammette si cercano una volta sola: le due domande
@@ -448,7 +451,6 @@ export function preparaPool(
         stampaDelPrezzo,
         stampaDellaFigura,
         nomeItaliano: nomeItalianoDi(stampe),
-        limitata: limitate.has(nome),
         aggiornatoIl: opzioni.aggiornatoIl,
         tag: opzioni.tag,
       }),
@@ -466,8 +468,9 @@ export function preparaPool(
   const corrette = applicaCorrezioni(carte, opzioni.correzioni ?? []);
 
   // Il registro si costruisce dai tag **finiti sulle carte**, non dall'indice
-  // intero: fra i due qualche carta si perde per strada — le bandite, le stampe
-  // doppie — e un registro che nomina tag che nessuno porta direbbe una falsità.
+  // intero: fra i due qualche carta si perde per strada — quelle che il criterio
+  // non ammette, le stampe doppie — e un registro che nomina tag che nessuno
+  // porta direbbe una falsità.
   const registroTagScryfall =
     opzioni.tag === undefined
       ? []
@@ -489,7 +492,9 @@ export function preparaPool(
     },
     bandite,
     correzioniOrfane: corrette.orfane,
-    postaNonBandita: cartePerLaPosta(corrette.carte),
+    // Le bandite adesso nel pool ci sono, e la verifica le deve saltare: è la
+    // carta da posta che la lista **non** nomina a dover suonare l'allarme.
+    postaNonBandita: cartePerLaPosta(corrette.carte).filter((nome) => !daBandire.has(nome)),
     senzaLinguaAmmessa,
     figureDaUnAltraCopia,
   };
@@ -822,7 +827,6 @@ function riduci(quale: {
    */
   stampaDellaFigura: CartaScryfall | null;
   nomeItaliano: string | null;
-  limitata: boolean;
   aggiornatoIl: string;
   tag: IndiceTag | undefined;
 }): Carta {
@@ -911,10 +915,11 @@ function riduci(quale: {
     terra: tipi.includes("Land") ? leggiTerra(grezza, testo) : null,
     // Il tetto di copie si cuoce qui, una volta per carta, e da qui in poi è un
     // dato come il costo di mana: chi costruisce lo legge e non lo ricalcola.
-    // Il formato ha l'ultima parola — una limitata sta a una copia anche se il
-    // suo testo si concedesse il permesso — e quel che resta è regola del gioco
-    // e vive dove viveva (`mazzo/copie.ts`).
-    tettoDiCopie: quale.limitata ? COPIE_DI_UNA_LIMITATA : leggiTettoDiCopie(testo, tipi),
+    // Qui è la **regola del gioco** e vive dove viveva (`mazzo/copie.ts`). Il
+    // formato ha l'ultima parola — una limitata sta a una copia anche se il suo
+    // testo si concedesse il permesso — ma quella parola la scrive l'app sopra
+    // il pool, leggendo il documento (ADR-0008).
+    tettoDiCopie: leggiTettoDiCopie(testo, tipi),
   };
 
   // I tag si leggono dalla carta già ridotta, non dai dati grezzi: le regole
@@ -1067,23 +1072,21 @@ function cartePerLaPosta(carte: Carta[]): string[] {
 }
 
 /**
- * Cosa è cambiato dal pool precedente. Le carte sparite si dividono in due:
- * quelle **bandite**, che hanno un nome e una data, e quelle semplicemente
- * **uscite**. È la distinzione che il manutentore guarda prima di pubblicare
+ * Cosa è cambiato dal pool precedente: le carte **entrate** e quelle **uscite**
+ * — che adesso escono solo perché è cambiato il criterio o l'archivio — e, a
+ * parte, le **bandite**: nel pool ci sono, ma il catalogo non le mostrerà
+ * (ADR-0008). È la distinzione che il manutentore guarda prima di pubblicare
  * (storia 30).
  */
 export function confrontaPool(precedente: Pool | null, nuova: Preparazione): Diario {
   const prima = new Set((precedente?.carte ?? []).map((c) => c.nome));
   const adesso = new Set(nuova.pool.carte.map((c) => c.nome));
-  const bandite = new Set(nuova.bandite);
-
-  const sparite = [...prima].filter((nome) => !adesso.has(nome));
 
   return {
     primaVolta: precedente === null,
     entrate: [...adesso].filter((nome) => !prima.has(nome)).sort(confrontaTesti),
-    uscite: sparite.filter((nome) => !bandite.has(nome)).sort(confrontaTesti),
-    bandite: sparite.filter((nome) => bandite.has(nome)).sort(confrontaTesti),
+    uscite: [...prima].filter((nome) => !adesso.has(nome)).sort(confrontaTesti),
+    bandite: [...nuova.bandite].sort(confrontaTesti),
   };
 }
 
@@ -1127,13 +1130,14 @@ export function raccontaDiario(diario: Diario): string {
     diario.primaVolta
       ? `Primo pool: ${diario.entrate.length} carte.`
       : `Differenze dal pool precedente: ${diario.entrate.length} entrate, ` +
-        `${diario.uscite.length} uscite, ${diario.bandite.length} bandite.`,
+        `${diario.uscite.length} uscite. ` +
+        `Nel pool ${diario.bandite.length} bandite, che l'app terrà fuori dal catalogo.`,
   ];
 
   for (const [titolo, nomi] of [
     ["entrate", diario.entrate],
     ["uscite", diario.uscite],
-    ["bandite", diario.bandite],
+    ["bandite, nel pool ma fuori dal catalogo", diario.bandite],
   ] as const) {
     if (nomi.length === 0) continue;
     // Al primo giro le entrate sono centinaia: il numero basta, l'elenco no.

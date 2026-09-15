@@ -7,7 +7,6 @@ import { interpretaFormato } from "../src/dati/carica-formato.ts";
 import { improntaDelDocumento } from "../src/dati/impronta-del-documento.ts";
 import type { Formato } from "../src/dati/formato.ts";
 import type { Carta, Pool } from "../src/dati/pool.ts";
-import { COPIE_DI_UNA_LIMITATA } from "../src/mazzo/copie.ts";
 import { COPIE_MASSIME } from "../src/mazzo/taratura.ts";
 import {
   confrontaPool,
@@ -130,9 +129,12 @@ describe("passo 1 — chi entra", () => {
     expect(pool.carte.map((c) => c.nome)).not.toContain("Fixture Antico");
   });
 
-  it("non fa entrare le carte che il formato bandisce", () => {
+  it("tiene anche le carte che il formato bandisce: le toglie l'app, leggendo il documento", () => {
+    // ADR-0008. Il pool si congela nell'app e il documento di formato si
+    // aggiorna da solo: una carta tolta di qui non potrebbe tornare il giorno
+    // che il gruppo la sbandisce, senza un pool nuovo.
     const esito = preparazione();
-    expect(esito.pool.carte.map((c) => c.nome)).not.toContain("Fixture Contratto");
+    expect(esito.pool.carte.map((c) => c.nome)).toContain("Fixture Contratto");
     expect(esito.bandite).toEqual(["Fixture Contratto"]);
   });
 
@@ -153,9 +155,7 @@ describe("passo 1 — chi entra", () => {
     );
   });
 
-  it("non chiama errore di battitura una carta bandita, che nel pool non c'è per definizione", () => {
-    // Il controllo si fa **prima** di togliere le bandite: se lo si facesse
-    // dopo, ogni riga della lista dei bandi sembrerebbe un nome sbagliato.
+  it("non chiama errore di battitura una carta bandita", () => {
     expect(() => preparazione()).not.toThrow();
   });
 });
@@ -630,19 +630,11 @@ describe("il tetto di copie", () => {
     expect(tetto("Fixture Goblin")).toBe(COPIE_MASSIME);
   });
 
-  it("è uno per la carta che il documento di formato dichiara limitata", () => {
-    expect(tetto("Fixture Sigillo")).toBe(COPIE_DI_UNA_LIMITATA);
-  });
-
-  it("torna quattro se il documento smette di dichiararla limitata", () => {
-    // Cambiare una riga di dati cambia il pool, e non serve toccare il codice:
-    // è la promessa fatta al manutentore (storia 26).
-    const { pool } = preparaPool(FRAMMENTO, {
-      formato: formatoCon({ limitate: { ...FORMATO.limitate, carte: [] } }),
-      aggiornatoIl: QUANDO,
-    });
-
-    expect(carta(pool, "Fixture Sigillo").tettoDiCopie).toBe(COPIE_MASSIME);
+  it("è quello del gioco anche per la carta che il documento dichiara limitata", () => {
+    // Il tetto del formato non si cuoce qui (ADR-0008): lo scrive l'app sopra
+    // il pool, leggendo il documento, così che un documento più fresco lo
+    // cambi senza un pool nuovo. Quel che il pool porta è la regola del gioco.
+    expect(tetto("Fixture Sigillo")).toBe(COPIE_MASSIME);
   });
 
   it("non c'è per la carta che se lo concede da sé nel testo", () => {
@@ -654,24 +646,6 @@ describe("il tetto di copie", () => {
   it("non c'è per le terre base", () => {
     expect(tetto("Fixture Forest")).toBeNull();
   });
-
-  it("la limitata resta a una copia anche se il testo si concedesse il permesso", () => {
-    // Il formato ha l'ultima parola: fra «il gioco dice quante ne vuoi» e «il
-    // gruppo dice una», al tavolo del venerdì vince il gruppo.
-    const { pool } = preparaPool(FRAMMENTO, {
-      formato: formatoCon({
-        limitate: {
-          ...FORMATO.limitate,
-          carte: [
-            { carta: "Fixture Sciame", perché: "troppo forte", divergenza: null, daConfermare: null },
-          ],
-        },
-      }),
-      aggiornatoIl: QUANDO,
-    });
-
-    expect(carta(pool, "Fixture Sciame").tettoDiCopie).toBe(COPIE_DI_UNA_LIMITATA);
-  });
 });
 
 describe("la verifica della posta", () => {
@@ -679,7 +653,7 @@ describe("la verifica della posta", () => {
     expect(preparazione().postaNonBandita).toEqual(["Fixture Scommessa"]);
   });
 
-  it("non segnala la carta con la posta che la lista nomina già", () => {
+  it("non segnala la carta con la posta che la lista nomina già, anche se nel pool c'è", () => {
     expect(preparazione().postaNonBandita).not.toContain("Fixture Contratto");
   });
 
@@ -953,13 +927,14 @@ describe("ripetibilità", () => {
 describe("i tag di Scryfall, accanto ai quindici", () => {
   /**
    * L'indice come lo consegnerebbe il file bulk: il Goblin e il Refusal
-   * taggati, il Contratto pure — ma il Contratto è bandito e nel pool non entra.
+   * taggati, la Relic pure — ma la Relic in italiano non c'è, e col criterio
+   * del documento finto nel pool non entra.
    */
   const INDICE = indicizzaTag([
     { id: "id-counterspell", nome: "counterspell", oracleId: ["oracolo-refusal"] },
     { id: "id-aggro", nome: "aggro-payoff", oracleId: ["oracolo-goblin"] },
     { id: "id-token", nome: "token-generator", oracleId: ["oracolo-goblin"] },
-    { id: "id-ante", nome: "ante", oracleId: ["oracolo-contratto"] },
+    { id: "id-reliquia", nome: "relic", oracleId: ["oracolo-relic"] },
   ]);
 
   const conTag = () =>
@@ -981,10 +956,10 @@ describe("i tag di Scryfall, accanto ai quindici", () => {
   });
 
   it("nel registro non mette i tag che nessuna carta del pool porta", () => {
-    // «ante» esiste nell'indice, ma è solo del Contratto, che è bandito.
+    // «relic» esiste nell'indice, ma è solo della Relic, che il criterio lascia fuori.
     const nomi = conTag().pool.registroTagScryfall.map((t) => t.nome);
 
-    expect(nomi).not.toContain("ante");
+    expect(nomi).not.toContain("relic");
     expect(nomi).toEqual(["aggro-payoff", "counterspell", "token-generator"]);
   });
 
@@ -1038,18 +1013,18 @@ describe("diario delle differenze", () => {
     expect(diario.primaVolta).toBe(true);
     expect(diario.entrate).toEqual(nuova.pool.carte.map((c) => c.nome).sort());
     expect(diario.uscite).toEqual([]);
-    expect(diario.bandite).toEqual([]);
   });
 
-  it("separa chi è entrato, chi è uscito e chi è stato bandito", () => {
+  it("separa chi è entrato, chi è uscito, e dice quali carte del pool l'app terrà fuori", () => {
     const prima = poolPrecedente(["Fixture Goblin", "Fixture Contratto", "Fixture Uscita"]);
     const diario = confrontaPool(prima, nuova);
 
     expect(diario.primaVolta).toBe(false);
     expect(diario.entrate).not.toContain("Fixture Goblin");
     expect(diario.entrate).toContain("Fixture Anchorage");
-    // Bandita: sparita dal pool, ma sparita per un motivo che ha un nome.
+    // Bandita: nel pool c'è, e c'era — ma nel catalogo non si vedrà (ADR-0008).
     expect(diario.bandite).toEqual(["Fixture Contratto"]);
+    expect(diario.uscite).not.toContain("Fixture Contratto");
     // Uscita: sparita e basta.
     expect(diario.uscite).toEqual(["Fixture Uscita"]);
   });
@@ -1096,7 +1071,13 @@ describe("il pool dice da quale documento viene", () => {
     expect(preparazione().pool.improntaDelDocumento).toBe(improntaDelDocumento(FORMATO));
   });
 
-  it("ne porta un'altra se il documento bandisce una carta in più", () => {
+  it("ne porta un'altra se un'edizione ammette altre lingue", () => {
+    const dopo = preparaPool(FRAMMENTO, { formato: conLingue("xb", ["it", "en"]), aggiornatoIl: QUANDO });
+
+    expect(dopo.pool.improntaDelDocumento).not.toBe(preparazione().pool.improntaDelDocumento);
+  });
+
+  it("porta la stessa se il documento bandisce una carta in più: il bando lo applica l'app", () => {
     const conUnBando = formatoCon({
       bandite: {
         ...FORMATO.bandite,
@@ -1113,7 +1094,8 @@ describe("il pool dice da quale documento viene", () => {
     });
     const dopo = preparaPool(FRAMMENTO, { formato: conUnBando, aggiornatoIl: QUANDO });
 
-    expect(dopo.pool.improntaDelDocumento).not.toBe(preparazione().pool.improntaDelDocumento);
+    expect(dopo.pool.improntaDelDocumento).toBe(preparazione().pool.improntaDelDocumento);
+    expect(JSON.stringify(dopo.pool)).toBe(JSON.stringify(preparazione().pool));
   });
 });
 

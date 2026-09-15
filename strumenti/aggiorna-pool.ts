@@ -6,6 +6,7 @@ import { createGunzip } from "node:zlib";
 
 import { interpretaFormato } from "../src/dati/carica-formato.ts";
 import type { Formato } from "../src/dati/formato.ts";
+import { listinoDelPool } from "../src/dati/listino.ts";
 import type { Pool } from "../src/dati/pool.ts";
 import { DESCRITTORE, dataDellArchivio } from "./archivio-di-scryfall.ts";
 import {
@@ -38,7 +39,14 @@ import {
  *
  * Scarica l'archivio completo Scryfall, tiene le sole stampe delle edizioni che
  * il **documento di formato** ammette, le riduce ai campi che servono, riscrive
- * `public/dati/pool.json` e dice a schermo cosa è cambiato.
+ * `public/dati/pool.json` e `public/dati/prezzi.json`, e dice a schermo cosa è
+ * cambiato.
+ *
+ * I due file hanno due vite diverse (ticket 11). Il **pool** si congela
+ * nell'app: le carte del 1994 non cambiano, e l'app non lo riscarica mai. Il
+ * **listino dei prezzi** invece l'app lo chiede in sottofondo, insieme al
+ * documento di formato, perché sono le sole cose che invecchiano: pubblicare
+ * prezzi freschi è rilanciare questo comando e pubblicare il sito.
  *
  * Il formato non è scritto qui: si legge da `public/dati/formato.json`, che è
  * il file che una persona apre e corregge
@@ -81,6 +89,7 @@ const INTESTAZIONI = {
 
 const qui = (percorso: string) => fileURLToPath(new URL(percorso, import.meta.url));
 const POOL = qui("../public/dati/pool.json");
+const LISTINO = qui("../public/dati/prezzi.json");
 
 /**
  * Il documento di formato: lo stesso file che l'app legge nel browser, letto
@@ -172,6 +181,7 @@ async function principale(): Promise<void> {
   // non a riscaricare l'archivio.
   verificaPoolNonVuoto(preparazione.pool, formato);
   scriviPool(preparazione.pool);
+  scriviListino(preparazione.pool);
 
   const conTag = preparazione.pool.carte.filter((c) => c.tagScryfall.length > 0).length;
   console.log(
@@ -181,14 +191,15 @@ async function principale(): Promise<void> {
 
   // I tag più freschi delle carte vogliono dire un pool nuovo con la data
   // vecchia — perché la data dei dati è quella delle carte, ed è la stessa dei
-  // prezzi. Il file sul disco è giusto, ma il controllo di freschezza (storia
-  // 18) non scatterà: chi ha già quel pool datato non vedrà mai i tag nuovi.
-  // Succede solo rileggendo un archivio di carte vecchio con `--da`.
+  // prezzi. Il pool arriva lo stesso, con l'app; ma il listino porta quella
+  // data, e il controllo di freschezza dei prezzi (ticket 11) non scatterà:
+  // chi ha già i prezzi di quel giorno non vedrà quelli di oggi, perché oggi
+  // non ce ne sono. Succede solo rileggendo un archivio di carte vecchio con `--da`.
   if (tag.aggiornatoIl !== null && tag.aggiornatoIl > aggiornatoIl) {
     console.log(
       `  Attenzione: i tag sono del ${tag.aggiornatoIl}, più freschi delle carte. ` +
-        `La data del pool resta quella delle carte, quindi le app già installate ` +
-        `non si accorgeranno di questo aggiornamento: rilancia senza --da.`,
+        `I prezzi restano del giorno delle carte, quindi le app già installate ` +
+        `non prenderanno prezzi nuovi: rilancia senza --da.`,
     );
   }
 
@@ -227,10 +238,10 @@ async function principale(): Promise<void> {
 
   console.log("");
   console.log(
-    `Scritto ${percorsoLeggibile(POOL)}: ${preparazione.pool.carte.length} carte, ` +
-      `dati Scryfall del ${aggiornatoIl}.`,
+    `Scritti ${percorsoLeggibile(POOL)} e ${percorsoLeggibile(LISTINO)}: ` +
+      `${preparazione.pool.carte.length} carte, dati Scryfall del ${aggiornatoIl}.`,
   );
-  console.log("Il file è un prodotto di compilazione: va messo in git, mai modificato a mano.");
+  console.log("Sono prodotti di compilazione: vanno messi in git, mai modificati a mano.");
 }
 
 /** Scarica il descrittore, poi l'archivio, e lo setaccia mentre arriva. */
@@ -497,6 +508,26 @@ function scriviPool(pool: Pool): void {
       `"improntaDelDocumento": ${JSON.stringify(pool.improntaDelDocumento)},\n` +
       `"registroTagScryfall": [\n${tag}\n],\n` +
       `"carte": [\n${carte}\n]\n}\n`,
+    "utf8",
+  );
+}
+
+/**
+ * Il listino dei prezzi si scrive con una voce per riga, come le carte del pool:
+ * è il file che cambia a ogni giro, e il diff deve mostrare quali prezzi.
+ *
+ * Viene dallo stesso pool appena scritto, e mai da un giro a parte: chi entra e
+ * quale copia prezza una carta lo decide la stessa preparazione, e un listino
+ * fatto altrove potrebbe prezzare carte che il pool non ha.
+ */
+function scriviListino(pool: Pool): void {
+  const listino = listinoDelPool(pool);
+  const voci = listino.prezzi.map((voce) => JSON.stringify(voce)).join(",\n");
+  writeFileSync(
+    LISTINO,
+    `{\n"generatoIl": ${JSON.stringify(listino.generatoIl)},\n` +
+      `"improntaDelDocumento": ${JSON.stringify(listino.improntaDelDocumento)},\n` +
+      `"prezzi": [\n${voci}\n]\n}\n`,
     "utf8",
   );
 }

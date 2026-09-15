@@ -28,7 +28,7 @@
  *
  * `indexedDB.open()` **può restare muto per sempre**: non risponde né sì né no,
  * in contesti che certi browser trattano come ristretti. È un caso vero e già
- * noto a questo codice — `poolDaAprire` ha il suo tetto per la stessa ragione,
+ * noto a questo codice — `datiDaAprire` ha il suo tetto per la stessa ragione,
  * e per lo stesso numero — e in fila diventa molto peggio: senza tetto, un
  * turno che non finisce fermerebbe ogni operazione successiva per il resto
  * della sessione, in silenzio. Il salvataggio degli orologi, i mazzi, tutto.

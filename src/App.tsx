@@ -23,13 +23,19 @@ import {
 import { NoteLegali } from "./componenti/NoteLegali.js";
 import { SchedaCarta } from "./componenti/SchedaCarta.js";
 import { Vincoli } from "./componenti/Vincoli.js";
-import { aggiornaInSottofondo, poolDaAprire } from "./dati/aggiornamento.js";
+import {
+  aggiornaInSottofondo,
+  dataDeiPrezzi,
+  datiDaAprire,
+  type Rifiuto,
+} from "./dati/aggiornamento.js";
 import { dimenticaOrologi, leggiOrologiSalvati, salvaOrologi } from "./dati/deposito.js";
 import { identitaDelFormato } from "./dati/ambito.js";
-import { caricaFormato } from "./dati/carica-formato.js";
-import { improntaDelDocumento } from "./dati/impronta-del-documento.js";
 import { dataInItaliano } from "./dati/carica-pool.js";
 import type { Formato } from "./dati/formato.js";
+import type { Listino } from "./dati/listino.js";
+import { notaDelRifiuto } from "./dati/note-dell-aggiornamento.js";
+import { poolInVigore } from "./dati/pool-in-vigore.js";
 import type { Carta, Pool } from "./dati/pool.js";
 import { FILTRI_VUOTI, type Filtri } from "./catalogo/filtri.js";
 import type { CopieDiCarta } from "./mazzo/base-di-terre.js";
@@ -66,20 +72,46 @@ import { NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
  * l'app si apre anche senza rete (storia 15); solo le immagini arrivano da
  * Scryfall, e mancano finché non si è viste almeno una volta.
  *
- * In fondo, sempre, la data dei dati che si stanno guardando (storia 17):
- * presa dal pool e mai dall'orologio, perché è dei dati che parla.
+ * In fondo, sempre, le date dei dati che si stanno guardando (storia 17): delle
+ * carte, dei prezzi e della lista del formato, prese dai dati e mai
+ * dall'orologio, perché è dei dati che parlano.
  *
- * L'apertura non aspetta mai la rete (ticket 05): si parte dai dati che ci sono
- * già — quelli inclusi, o quelli più freschi scaricati una volta passata. Solo
- * dopo, in sottofondo, si guarda se ne esistano di più recenti; se arrivano, la
- * data in fondo cambia e il catalogo si ritrova le carte nuove sotto le mani.
- * Se non arrivano, non succede niente e nessuno se ne accorge.
+ * L'apertura non aspetta mai la rete: si parte dai dati che ci sono già — il
+ * pool incluso, e il documento e i prezzi inclusi o quelli più freschi presi
+ * una volta passata. Solo dopo, in sottofondo, si guarda se il documento o i
+ * prezzi ne abbiano di più recenti (ticket 11): le carte no, sono del 1994. Se
+ * arrivano, le date in fondo cambiano e il catalogo si ritrova il bando nuovo o
+ * i prezzi di oggi sotto le mani. Se non arrivano, non succede niente e nessuno
+ * se ne accorge. Se arrivano rotti, si tiene quel che c'era e lo si dice.
  */
 export function App() {
-  const [pool, setPool] = useState<Pool | null>(null);
+  /**
+   * Il pool **congelato**, com'è arrivato col pacchetto: le bandite ci sono
+   * ancora, e le limitate hanno il tetto del gioco. Nessuna schermata lo vede —
+   * vedono `pool`, qui sotto.
+   */
+  const [congelato, setCongelato] = useState<Pool | null>(null);
   /** Il gioco che si sta giocando, letto dal documento di formato. */
   const [formato, setFormato] = useState<Formato | null>(null);
+  /** I prezzi più freschi di quelli del pool; `null` finché valgono quelli. */
+  const [listino, setListino] = useState<Listino | null>(null);
+  /** Gli aggiornamenti arrivati rotti in questa sessione, da dire in fondo. */
+  const [rifiuti, setRifiuti] = useState<readonly Rifiuto[]>([]);
   const [guasto, setGuasto] = useState<string | null>(null);
+  /**
+   * Il pool **in vigore**: quello congelato, coi prezzi e il documento di adesso
+   * applicati sopra (`pool-in-vigore.ts`, ADR-0008). È il solo pool che
+   * catalogo, motore e mazzi vedono: un documento più fresco che bandisce una
+   * carta la toglie da tutti e tre insieme.
+   *
+   * Ricavato una volta per dati e non nel disegno, per la ragione di `ambito`
+   * qui sotto: chi lo riceve lo tiene fra le dipendenze dei propri conti.
+   */
+  const pool = useMemo(
+    () =>
+      congelato === null || formato === null ? null : poolInVigore(congelato, formato, listino),
+    [congelato, formato, listino],
+  );
   const [pagina, setPagina] = useState<"catalogo" | "tema" | "mazzo" | "salvati">("catalogo");
 
   /**
@@ -296,22 +328,17 @@ export function App() {
 
   useEffect(() => {
     let vivo = true;
-    // Le carte e il formato si aprono **insieme**, e insieme falliscono: le
-    // carte senza il formato sarebbero un catalogo di un gioco che non si sa
-    // quale sia, e il formato senza le carte non ha niente da governare.
-    //
-    // La scelta del pool aspetta l'impronta del documento, perché è lui a dire
-    // quale pool conservato gli sta accanto (ticket 32); le letture dei due
-    // file però partono insieme.
-    const letturaDelFormato = caricaFormato();
-    Promise.all([
-      poolDaAprire(letturaDelFormato.then(improntaDelDocumento)),
-      letturaDelFormato,
-    ]).then(
-      ([lettoPool, lettoFormato]) => {
+    // Le carte, il formato e i prezzi si aprono **insieme**, e insieme
+    // falliscono: le carte senza il formato sarebbero un catalogo di un gioco
+    // che non si sa quale sia, e il formato senza le carte non ha niente da
+    // governare. Quale documento e quali prezzi — gli inclusi, o quelli presi
+    // in sottofondo una volta passata — lo decide `datiDaAprire`.
+    datiDaAprire().then(
+      (dati) => {
         if (!vivo) return;
-        setPool(lettoPool);
-        setFormato(lettoFormato);
+        setCongelato(dati.pool);
+        setFormato(dati.formato);
+        setListino(dati.listino);
       },
       (errore: unknown) => {
         if (vivo) setGuasto(errore instanceof Error ? errore.message : String(errore));
@@ -455,29 +482,36 @@ export function App() {
   };
 
   useEffect(() => {
-    if (pool === null || formato === null || giaControllato.current) return undefined;
+    if (congelato === null || formato === null || giaControllato.current) return undefined;
     giaControllato.current = true;
 
     let vivo = true;
-    void aggiornaInSottofondo(pool, improntaDelDocumento(formato)).then((esito) => {
-      // Solo i dati più freschi cambiano qualcosa. Rete assente, risposta rotta,
-      // niente di nuovo da mesi, dati fatti per un documento che arriverà col
-      // guscio nuovo: in tutti questi casi si resta come si era, e all'utente
-      // non si dice niente perché non c'è niente da dirgli.
-      if (vivo && esito.tipo === "preso") setPool(esito.pool);
-    })
+    void aggiornaInSottofondo({ pool: congelato, formato, listino })
+      .then((esito) => {
+        if (!vivo) return;
+        // Solo i dati più freschi cambiano qualcosa. Rete assente, niente di
+        // nuovo da mesi: si resta come si era, e all'utente non si dice niente
+        // perché non c'è niente da dirgli — l'app è corretta coi dati che ha.
+        if (esito.formato !== null) setFormato(esito.formato);
+        if (esito.listino !== null) setListino(esito.listino);
+        // Un aggiornamento arrivato rotto invece si dice: si è tenuto il
+        // vecchio, e chi legge le date in fondo deve sapere perché sono quelle.
+        if (esito.rifiuti.length > 0) setRifiuti(esito.rifiuti);
+      })
       // Il controllo non fallisce mai rumorosamente, e se un giorno lo facesse
       // non sarebbe comunque una ragione per rovinare la schermata a chi legge.
       .catch(() => {});
     return () => {
       vivo = false;
     };
-  }, [pool, formato]);
+    // Il listino non sta fra le dipendenze: il controllo si fa una volta per
+    // apertura, e parte coi dati che l'apertura ha scelto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [congelato, formato]);
 
   // Il mazzo, ricostruito sulle carte del pool che c'è adesso. Le carte che un
-  // aggiornamento dei dati facesse sparire — una rotazione, un bando — escono
-  // dal mazzo da sole, che è esattamente quel che deve succedere: non sono più
-  // giocabili.
+  // documento più fresco bandisce escono dal mazzo da sole, che è esattamente
+  // quel che deve succedere: non sono più giocabili.
   const mazzo = useMemo<CopieDiCarta[]>(() => {
     if (pool === null || copiePerNome.size === 0) return [];
     const perNome = new Map(pool.carte.map((carta) => [carta.nome, carta]));
@@ -806,9 +840,16 @@ export function App() {
       </main>
 
       <footer class="piede">
-        {pool !== null ? (
+        {congelato !== null && formato !== null ? (
           <p class="data-dati">
-            Carte e prezzi del {dataInItaliano(pool.generatoIl)}.
+            {/*
+              Tre date e non una: le carte non invecchiano, i prezzi e la lista
+              del formato sì, e si aggiornano ciascuno per conto suo (ticket 11).
+              Quella dei prezzi è sempre l'ultimo aggiornamento **riuscito**.
+            */}
+            Carte del {dataInItaliano(congelato.generatoIl)}, prezzi del{" "}
+            {dataInItaliano(dataDeiPrezzi(congelato, listino))}, lista del formato del{" "}
+            {dataInItaliano(formato.aggiornatoIl)}.
             {/*
               L'aspetto è ancora da scegliere anche adesso che il nome c'è, e
               l'avviso lo dice per quel che è invece di sparire con lui: un'app
@@ -820,6 +861,16 @@ export function App() {
               : " L’aspetto dell’app non è ancora stato scelto."}
           </p>
         ) : null}
+        {congelato !== null && formato !== null
+          ? rifiuti.map((rifiuto) => (
+              <p class="data-dati" key={rifiuto.cosa}>
+                {notaDelRifiuto(rifiuto, {
+                  documentoDel: formato.aggiornatoIl,
+                  prezziDel: dataDeiPrezzi(congelato, listino),
+                })}
+              </p>
+            ))
+          : null}
         <NoteLegali />
       </footer>
     </div>

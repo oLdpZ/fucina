@@ -218,19 +218,46 @@ la prigione, gli artefatti, il recupero e la difesa.
 
 ## Tetto di copie
 
-**Quante copie di una carta un mazzo può contenere**, scritto sulla carta stessa
-dalla preparazione del pool.
+**Quante copie di una carta un mazzo può contenere**, scritto sulla carta stessa.
 
 Non è «quattro tranne eccezioni»: è un numero che la carta porta con sé, e
 `null` quando tetto non ce n'è — le terre base, e le carte che si concedono il
 permesso nel proprio testo.
 
-Vale **uno** per le carte che il documento di formato dichiara limitate, e il
-formato ha l'ultima parola anche sul permesso scritto nel testo.
+Nel file del pool è il tetto del **gioco**, e lo scrive la preparazione. Vale
+**uno** per le carte che il documento di formato dichiara limitate, e
+quell'uno lo scrive l'app sopra il pool, leggendo il documento
+(`dati/pool-in-vigore.ts`): il formato ha l'ultima parola anche sul permesso
+scritto nel testo. Sta sopra il pool e non dentro perché il documento si
+aggiorna da solo e il pool no
+([ADR-0008](docs/adr/0008-limitate-e-bandite-le-applica-l-app.md)).
 
-Sta nel pool e non in una funzione del motore perché è così che chi costruisce
-un mazzo non ha bisogno di conoscere il formato: legge un numero. Il giorno che
-il gruppo limita una carta in più, cambia quel numero e nient'altro.
+Sta sulla carta e non in una funzione del motore perché è così che chi
+costruisce un mazzo non ha bisogno di conoscere il formato: legge un numero. Il
+giorno che il gruppo limita una carta in più, cambia quel numero e nient'altro.
+
+---
+
+## Pool in vigore
+
+**Il pool che l'app mostra e con cui costruisce**: il pool congelato nell'app,
+coi prezzi e il documento di formato di adesso applicati sopra.
+
+Il pool **congelato** è il file che arriva col pacchetto: tutte le carte che il
+criterio ammette, bandite comprese, ciascuna col tetto del gioco e i prezzi del
+giorno in cui è stato preparato. Non si riscarica mai — le carte del 1994 non
+cambiano.
+
+Sopra ci vanno due cose che invecchiano, e sono le sole che l'aggiornamento in
+sottofondo va a chiedere: il **listino dei prezzi** (`prezzi.json`) e il
+**documento di formato**. Il documento toglie le bandite e mette le limitate a
+una copia. Un documento o un listino di un altro criterio non si applicano, e un
+aggiornamento arrivato rotto o incompleto non si prende: si tiene quel che c'era
+e lo si dice. Un aggiornamento che non arriva, invece, non si dice: senza rete
+l'app è corretta coi dati che ha.
+
+Catalogo, motore e mazzi vedono solo il pool in vigore. Il pool congelato non
+lo vede nessuna schermata.
 
 ---
 
@@ -312,19 +339,16 @@ Un mazzo che **non** dichiara il formato — salvato prima che l'app lo scrivess
 
 Di impronte però ce ne sono **due**, e la seconda risponde a un'altra domanda:
 l'**impronta del documento** (`dati/impronta-del-documento.ts`) dice da quale
-documento di formato viene il pool. Guarda tutto quel che decide il contenuto
-del pool — limitate e bandite comprese, cioè proprio le voci che l'altra lascia
-fuori apposta — perché quelle entrano nel file quando lo si genera e a runtime
-non le rilegge nessuno. Non si mostra e non viaggia dentro i mazzi: la
-confronta la compilazione, che si ferma quando i due file di dati non sono
-stati fatti insieme, e la confronta l'app, che non apre accanto al documento un
-pool arrivato dalla rete che viene da un altro. Un pool che l'impronta non ce
-l'ha — scritto prima che il legame esistesse — si apre lo stesso accanto al pool
-incluso, se è più fresco: qui «non si sa» passa, al contrario che per i mazzi,
-perché rifiutarlo toglierebbe a chi ha l'app da prima l'aggiornamento che aveva
-già preso. Al **posto** del pool incluso che non si carica, invece, no: lì non
-c'è nessun aggiornamento da proteggere, solo un catalogo di cui non si sa il
-gioco. La compilazione, che il pool lo può rifare, si ferma in ogni caso.
+documento di formato viene il pool. Guarda quel che decide il contenuto del
+pool e che non si può applicare dopo: il criterio e le edizioni, con le lingue
+di ciascuna nell'ordine dichiarato. Le limitate e le bandite no: il pool le
+porta tutte, e le applica l'app
+([ADR-0008](docs/adr/0008-limitate-e-bandite-le-applica-l-app.md)). Non si
+mostra e non viaggia dentro i mazzi: sta nel pool e nel listino dei prezzi, la
+confronta la compilazione, che si ferma quando pool e documento non vengono
+dallo stesso criterio, e la confronta l'app, che non applica al pool un
+documento o un listino arrivati dalla rete da un altro criterio. Qui «non si
+sa» non passa: un pool che l'impronta non ce l'ha non accetta nessun documento.
 
 ---
 

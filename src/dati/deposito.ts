@@ -1,10 +1,11 @@
 /**
- * Il deposito dei dati sul dispositivo: dove finisce il pool scaricato in
- * sottofondo, perché la prossima apertura parta già fresca, e dove stanno i
- * mazzi che l'utente ha salvato (ticket 07).
+ * Il deposito dei dati sul dispositivo: dove finiscono il documento di formato e
+ * il listino dei prezzi presi in sottofondo, perché la prossima apertura parta
+ * già fresca (ticket 11), e dove stanno i mazzi e gli orologi che l'utente ha
+ * salvato (ticket 07).
  *
- * IndexedDB e non `localStorage`: il pool pesa qualche megabyte, cioè più di
- * quanto `localStorage` conceda, e ci si scrive senza fermare l'interfaccia.
+ * IndexedDB e non `localStorage`: i mazzi salvati crescono senza un tetto, e ci
+ * si scrive senza fermare l'interfaccia.
  *
  * **Le operazioni si fanno una alla volta, nell'ordine in cui partono.** Ci
  * pensa la fila (`fila.ts`): IndexedDB ordina le transazioni dentro una
@@ -20,12 +21,13 @@
  */
 
 import { orologiCheSiLeggono, type Orologio } from "../avversario/orologio.js";
-import { interpretaPool } from "./carica-pool.js";
 import { creaFila } from "./fila.js";
-import type { Pool } from "./pool.js";
 
 const DEPOSITO = "mazzi-fuori-meta";
-/** Lo scaffale dei dati: una voce sola, il pool più fresco che si è preso. */
+/**
+ * Lo scaffale dei dati: il documento di formato e il listino presi in
+ * sottofondo, e gli orologi dell'utente.
+ */
 const SCAFFALE = "dati";
 /**
  * Lo scaffale dei mazzi salvati, uno per mazzo, con la chiave dentro la voce.
@@ -36,8 +38,15 @@ const SCAFFALE = "dati";
  */
 export const SCAFFALE_MAZZI = "mazzi";
 const VERSIONE = 2;
-/** Una voce sola: il pool più fresco che si è riusciti a scaricare. */
-const CHIAVE = "pool";
+/**
+ * Il posto dove stava il pool scaricato in sottofondo, prima che il pool si
+ * congelasse nell'app (ticket 11). Resta nominato solo per sgomberarlo.
+ */
+const CHIAVE_POOL_DI_IERI = "pool";
+/** Il documento di formato più fresco preso in sottofondo, grezzo. */
+const CHIAVE_FORMATO = "formato";
+/** Il listino dei prezzi più fresco preso in sottofondo, grezzo. */
+const CHIAVE_LISTINO = "listino";
 /**
  * Gli orologi dell'avversario scritti dall'utente, tutti in una voce.
  *
@@ -220,37 +229,61 @@ function aperta<T>(
   );
 }
 
+/* --- Il documento di formato e il listino presi in sottofondo -------------- */
+
 /**
- * Il pool conservato, se c'è ed è ancora un pool.
- *
- * Si ri-controlla quel che si rilegge: fra una sessione e l'altra il deposito
- * può essere stato troncato dal browser che recupera spazio, e un pool a metà
- * svuoterebbe il catalogo in silenzio.
+ * Quel che si conserva è **grezzo**, così com'è arrivato dalla rete, e qui non
+ * si legge: si rilegge all'apertura dalla stessa porta dell'aggiornamento
+ * (`aggiornamento.ts`), perché la domanda vera — si applica ancora al pool? — la
+ * può fare solo chi il pool ce l'ha in mano. Fra una sessione e l'altra l'app
+ * può essere cambiata, e il deposito troncato dal browser che recupera spazio.
  */
-export async function leggiPoolConservato(): Promise<Pool | null> {
-  const letto = await transazione<unknown>(SCAFFALE, "readonly", (scaffale) =>
-    scaffale.get(CHIAVE),
-  );
-  if (letto === null || letto === undefined) return null;
-  try {
-    return interpretaPool(letto);
-  } catch {
-    void dimenticaPool();
-    return null;
-  }
+
+/** Il documento di formato conservato, grezzo; `null` se non ce n'è. */
+export function leggiFormatoConservato(): Promise<unknown> {
+  return transazione<unknown>(SCAFFALE, "readonly", (scaffale) => scaffale.get(CHIAVE_FORMATO));
 }
 
-/** Tiene da parte il pool per la prossima apertura. `false` se non c'è spazio. */
-export async function conservaPool(pool: Pool): Promise<boolean> {
-  const esito = await transazione(SCAFFALE, "readwrite", (scaffale) =>
-    scaffale.put(pool, CHIAVE),
+/** Tiene da parte il documento per la prossima apertura. `false` se non si è potuto. */
+export async function conservaFormato(grezzo: unknown): Promise<boolean> {
+  const { come } = await eseguita(SCAFFALE, "readwrite", (scaffale) =>
+    scaffale.put(grezzo, CHIAVE_FORMATO),
   );
-  return esito !== null;
+  return come === "fatta";
 }
 
-/** Libera lo spazio quando la copia conservata non serve più. */
-export async function dimenticaPool(): Promise<void> {
-  await transazione(SCAFFALE, "readwrite", (scaffale) => scaffale.delete(CHIAVE));
+/** Libera il posto del documento quando la copia non serve più. */
+export async function dimenticaFormato(): Promise<void> {
+  await transazione(SCAFFALE, "readwrite", (scaffale) => scaffale.delete(CHIAVE_FORMATO));
+}
+
+/** Il listino dei prezzi conservato, grezzo; `null` se non ce n'è. */
+export function leggiListinoConservato(): Promise<unknown> {
+  return transazione<unknown>(SCAFFALE, "readonly", (scaffale) => scaffale.get(CHIAVE_LISTINO));
+}
+
+/** Tiene da parte il listino per la prossima apertura. `false` se non si è potuto. */
+export async function conservaListino(grezzo: unknown): Promise<boolean> {
+  const { come } = await eseguita(SCAFFALE, "readwrite", (scaffale) =>
+    scaffale.put(grezzo, CHIAVE_LISTINO),
+  );
+  return come === "fatta";
+}
+
+/** Libera il posto del listino quando la copia non serve più. */
+export async function dimenticaListino(): Promise<void> {
+  await transazione(SCAFFALE, "readwrite", (scaffale) => scaffale.delete(CHIAVE_LISTINO));
+}
+
+/**
+ * Libera il posto del pool che l'app scaricava prima del ticket 11.
+ *
+ * Erano quattro megabyte, e da allora nessuno li rilegge: il pool arriva con
+ * l'app e non si scarica più. Si cancellano senza chiedere perché non sono
+ * dell'utente — erano una copia di dati che l'app ha già.
+ */
+export async function dimenticaPoolDiIeri(): Promise<void> {
+  await transazione(SCAFFALE, "readwrite", (scaffale) => scaffale.delete(CHIAVE_POOL_DI_IERI));
 }
 
 /* --- Gli orologi dell'avversario ----------------------------------------- */

@@ -257,10 +257,13 @@ export type Carta = {
    * nel proprio testo. Nel JSON `null` è anche l'unico modo onesto di scrivere
    * «nessun limite»: `Infinity` non attraversa un file di dati.
    *
-   * Vale **uno** per le carte che il documento di formato dichiara limitate. Sta
-   * qui e non in una funzione perché è la sola cosa che tiene fuori dal motore
-   * la conoscenza del formato: il giorno che il gruppo limita una carta in più,
-   * cambia questo numero e nient'altro.
+   * Nel file il tetto è quello del **gioco**. Vale **uno** per le carte che il
+   * documento di formato dichiara limitate, e quell'uno lo scrive l'app sopra
+   * il pool, leggendo il documento (`pool-in-vigore.ts`, ADR-0008): così un
+   * documento più fresco lo cambia senza un pool nuovo. Chi costruisce riceve
+   * il pool in vigore, e sta qui e non in una funzione perché è la sola cosa
+   * che tiene fuori dal motore la conoscenza del formato: il giorno che il
+   * gruppo limita una carta in più, cambia questo numero e nient'altro.
    */
   tettoDiCopie: number | null;
 };
@@ -268,7 +271,10 @@ export type Carta = {
 export type Pool = {
   /**
    * La data dei dati Scryfall da cui il pool è stato costruito: è la data che
-   * l'app mostra all'utente (user story 17) ed è la stessa dei prezzi.
+   * l'app mostra all'utente accanto alle carte (user story 17), ed è quella dei
+   * prezzi che il pool porta. I prezzi **in uso** possono essere più freschi:
+   * arrivano col listino in sottofondo (`listino.ts`, ticket 11), e ogni prezzo
+   * porta la sua data.
    */
   generatoIl: string;
   /**
@@ -279,24 +285,19 @@ export type Pool = {
    * data dice da quale archivio Scryfall vengono le carte, questa dice quale
    * documento ha deciso quali entrassero, con che tetto di copie e quali no.
    *
-   * La legge la **compilazione**, che si ferma quando non combacia con
-   * l'impronta del documento incluso: le limitate e le bandite entrano qui
-   * dentro al momento della generazione e a runtime nessuno le rilegge, quindi
-   * un pool vecchio accanto a un documento nuovo è un catalogo che contiene
-   * carte che il formato ha già bandito. La legge anche l'app, ma solo per i
-   * pool arrivati dalla rete: quello che viene da un altro documento non si
-   * apre (`aggiornamento.ts`, ticket 32).
+   * Guarda il criterio e le edizioni, e non le limitate e le bandite: quelle il
+   * pool non le applica, le applica l'app leggendo il documento (ADR-0008).
    *
-   * Non è l'impronta di `ambito.ts`, che risponde a un'altra domanda: quella
-   * dice se due mazzi sono dello stesso gioco, e le limitate e le bandite le
-   * lascia fuori apposta.
+   * La legge la **compilazione**, che si ferma quando non combacia con
+   * l'impronta del documento incluso: un pool di un altro criterio accanto al
+   * documento è un catalogo di un altro gioco. La legge anche l'app, che non
+   * applica al pool un documento o un listino arrivati dalla rete da un altro
+   * criterio (`pool-in-vigore.ts`).
    *
    * Stringa vuota nei pool scritti prima che il legame esistesse: il rattoppo
-   * di `carica-pool.ts` la mette perché l'app si apra lo stesso, e vale «non lo
-   * so» — che per la compilazione è un motivo per fermarsi, non per passare, e
-   * per l'app no, finché accanto c'è il pool incluso: là il pool vecchio si può
-   * rifare, qui è l'aggiornamento che l'utente aveva già preso. Al posto del
-   * pool incluso che manca, però, non si apre nemmeno nell'app.
+   * di `carica-pool.ts` la mette perché la lettura non cada, e vale «non lo
+   * so» — che per la compilazione è un motivo per fermarsi, e per l'app pure:
+   * nessun documento si applica a un pool che non dice da dove viene.
    */
   improntaDelDocumento: string;
   /**

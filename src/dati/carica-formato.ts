@@ -32,6 +32,7 @@ import type {
   Formato,
   VoceDiCarta,
 } from "./formato.js";
+import { scaricaFresco, type Arrivo } from "./scarica.js";
 
 /**
  * Dov'è il documento, relativo alla base dell'app: l'app gira anche in
@@ -453,6 +454,14 @@ export function vociDaConfermare(formato: Formato): DaConfermare[] {
   }
 
   return aperte;
+}
+
+/**
+ * Chiede alla rete il documento di formato, per vedere se ne esiste uno più
+ * fresco (ticket 11). Chi decide se prenderlo è `aggiornamento.ts`.
+ */
+export function scaricaFormato(): Promise<Arrivo> {
+  return scaricaFresco(percorsoDelFormato());
 }
 
 /** Legge il documento di formato incluso nell'app. */

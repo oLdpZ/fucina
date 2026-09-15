@@ -85,3 +85,67 @@ describe("l'app non parla con Scryfall", () => {
     expect(lettura.match(/https?:\/\//g)).toBeNull();
   });
 });
+
+/**
+ * Il ticket 11 stringe il confine, e questo test lo segue: il pool si congela
+ * nell'app, e la rete l'app la usa per **due file suoi** — il documento di
+ * formato e il listino dei prezzi — oltre alle immagini che il pool nomina.
+ * Vale più di prima perché adesso il confine si può scrivere per intero: chi
+ * aggiunge una richiesta di rete deve passare di qui e dire perché.
+ */
+describe("l'app chiede alla rete solo i suoi file", () => {
+  const relativo = (percorso: string) => relative(SRC, percorso).replaceAll("\\", "/");
+  const applicazione = FILE.filter((percorso) => !percorso.includes(".test."));
+
+  it("le richieste di rete partono da cinque file, e da nessun altro", () => {
+    const conRichieste = applicazione
+      .filter((percorso) => /\bfetch\(/.test(readFileSync(percorso, "utf8")))
+      .map(relativo)
+      .sort();
+
+    expect(conRichieste).toEqual([
+      // Il file di cortesia degli avversari, incluso nell'app.
+      "avversario/carica-orologi.ts",
+      // Il documento di formato incluso nell'app.
+      "dati/carica-formato.ts",
+      // Il pool incluso nell'app.
+      "dati/carica-pool.ts",
+      // L'aggiornamento in sottofondo: il documento e il listino, e basta.
+      "dati/scarica.ts",
+      // Il guscio: i file dell'app, e le immagini delle carte.
+      "sw.js",
+    ]);
+  });
+
+  it("nessuna di quelle richieste compone un indirizzo di un altro dominio", () => {
+    for (const nome of [
+      "avversario/carica-orologi.ts",
+      "dati/carica-formato.ts",
+      "dati/carica-pool.ts",
+      "dati/listino.ts",
+      "dati/scarica.ts",
+    ]) {
+      const testo = readFileSync(join(SRC, nome), "utf8");
+      expect(testo.match(/https?:\/\//g), nome).toBeNull();
+    }
+  });
+
+  it("il pool non si riscarica: si legge dal pacchetto e basta", () => {
+    // Un `no-cache` sul pool vorrebbe dire chiedere al server se le carte sono
+    // cambiate, cioè riaprire l'aggiornamento che il ticket 11 ha chiuso.
+    const lettura = readFileSync(join(SRC, "dati", "carica-pool.ts"), "utf8");
+    expect(lettura).not.toMatch(/no-cache|no-store/);
+  });
+
+  it("il guscio lascia passare verso il server il documento e i prezzi, e non il pool", () => {
+    const guscio = readFileSync(join(SRC, "sw.js"), "utf8");
+    expect(guscio).toContain('"dati/formato.json"');
+    expect(guscio).toContain('"dati/prezzi.json"');
+    expect(guscio).not.toContain("dati/pool.json");
+  });
+
+  it("l'aggiornamento in sottofondo non importa la lettura del pool per scaricarlo", () => {
+    const aggiornamento = readFileSync(join(SRC, "dati", "aggiornamento.ts"), "utf8");
+    expect(aggiornamento).not.toMatch(/scaricaPool|interpretaPool/);
+  });
+});

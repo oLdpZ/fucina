@@ -68,10 +68,10 @@ export function interpretaPool(dati: unknown): Pool {
   // Due campi si possono non trovare, e sono i due che sono nati dopo il pool.
   // Non è il controllo carta per carta che questo modulo rifiuta di fare —
   // quello sarebbe un secondo posto in cui è scritta la forma dei dati — è il
-  // rattoppo di un pool di ieri alla forma di oggi. E i pool di ieri arrivano
-  // per davvero: uno più fresco di quello incluso resta nel deposito del
-  // dispositivo e vince all'apertura (`aggiornamento.ts`), anche quando l'app
-  // attorno è stata nel frattempo aggiornata.
+  // rattoppo di un pool di ieri alla forma di oggi. I pool di ieri arrivavano
+  // per davvero finché l'aggiornamento in sottofondo li scaricava e li
+  // conservava sul dispositivo; dal ticket 11 il pool arriva solo col pacchetto,
+  // e il rattoppo protegge da un pacchetto pubblicato senza rifare il pool.
   //
   // Il **registro dei tag** di Scryfall manca nei pool scritti prima che i tag
   // della comunità entrassero nel file (ADR-0003): un registro che manca vuol
@@ -220,27 +220,6 @@ export async function caricaPool(): Promise<Pool> {
     throw new Error("Il file del pool delle carte non si legge.");
   }
   return interpretaPool(letto);
-}
-
-/**
- * Chiede alla rete il file del pool, per vedere se ne esiste uno più fresco
- * (storia 18).
- *
- * `no-cache` e non `no-store`: si vuole che il server dica se il file è
- * cambiato, non che i quattro megabyte riscendano a ogni apertura dell'app. Se
- * non è cambiato la risposta arriva vuota e il corpo lo mette il browser, che
- * ce l'ha già. È anche il segnale con cui il service worker riconosce questa
- * richiesta e la lascia passare invece di rispondere dalla sua cache: chiedere
- * a sé stessi se si è aggiornati non direbbe mai di no.
- *
- * È l'unica richiesta di rete che l'app fa oltre alle immagini delle carte.
- */
-export async function scaricaPool(): Promise<unknown> {
-  const risposta = await fetch(PERCORSO_POOL, { cache: "no-cache" });
-  if (!risposta.ok) {
-    throw new Error(`Il pool delle carte non è raggiungibile (${risposta.status}).`);
-  }
-  return risposta.json();
 }
 
 /**

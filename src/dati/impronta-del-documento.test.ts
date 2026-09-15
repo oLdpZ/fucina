@@ -104,9 +104,13 @@ describe("l'impronta del documento cambia", () => {
     expect(improntaDelDocumento(altro)).not.toBe(improntaDelDocumento(FORMATO));
   });
 
-  // Le due voci che l'impronta di `ambito.ts` esclude apposta: là non fanno un
-  // gioco nuovo, qui fanno un pool diverso, perché entrano nel file al momento
-  // della generazione e a runtime non le rilegge nessuno.
+});
+
+describe("l'impronta del documento non cambia", () => {
+  // Le limitate e le bandite non fanno il pool dal ticket 11: il pool le porta
+  // tutte, e le applica l'app leggendo il documento. Un documento più fresco
+  // che ne cambia una deve potersi usare accanto al pool che c'è — e lo può
+  // solo se l'impronta non si accorge di lui.
   it("quando si limita una carta in più", () => {
     const altro = con({
       limitate: {
@@ -114,7 +118,7 @@ describe("l'impronta del documento cambia", () => {
         carte: [...FORMATO.limitate.carte, unaVoce("Carta Inventata Terza")],
       },
     });
-    expect(improntaDelDocumento(altro)).not.toBe(improntaDelDocumento(FORMATO));
+    expect(improntaDelDocumento(altro)).toBe(improntaDelDocumento(FORMATO));
   });
 
   it("quando si bandisce una carta in più", () => {
@@ -124,7 +128,7 @@ describe("l'impronta del documento cambia", () => {
         carte: [...FORMATO.bandite.carte, unaVoce("Carta Inventata Terza")],
       },
     });
-    expect(improntaDelDocumento(altro)).not.toBe(improntaDelDocumento(FORMATO));
+    expect(improntaDelDocumento(altro)).toBe(improntaDelDocumento(FORMATO));
   });
 
   it("quando la stessa carta passa da limitata a bandita", () => {
@@ -135,11 +139,9 @@ describe("l'impronta del documento cambia", () => {
         carte: [...FORMATO.bandite.carte, ...FORMATO.limitate.carte],
       },
     });
-    expect(improntaDelDocumento(altro)).not.toBe(improntaDelDocumento(FORMATO));
+    expect(improntaDelDocumento(altro)).toBe(improntaDelDocumento(FORMATO));
   });
-});
 
-describe("l'impronta del documento non cambia", () => {
   it("quando cambia il nome del formato, che si mostra e non decide niente", () => {
     expect(improntaDelDocumento(con({ nome: "Un altro nome" }))).toBe(
       improntaDelDocumento(FORMATO),
@@ -177,17 +179,6 @@ describe("l'impronta del documento non cambia", () => {
     expect(improntaDelDocumento(rimescolato)).toBe(improntaDelDocumento(FORMATO));
   });
 
-  it("quando si riordinano le carte di un elenco", () => {
-    const terza = unaVoce("Carta Inventata Terza");
-    const duePoiUna = con({
-      bandite: { ...FORMATO.bandite, carte: [terza, ...FORMATO.bandite.carte] },
-    });
-    const unaPoiDue = con({
-      bandite: { ...FORMATO.bandite, carte: [...FORMATO.bandite.carte, terza] },
-    });
-    expect(improntaDelDocumento(duePoiUna)).toBe(improntaDelDocumento(unaPoiDue));
-  });
-
   it("per uno spazio o una maiuscola di troppo, che la preparazione toglie", () => {
     const sciatto = conLaPrimaEdizione({ codice: " AAA ", lingue: ["IT ", " en"] });
     expect(improntaDelDocumento(sciatto)).toBe(improntaDelDocumento(FORMATO));
@@ -200,9 +191,10 @@ describe("l'impronta del documento non cambia", () => {
  * nuovo che nessuno ha classificato è un campo che l'impronta non guarda, cioè
  * il difetto di questo ticket che torna dalla finestra.
  *
- * Vale per **ogni** pezzo del documento e non solo per quello di fuori: se una
- * riga di limitata guadagnasse un numero di copie, l'impronta continuerebbe a
- * guardare il solo nome e un pool vecchio passerebbe per buono.
+ * Vale per **ogni** pezzo del documento e non solo per quello di fuori: se
+ * un'edizione guadagnasse un campo che decide quale copia descrive la carta,
+ * l'impronta continuerebbe a guardare codice e lingue e un pool vecchio
+ * passerebbe per buono.
  */
 describe("ogni voce del documento è classificata", () => {
   const esemplari: Record<keyof typeof SPARTIZIONE, object> = {
@@ -240,7 +232,7 @@ describe("la verifica di allineamento", () => {
   });
 
   it("ferma il pool che viene da un altro documento, e dice quale rifare", () => {
-    const altro = con({ bandite: { ...FORMATO.bandite, carte: [] } });
+    const altro = con({ criterio: { ...FORMATO.criterio, regola: "stampa-italiana" } });
     expect(() =>
       verificaAllineamento(improntaDelDocumento(altro), FORMATO),
     ).toThrow(/npm run dati/);

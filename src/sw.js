@@ -16,9 +16,11 @@
  *   loro, così la seconda volta ci sono anche senza rete. Non si scaricano mai
  *   in blocco: sarebbe ridistribuire dati altrui.
  * - ogni altra richiesta verso altri domini qui non viene toccata;
- * - il controllo di freschezza dei dati (ticket 05) chiede espressamente al
- *   server se il pool è cambiato, e passa liscio: è l'unica richiesta che non
- *   deve essere risposta dalla cache, e si riconosce dall'indirizzo.
+ * - il controllo di freschezza dei dati (ticket 11) chiede espressamente al
+ *   server se il documento di formato o il listino dei prezzi sono cambiati, e
+ *   passa liscio: sono le sole richieste che non devono essere risposte dalla
+ *   cache, e si riconoscono dall'indirizzo. Il pool non è fra loro: le carte non
+ *   cambiano, e arrivano solo col guscio.
  */
 
 const VERSIONE = "__VERSIONE__";
@@ -48,11 +50,14 @@ const IMMAGINI_TENUTE = 1200;
 const DOMINIO_IMMAGINI = "scryfall.io";
 
 /**
- * L'indirizzo esatto del pool, l'unico file per cui l'app chiede al server se è
- * cambiato. Si ricava dall'ambito del service worker, così vale anche quando
- * l'app sta in una sottocartella.
+ * Gli indirizzi esatti dei due file per cui l'app chiede al server se sono
+ * cambiati: il documento di formato e il listino dei prezzi (ticket 11). Si
+ * ricavano dall'ambito del service worker, così valgono anche quando l'app sta
+ * in una sottocartella.
  */
-const POOL = new URL("dati/pool.json", self.registration.scope).href;
+const FRESCHI = ["dati/formato.json", "dati/prezzi.json"].map(
+  (percorso) => new URL(percorso, self.registration.scope).href,
+);
 
 /** Una potatura per volta: sessanta immagini in arrivo insieme sono la norma. */
 let potaturaInCorso = null;
@@ -89,17 +94,29 @@ self.addEventListener("fetch", (evento) => {
 
   const indirizzo = new URL(richiesta.url);
 
-  // Il controllo di freschezza (`carica-pool.ts`) chiede al server, in parole
+  // Il controllo di freschezza (`scarica.ts`) chiede al server, in parole
   // povere, «è cambiato?». Rispondergli dalla cache vorrebbe dire rispondere
   // «no» per sempre, e l'app non si aggiornerebbe mai: quella richiesta passa
   // liscia.
   //
-  // Il varco è per **quell'indirizzo**, non per quel modo di chiedere: il modo
+  // Il varco è per **quegli indirizzi**, non per quel modo di chiedere: il modo
   // `no-cache` non è nostro, lo mettono anche i browser per conto loro — Firefox
   // su un ricaricamento normale, gli strumenti di sviluppo con la cache
   // disattivata — e su qualunque risorsa. Un varco largo così farebbe uscire
   // dalla cache anche i file dell'app, e senza rete l'app non si aprirebbe più.
-  if (indirizzo.href === POOL && daControllo(richiesta)) return;
+  //
+  // Passa liscia **verso la rete**, ma senza rete ripiega sulla cache: il
+  // documento di formato sta nel guscio, e se un browser marca `no-cache` la
+  // sua lettura normale — lo fanno da soli, vedi sopra — un'app scollegata non
+  // deve restare senza sapere che gioco gioca (review del ticket 11). Al
+  // controllo di freschezza la copia del guscio risponde «niente di nuovo», che
+  // senza rete è la verità.
+  if (FRESCHI.includes(indirizzo.href) && daControllo(richiesta)) {
+    evento.respondWith(
+      fetch(richiesta).catch(async () => (await caches.match(richiesta.url)) ?? Response.error()),
+    );
+    return;
+  }
   if (indirizzo.origin !== self.location.origin) {
     // Solo le immagini delle carte: qualunque altra cosa passa liscia.
     if (richiesta.destination === "image" && daScryfall(indirizzo)) {
