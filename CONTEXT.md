@@ -319,10 +319,12 @@ non le rilegge nessuno. Non si mostra e non viaggia dentro i mazzi: la
 confronta la compilazione, che si ferma quando i due file di dati non sono
 stati fatti insieme, e la confronta l'app, che non apre accanto al documento un
 pool arrivato dalla rete che viene da un altro. Un pool che l'impronta non ce
-l'ha — scritto prima che il legame esistesse — si apre lo stesso: qui «non si
-sa» passa, al contrario che per i mazzi, perché rifiutarlo non proteggerebbe
-nessuna identità e toglierebbe a chi ha l'app da prima i dati che aveva già
-preso. La compilazione, che il pool lo può rifare, invece si ferma.
+l'ha — scritto prima che il legame esistesse — si apre lo stesso accanto al pool
+incluso, se è più fresco: qui «non si sa» passa, al contrario che per i mazzi,
+perché rifiutarlo toglierebbe a chi ha l'app da prima l'aggiornamento che aveva
+già preso. Al **posto** del pool incluso che non si carica, invece, no: lì non
+c'è nessun aggiornamento da proteggere, solo un catalogo di cui non si sa il
+gioco. La compilazione, che il pool lo può rifare, si ferma in ogni caso.
 
 ---
 

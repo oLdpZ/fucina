@@ -116,9 +116,7 @@ describe("quale pool si apre", () => {
     // Un pool di un altro documento nel deposito e un deploy che serve la
     // pagina dell'app al posto di `pool.json`: aprirlo vorrebbe dire le carte di
     // un gioco sotto il nome e l'impronta di un altro. Meglio il guasto del file
-    // incluso, che è quello che il manutentore può riparare. Un pool che
-    // l'impronta non ce l'ha affatto, invece, qui si apre ancora: vedi il test
-    // sotto, e il commento del 2026-09-15 nel ticket.
+    // incluso, che è quello che il manutentore può riparare.
     expect(scegliPool(null, DI_UN_ALTRO_DOCUMENTO, DOCUMENTO)).toEqual({
       pool: null,
       dimentica: true,
@@ -132,9 +130,17 @@ describe("quale pool si apre", () => {
       pool: SENZA_IMPRONTA,
       dimentica: false,
     });
+  });
+
+  it("ma non al posto di dati inclusi che non si leggono", () => {
+    // Ticket 81. Un aggiornamento c'è solo se c'è un pool da aggiornare: senza
+    // quello incluso, un pool che non dice da dove viene è un catalogo di cui
+    // non si sa il gioco — un pool dell'era Standard, magari, con le bandite
+    // dentro, sotto il nome del formato di adesso. Si dice il guasto del file
+    // incluso, e quel pool si dimentica.
     expect(scegliPool(null, SENZA_IMPRONTA, DOCUMENTO)).toEqual({
-      pool: SENZA_IMPRONTA,
-      dimentica: false,
+      pool: null,
+      dimentica: true,
     });
   });
 });
@@ -247,6 +253,18 @@ describe("l'apertura dell'app", () => {
       },
     );
     expect(aperto).toEqual(VECCHIO);
+  });
+
+  it("senza dati inclusi, un pool che non dice da dove viene non copre il guasto", async () => {
+    await expect(
+      poolDaAprire(
+        DOCUMENTO,
+        async () => {
+          throw new Error("Il file del pool delle carte non si legge.");
+        },
+        async () => SENZA_IMPRONTA,
+      ),
+    ).rejects.toThrow(/non si legge/);
   });
 
   it("l'impronta del documento può arrivare dopo le letture dei pool", async () => {

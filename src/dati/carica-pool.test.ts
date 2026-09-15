@@ -31,8 +31,10 @@ describe("lettura del pool", () => {
 
   it("non cade su un pool che non dice da quale documento viene", () => {
     // I pool scritti prima che il legame coi due file esistesse non ce l'hanno.
-    // Qui «non lo so» è la stringa vuota e l'app si apre lo stesso: a fermarsi
-    // su un pool così è la compilazione, dove i due file si possono rifare.
+    // Qui «non lo so» è la stringa vuota, e la lettura non si ferma: se un pool
+    // così si apra lo decide `aggiornamento.ts` (accanto al pool incluso sì, al
+    // suo posto no), e a fermarsi del tutto è la compilazione, dove i due file
+    // si possono rifare.
     expect(interpretaPool(POOL_VALIDO).improntaDelDocumento).toBe("");
     expect(interpretaPool({ ...POOL_VALIDO, improntaDelDocumento: 7 }).improntaDelDocumento).toBe(
       "",

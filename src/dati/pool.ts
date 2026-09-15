@@ -294,8 +294,9 @@ export type Pool = {
    * Stringa vuota nei pool scritti prima che il legame esistesse: il rattoppo
    * di `carica-pool.ts` la mette perché l'app si apra lo stesso, e vale «non lo
    * so» — che per la compilazione è un motivo per fermarsi, non per passare, e
-   * per l'app no: là il pool vecchio si può rifare, qui è l'aggiornamento che
-   * l'utente aveva già preso.
+   * per l'app no, finché accanto c'è il pool incluso: là il pool vecchio si può
+   * rifare, qui è l'aggiornamento che l'utente aveva già preso. Al posto del
+   * pool incluso che manca, però, non si apre nemmeno nell'app.
    */
   improntaDelDocumento: string;
   /**

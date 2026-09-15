@@ -62,7 +62,9 @@ export function piuFresco(candidato: Pool, inUso: Pool): boolean {
  *
  * Un pool che non dice da dove viene passa: è stato scritto prima che il legame
  * esistesse, e rifiutarlo vorrebbe dire togliere l'aggiornamento in sottofondo a
- * chiunque abbia l'app da prima. «Non lo so» qui non basta a dire di no.
+ * chiunque abbia l'app da prima. «Non lo so» qui non basta a dire di no — ma
+ * basta a non aprirlo al posto dei dati inclusi che mancano, e quello lo decide
+ * `scegliPool`.
  */
 export function puoStareAccanto(pool: Pool, improntaInMano: string): boolean {
   return pool.improntaDelDocumento === "" || pool.improntaDelDocumento === improntaInMano;
@@ -75,7 +77,8 @@ export function puoStareAccanto(pool: Pool, improntaInMano: string): boolean {
  * l'app stessa è stata aggiornata con dati altrettanto freschi o più, e tenerla
  * sarebbe occupare quattro megabyte per niente. Succede anche quando la copia
  * viene da un altro documento di formato: non si apre, e al giro dopo — col
- * guscio nuovo attivo — l'aggiornamento in sottofondo la riprende.
+ * guscio nuovo attivo — l'aggiornamento in sottofondo la riprende. E succede
+ * quando la copia non dice da dove viene e i dati inclusi mancano.
  */
 export function scegliPool(
   incluso: Pool | null,
@@ -91,7 +94,17 @@ export function scegliPool(
   // mano. La copia sul dispositivo, che viene dallo stesso documento, è
   // comunque un pool buono, e va aperta — perdere dati che l'app aveva è
   // proprio il caso che il ticket vieta.
-  if (incluso === null) return { pool: conservato, dimentica: false };
+  //
+  // Una copia che non dice da dove viene, invece, no (ticket 81). Accanto ai
+  // dati inclusi il «non lo so» passa perché lì c'è un aggiornamento da
+  // proteggere, e le date lo mettono a confronto con qualcosa. Qui non c'è
+  // niente con cui confrontarla: è un catalogo di cui non si sa il gioco — un
+  // pool dell'era Standard, con le bandite dentro — e aprirlo sotto il nome del
+  // formato di adesso nasconderebbe un guasto che il manutentore può riparare.
+  if (incluso === null) {
+    if (conservato.improntaDelDocumento === "") return { pool: null, dimentica: true };
+    return { pool: conservato, dimentica: false };
+  }
   if (piuFresco(conservato, incluso)) return { pool: conservato, dimentica: false };
   return { pool: incluso, dimentica: true };
 }
@@ -146,9 +159,10 @@ export const TETTO_DEPOSITO = 3000;
  * Non aspetta mai la rete, e non aspetta il deposito oltre il tetto. Se il
  * deposito non risponde — modo privato, spazio finito, permessi negati, o
  * silenzio — si aprono i dati inclusi. Se sono i dati inclusi a non leggersi,
- * si apre la copia sul dispositivo, purché venga dal documento di formato in
- * mano. Solo quando non resta niente da aprire si parla di guasto, e si dice
- * quello del file incluso, che è il guasto che il manutentore può riparare.
+ * si apre la copia sul dispositivo, purché dica di venire dal documento di
+ * formato in mano. Solo quando non resta niente da aprire si parla di guasto,
+ * e si dice quello del file incluso, che è il guasto che il manutentore può
+ * riparare.
  *
  * Le due letture entrano da fuori perché i casi che contano — il deposito muto,
  * il file incluso rotto — si possano provare senza un browser.
