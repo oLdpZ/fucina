@@ -73,6 +73,13 @@ function conLingue(codice: string, lingue: string[]): Formato {
   });
 }
 
+/** Una stampa del materiale di prova, per id: i test che ne aggiungono una simile. */
+function stampaDiProva(id: string): CartaScryfall {
+  const trovata = FRAMMENTO.find((stampa) => stampa.id === id);
+  if (!trovata) throw new Error(`la stampa «${id}» non è nel materiale di prova`);
+  return trovata;
+}
+
 function carta(pool: Pool, nome: string): Carta {
   const trovata = pool.carte.find((c) => c.nome === nome);
   if (!trovata) throw new Error(`la carta «${nome}» non è nel pool`);
@@ -273,6 +280,66 @@ describe("passo 2 — cosa si mostra", () => {
     });
 
     expect(carta(pool, "Fixture Relic").nomeItaliano).toBeNull();
+  });
+
+  it("prende il nome italiano dall'edizione mostrata, non dalla stampa italiana più vecchia", () => {
+    // Ticket 42. L'Abominio è mostrato dall'italiana di xd, e in italiano esiste
+    // anche in xc, che è più vecchia. Nessuna delle due ha un listino, quindi il
+    // prezzo non decide e a scegliere arrivava la data: l'alias di ricerca era
+    // il nome stampato su un'edizione che all'utente non è mai stata nominata.
+    const rinominato = FRAMMENTO.map((stampa) =>
+      stampa.id === "abominio-xc-it" ? { ...stampa, printed_name: "Abominio Vecchio" } : stampa,
+    );
+    const { pool } = preparaPool(rinominato, { formato: FORMATO, aggiornatoIl: QUANDO });
+
+    const abominio = carta(pool, "Fixture Abominio");
+    expect(abominio.edizione).toBe("xd");
+    expect(abominio.nomeItaliano).toBe("Abominio di Prova");
+  });
+
+  it("per una carta mostrata in un'altra lingua prende l'italiana della stessa edizione", () => {
+    // Il Goblin è mostrato dall'inglese di xb. Con un'italiana di xb accanto,
+    // il nome da cercare è quello scritto sulla copia di quell'edizione, anche
+    // se in xa ce n'è una più vecchia.
+    const conSorella = [
+      ...FRAMMENTO,
+      {
+        ...stampaDiProva("goblin-xa-it"),
+        id: "goblin-xb-it",
+        set: "xb",
+        collector_number: "7",
+        released_at: "1995-04-01",
+        printed_name: "Folletto Ristampato",
+      },
+    ];
+    const { pool } = preparaPool(conSorella, { formato: FORMATO, aggiornatoIl: QUANDO });
+
+    const goblin = carta(pool, "Fixture Goblin");
+    expect(goblin.edizione).toBe("xb");
+    expect(goblin.linguaDellaStampa).toBe("en");
+    expect(goblin.nomeItaliano).toBe("Folletto Ristampato");
+  });
+
+  it("senza un'italiana nell'edizione mostrata ripiega su un'altra, e sempre sulla stessa", () => {
+    // Il Goblin mostrato da xb in italiano c'è solo in xa: il nome resta, perché
+    // una carta che si cerca solo in inglese il destinatario non la trova.
+    const { pool } = preparazione();
+    expect(carta(pool, "Fixture Goblin").edizione).toBe("xb");
+    expect(carta(pool, "Fixture Goblin").nomeItaliano).toBe("Folletto di Prova");
+    expect(JSON.stringify(preparazione().pool)).toBe(JSON.stringify(pool));
+  });
+
+  it("non si lascia svuotare il nome da una stampa mostrata che non ne ha scritto uno", () => {
+    // Una scritta vuota sull'italiana di xd non toglie la chiave di ricerca: il
+    // nome arriva dall'italiana di un'altra edizione, che uno ce l'ha.
+    const senzaNome = FRAMMENTO.map((stampa) =>
+      stampa.id === "abominio-xd-it" ? { ...stampa, printed_name: " " } : stampa,
+    );
+    const { pool } = preparaPool(senzaNome, { formato: FORMATO, aggiornatoIl: QUANDO });
+
+    const abominio = carta(pool, "Fixture Abominio");
+    expect(abominio.edizione).toBe("xd");
+    expect(abominio.nomeItaliano).toBe("Abominio di Prova");
   });
 
   it("conserva i campi che servono, e nient'altro", () => {

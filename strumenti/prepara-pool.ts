@@ -450,7 +450,7 @@ export function preparaPool(
         stampa,
         stampaDelPrezzo,
         stampaDellaFigura,
-        nomeItaliano: nomeItalianoDi(stampe),
+        nomeItaliano: nomeItalianoDi(stampa, stampe),
         aggiornatoIl: opzioni.aggiornatoIl,
         tag: opzioni.tag,
       }),
@@ -720,14 +720,51 @@ function stampaChePrezza(ammesse: CartaScryfall[]): CartaScryfall | null {
  * Il nome italiano, che non si mostra e serve solo a cercare: chi scrive
  * «Labirinto di Ith» deve trovare *Maze of Ith*.
  *
- * Si prende dalla stessa stampa italiana ogni volta — la più economica, poi la
- * più vecchia, poi per identificativo — così due preparazioni sugli stessi dati
- * scrivono lo stesso file.
+ * Viene dalla **stampa che descrive la carta**, perché è quella l'edizione che
+ * l'app nomina: chi ha in mano il cartoncino che gli è stato detto di comprare
+ * digita il nome che ci legge sopra, e due edizioni italiane non sempre
+ * stampano lo stesso nome (ticket 42). Prima si pescava fra **tutte** le
+ * italiane, e siccome nessuna ha un listino a decidere arrivava la data: il
+ * nome era quello dell'edizione più vecchia, anche per una carta mostrata in
+ * un'altra.
+ *
+ * L'ordine, criterio per criterio:
+ *
+ * 1. la stampa che descrive, se è italiana;
+ * 2. altrimenti un'italiana **della stessa edizione**, prima quella dello
+ *    stesso numero di collezione — è lo stesso cartoncino con la scritta in
+ *    italiano;
+ * 3. solo se l'edizione mostrata in italiano non c'è, un'italiana di un'altra
+ *    edizione, scelta come `scegli` sceglie senza criteri davanti: la più
+ *    economica, poi la più vecchia, poi per identificativo. Non è una
+ *    preferenza fra edizioni — nessun dato ne dice una — ma rende la scelta la
+ *    stessa a ogni preparazione, perché il pool finisce in git.
+ *
+ * Il terzo passo non si salta togliendo il nome: una carta che si cerca solo in
+ * inglese è una carta che il destinatario non trova. Le stampe senza un nome
+ * stampato non contano, così una scritta vuota non ne copre una buona.
  */
-function nomeItalianoDi(stampe: CartaScryfall[]): string | null {
-  const italiane = stampe.filter((stampa) => stampa.lang === ITALIANO);
+function nomeItalianoDi(descrive: CartaScryfall, stampe: CartaScryfall[]): string | null {
+  const italiane = stampe.filter(
+    (stampa) => stampa.lang === ITALIANO && nomeStampato(stampa) !== null,
+  );
   if (italiane.length === 0) return null;
-  const stampato = piuEconomica(italiane).printed_name?.trim();
+
+  // I tre passi qui sopra, uno per criterio e nello stesso ordine.
+  const edizione = codiceDiEdizione(descrive.set);
+  const numero = descrive.collector_number ?? "";
+  const scelta = scegli(
+    italiane,
+    (stampa) => (stampa === descrive ? 0 : 1),
+    (stampa) => (codiceDiEdizione(stampa.set) === edizione ? 0 : 1),
+    (stampa) => ((stampa.collector_number ?? "") === numero ? 0 : 1),
+  );
+  return nomeStampato(scelta);
+}
+
+/** Il nome scritto sulla stampa, ripulito; `null` quando non ce n'è uno. */
+function nomeStampato(stampa: CartaScryfall): string | null {
+  const stampato = stampa.printed_name?.trim();
   return stampato === undefined || stampato === "" ? null : stampato;
 }
 
