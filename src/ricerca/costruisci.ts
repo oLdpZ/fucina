@@ -89,6 +89,7 @@ import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
 import { elenco, terre as terreDette } from "../spiegazioni/frasi.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
+import { notaDelFuoriTema } from "./nota-del-fuori-tema.js";
 import { POSTI_NON_TERRA } from "../tema/taratura.js";
 import {
   escluso,
@@ -1232,11 +1233,37 @@ export function costruisciMazzo(
   // Il tema bastava a riempire **questo** mazzo? La domanda si fa sui posti
   // che il mazzo ha davvero, non sui trentatre del verdetto di `ampiezza.ts`,
   // che prende il caso piu favorevole al tema e risponde a un'altra domanda.
-  const capienzaDelTema = capienzaDi(giocabili.filter((carta) => appartiene(carta, risolto)));
+  //
+  // Le carte del tema si contano **da `giocabili`**, cioè da quel che il tetto
+  // lascia comprare, ed è la stessa popolazione da cui esce la capienza qui
+  // sotto. Accanto c'era `ampiezza.carteDisponibili`, che viene da `valutaTema`
+  // e il prezzo non lo guarda affatto: un numero contava le carte comprabili,
+  // l'altro tutte, e la frase incolpava il tema di quel che aveva tolto il
+  // tetto (ticket 52).
+  const nelTemaPermesse = giocabiliPermesse.filter((carta) => appartiene(carta, risolto));
+  const nelTemaComprabili = nelTemaPermesse.filter((carta) => comprabile(carta, tetto));
+  const capienzaDelTema = capienzaDi(nelTemaComprabili);
   const fuoriTema = capienzaDelTema < copieTotali;
   const esito: Esito = fuoriTema ? "costruito-fuori-tema" : "costruito";
+
+  // Quel che il tema aveva e il prezzo ha tolto, diviso per **le due ragioni
+  // per cui `comprabile` dice no**: la carta costa più del tetto, oppure un
+  // listino non ce l'ha. È la stessa divisione che fa `spesaDichiarata` qui
+  // sopra, e per la stessa ragione — alzare il tetto rimedia alla prima e non
+  // rimedierà mai alla seconda. A tetto spento `comprabile` dice sempre sì, e i
+  // due conti sono zero.
+  const tolteDalPrezzo = nelTemaPermesse.filter((carta) => !comprabile(carta, tetto));
+  const troppoCare = tolteDalPrezzo.filter((carta) => prezzoDiUnaCopia(carta) !== null).length;
+
   const motivo = fuoriTema
-    ? `Il tema prende ${ampiezza.carteDisponibili} carte dal pool, buone per ${capienzaDelTema} posti sui ${copieTotali} da riempire: nemmeno il mazzo più fedele si è potuto finire senza carte fuori tema.`
+    ? notaDelFuoriTema({
+        carte: nelTemaComprabili.length,
+        capienza: capienzaDelTema,
+        posti: copieTotali,
+        troppoCare,
+        senzaPrezzo: tolteDalPrezzo.length - troppoCare,
+        tetto,
+      })
     : `Il mazzo più fedele: ${copieTotali + copieDiTerra} carte, di cui ${copieDiTerra} terre, e ${copieNelTema} delle ${copieTotali} carte non-terra sono del tema.`;
 
   return {

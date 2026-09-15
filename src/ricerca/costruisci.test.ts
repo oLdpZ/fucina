@@ -353,6 +353,41 @@ describe("il tema, che la ricerca non tradisce", () => {
   it("dichiara gli allargamenti che il tema porta con sé, senza aggiungerne", () => {
     expect(costruisci().allargamentiApplicati).toEqual([]);
   });
+
+  it("col tetto acceso non incolpa il tema delle carte che ha tolto il prezzo", () => {
+    // Il guasto del ticket 52: la frase metteva accanto due popolazioni che non
+    // si confrontano. Le carte distinte le contava `valutaTema`, che il prezzo
+    // non lo guarda, e i posti uscivano dal pool già filtrato dal tetto — «10
+    // carte, buone per 36 posti» dove quelle 10 bastavano per 40.
+    //
+    // Qui metà dei Goblin costa cento volte il tetto: la frase deve contare
+    // **solo gli altri**, e dire a parte che le prime le ha tolte il tetto.
+    // Niente nomi e niente euro scritti a mano — l'attesa si ricava dal pool.
+    const TETTO = 10;
+    const goblin = (carta: Carta) => carta.terra === null && carta.sottotipi.includes("Goblin");
+    const rincarati = new Set(POOL.filter(goblin).filter((_, quale) => quale % 2 === 0));
+    const pool = POOL.map((carta) =>
+      rincarati.has(carta)
+        ? { ...carta, prezzo: { ...carta.prezzo, euro: TETTO * 100 } }
+        : carta,
+    );
+    const frontiera = costruisciMazzo(richiesta({ tettoDiSpesa: TETTO }), pool, SVELTA);
+    const comprabili = pool.filter((carta) => goblin(carta) && comprabile(carta, TETTO));
+
+    // L'attesa qui sotto legge il plurale: se un giorno il pool finto avesse
+    // due o tre Goblin soli, la frase direbbe «Un'altra carta del tema» e
+    // questo test fallirebbe parlando di un guasto che non c'è.
+    expect(rincarati.size).toBeGreaterThan(1);
+
+    expect(frontiera.esito).toBe("costruito-fuori-tema");
+    // Il numero delle carte viene dalla stessa popolazione della capienza:
+    // quelle che il tetto lascia comprare, non tutte quelle del tema.
+    expect(frontiera.motivo).toContain(`${comprabili.length} carte`);
+    expect(frontiera.motivo).not.toContain(`${POOL.filter(goblin).length} carte dal pool`);
+    // E quel che ha tolto il tetto porta il nome di chi l'ha tolto.
+    expect(frontiera.motivo).toMatch(/tetto/);
+    expect(frontiera.motivo).toContain(`${rincarati.size} carte del tema`);
+  });
 });
 
 describe("il determinismo, che è un vincolo non negoziabile", () => {
