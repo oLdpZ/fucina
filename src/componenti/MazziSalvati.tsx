@@ -22,6 +22,7 @@ import {
 } from "../mazzo/terre-candidate.js";
 import type { Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre, type CopieDiCarta } from "../mazzo/base-di-terre.js";
+import { notaDellaCancellazione } from "../mazzo/nota-della-cancellazione.js";
 import { leggiScambio, listaDaTorneo, scriviScambio } from "../mazzo/scambio.js";
 import {
   fraseConLeTerreScartate,
@@ -343,13 +344,19 @@ export function MazziSalvati({
   };
 
   const cancella = async (salvato: MazzoSalvato) => {
-    await dimenticaMazzo(salvato.id);
-    // Cancellato il mazzo che si stava guardando, non lo si sta più guardando:
-    // senza questo il bottone direbbe ancora «Risalva», e il salvataggio dopo
-    // rimetterebbe al mondo, con lo stesso posto, il mazzo appena cancellato.
-    if (salvato.id === aperto?.id) chiudiMazzo();
-    setSalvati(await elencaMazziSalvati());
-    racconta(`«${salvato.nome}» è stato cancellato.`, null);
+    const esito = notaDellaCancellazione(salvato.nome, await dimenticaMazzo(salvato.id));
+    // Un deposito che ha detto di no non ha cancellato niente: l'elenco resta
+    // com'è — rileggerlo da un deposito che non si apre lo svuoterebbe sotto una
+    // frase che dice il mazzo ancora lì — e il mazzo in mano resta in mano, col
+    // suo «Risalva» che punta a un posto che c'è ancora (ticket 50).
+    if (esito.tolto) {
+      // Cancellato il mazzo che si stava guardando, non lo si sta più guardando:
+      // senza questo il bottone direbbe ancora «Risalva», e il salvataggio dopo
+      // rimetterebbe al mondo, con lo stesso posto, il mazzo appena cancellato.
+      if (salvato.id === aperto?.id) chiudiMazzo();
+      setSalvati(await elencaMazziSalvati());
+    }
+    racconta(esito.fatto, esito.male);
   };
 
   const importa = async () => {

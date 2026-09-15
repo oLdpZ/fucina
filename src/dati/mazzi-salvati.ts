@@ -13,7 +13,7 @@
  */
 
 import { interpretaMazzoSalvato, nuovoId, type ContenutoMazzo, type MazzoSalvato } from "../mazzo/salvato.js";
-import { SCAFFALE_MAZZI, transazione } from "./deposito.js";
+import { eseguita, SCAFFALE_MAZZI, transazione, type EsitoDellaScrittura } from "./deposito.js";
 
 /** I mazzi salvati, dal più recente al più vecchio: è l'ordine dell'elenco. */
 export async function elencaMazziSalvati(): Promise<MazzoSalvato[]> {
@@ -58,7 +58,12 @@ export async function salvaMazzo(
   return esito === null ? null : mazzo;
 }
 
-/** Cancella un mazzo salvato. Se non c'era, non è successo niente. */
-export async function dimenticaMazzo(id: string): Promise<void> {
-  await transazione(SCAFFALE_MAZZI, "readwrite", (scaffale) => scaffale.delete(id));
+/**
+ * Cancella un mazzo salvato, e dice com'è andata. Se non c'era, è `fatta`: non
+ * c'è più, che è quel che si chiedeva. Chi chiama: `notaDellaCancellazione`
+ * (ticket 50).
+ */
+export async function dimenticaMazzo(id: string): Promise<EsitoDellaScrittura> {
+  const { come } = await eseguita(SCAFFALE_MAZZI, "readwrite", (scaffale) => scaffale.delete(id));
+  return come;
 }

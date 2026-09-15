@@ -175,7 +175,7 @@ export interface Eseguita<T> {
   readonly esito: T | null;
 }
 
-function eseguita<T>(
+export function eseguita<T>(
   scaffale: string,
   modo: IDBTransactionMode,
   lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
