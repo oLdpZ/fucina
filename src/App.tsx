@@ -49,6 +49,7 @@ import {
 } from "./mazzo/in-vigore.js";
 import { TERRE_A_MANO_MASSIME, TERRE_A_MANO_MINIME } from "./mazzo/taratura.js";
 import type { MazzoSalvato } from "./mazzo/salvato.js";
+import { ingressiCambiati, type IngressiDellaRichiesta } from "./ricerca/ripensamento.js";
 import { usaMotore } from "./ricerca/usa-motore.js";
 import { COMBO_VUOTA, type Combo as CarteDellaCombo } from "./combo/combo.js";
 import { temaDichiarato, TEMA_VUOTO, type Tema } from "./tema/tema.js";
@@ -291,8 +292,11 @@ export function App() {
   // fatta: si butta, invece di restare lì col suo tasto «mettilo in mano» a dire
   // una piccola bugia.
   const dimentica = motore.dimentica;
+  const ingressi: IngressiDellaRichiesta = { tema, combo, tettoDiSpesa, corsa };
+  const ingressiDiPrima = useRef(ingressi);
   useEffect(() => {
-    dimentica();
+    dimentica(ingressiCambiati(ingressiDiPrima.current, ingressi));
+    ingressiDiPrima.current = ingressi;
     // `dimentica` cambia a ogni render — è ricostruita dal gancio — e metterla
     // fra le dipendenze vorrebbe dire buttare via il mazzo a ogni respiro
     // dell'app. Quel che deve far scattare l'oblio sono gli ingressi della
@@ -315,11 +319,10 @@ export function App() {
     // `dimentica` ferma anche una ricerca **in corso**, ed è la conseguenza che
     // gli orologi allargano: il pannello dell'avversario sta sulla stessa
     // schermata del tasto che costruisce, e correggere un numero mentre il
-    // motore lavora spegne il worker — «Sto costruendo…» torna «Costruisci il
-    // mazzo» e l'avanzamento sparisce, senza che nessuno dica niente. È voluto,
-    // perché quella ricerca sta rispondendo alla domanda di prima; che lo faccia
-    // in silenzio è un difetto suo, vecchio quanto il tema e il tetto, e va
-    // risolto una volta per tutti e quattro gli ingressi, non qui.
+    // motore lavora spegne il worker. È voluto, perché quella ricerca sta
+    // rispondendo alla domanda di prima — ma non in silenzio: dove stava
+    // l'avanzamento resta scritto quale ingresso è cambiato (ticket 46), e per
+    // saperlo l'effetto confronta gli ingressi con quelli del giro prima.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tema, combo, tettoDiSpesa, corsa]);
 

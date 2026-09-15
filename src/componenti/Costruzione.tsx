@@ -64,6 +64,7 @@ import { AVVISO_STIMA_AL_RIBASSO, listaDellaSpesa } from "../mazzo/spesa.js";
 import type { Orologio } from "../avversario/orologio.js";
 import type { Richiesta, SpesaDellaRicerca } from "../ricerca/costruisci.js";
 import { TEMPO_MASSIMO_PREDEFINITO_MS } from "../ricerca/taratura.js";
+import { fraseDellaRicercaFermata } from "../ricerca/ripensamento.js";
 import type { Motore } from "../ricerca/usa-motore.js";
 import { frasePerIlMazzoSolo, frasePerLaCorsa, PATTO_DELLA_CORSA } from "../spiegazioni/frasi.js";
 import { spiegaFrontiera } from "../spiegazioni/spiegazioni.js";
@@ -228,15 +229,23 @@ export function Costruzione({
         </p>
       ) : null}
 
-      {motore.allOpera ? (
+      {/*
+        La ricerca fermata perché la richiesta è cambiata lo dice **nella stessa
+        riga** dell'avanzamento (ticket 46): è lì che guardava chi aspettava, e
+        la riga resta la stessa zona `aria-live` invece di sparire e rinascere —
+        una zona che nasce già piena non la legge ad alta voce quasi nessuno.
+      */}
+      {motore.allOpera || motore.fermataPer !== null ? (
         <p class="avanzamento" aria-live="polite">
-          {motore.avanzamento === null
-            ? "Preparo le carte…"
-            : `Mazzo ${motore.avanzamento.passo + 1} di ${motore.avanzamento.passi}, partenza ${
-                motore.avanzamento.partenza + 1
-              } di ${motore.avanzamento.partenze}, ${NUMERI.format(
-                motore.avanzamento.valutazioni,
-              )} ${motore.avanzamento.valutazioni === 1 ? "mazzo provato" : "mazzi provati"}.`}
+          {!motore.allOpera
+            ? fraseDellaRicercaFermata(motore.fermataPer ?? [])
+            : motore.avanzamento === null
+              ? "Preparo le carte…"
+              : `Mazzo ${motore.avanzamento.passo + 1} di ${motore.avanzamento.passi}, partenza ${
+                  motore.avanzamento.partenza + 1
+                } di ${motore.avanzamento.partenze}, ${NUMERI.format(
+                  motore.avanzamento.valutazioni,
+                )} ${motore.avanzamento.valutazioni === 1 ? "mazzo provato" : "mazzi provati"}.`}
         </p>
       ) : null}
 

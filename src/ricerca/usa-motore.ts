@@ -10,29 +10,38 @@
  * ricerca continua mentre si gira per l'app — che è **il motivo per cui esiste
  * il worker**.
  *
- * Il risultato si butta via da solo quando cambia il tema (`dimentica`): un
+ * Il risultato si butta via da solo quando cambia la richiesta (`dimentica`): un
  * mazzo costruito per un tema che l'utente ha nel frattempo riscritto è un
  * mazzo che risponde a una domanda che non gli è più stata fatta, e lasciare
- * lì il tasto «mettilo in mano» sarebbe una piccola bugia.
+ * lì il tasto «mettilo in mano» sarebbe una piccola bugia. Se il motore stava
+ * ancora cercando si ferma anche lui, e lo lascia scritto (ticket 46).
+ *
+ * Quel che la schermata vede, e come cambia, sta in `stato-del-motore.ts`; qui
+ * resta il worker.
  */
 
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useReducer, useRef } from "preact/hooks";
 
 import type { Carta } from "../dati/pool.js";
-import type { Avanzamento, Frontiera, Richiesta } from "./costruisci.js";
+import type { Richiesta } from "./costruisci.js";
 import type { AllaRicerca, DallaRicerca } from "./protocollo.js";
+import type { IngressoDellaRichiesta } from "./ripensamento.js";
+import {
+  STATO_DEL_MOTORE_INIZIALE,
+  avanzaIlMotore,
+  type StatoDelMotore,
+} from "./stato-del-motore.js";
 
-export type Motore = {
-  allOpera: boolean;
-  avanzamento: Avanzamento | null;
-  frontiera: Frontiera | null;
-  guasto: string | null;
+export type Motore = StatoDelMotore & {
   /** Accende il worker se serve, gli manda le carte se non le ha, e parte. */
   costruisci: (carte: readonly Carta[], impronta: string, richiesta: Richiesta) => void;
   /** Ferma la ricerca in corso e spegne il worker. Il risultato di prima resta. */
   ferma: () => void;
-  /** Butta via il risultato — e la ricerca in corso, se ce n'è una. */
-  dimentica: () => void;
+  /**
+   * Butta via il risultato — e la ricerca in corso, se ce n'è una, lasciando
+   * scritto quali ingressi della richiesta sono cambiati mentre lavorava.
+   */
+  dimentica: (cambiati: readonly IngressoDellaRichiesta[]) => void;
 };
 
 export function usaMotore(): Motore {
@@ -40,10 +49,14 @@ export function usaMotore(): Motore {
   /** L'impronta del pool che il worker ha già in casa: `null` se non ne ha. */
   const poolMandato = useRef<string | null>(null);
 
-  const [allOpera, setAllOpera] = useState(false);
-  const [avanzamento, setAvanzamento] = useState<Avanzamento | null>(null);
-  const [frontiera, setFrontiera] = useState<Frontiera | null>(null);
-  const [guasto, setGuasto] = useState<string | null>(null);
+  /**
+   * Se il worker sta cercando adesso. Sta in un riferimento e non si legge da
+   * `stato`: lo stato visto da una funzione è quello del giro in cui è nata, e
+   * un risultato arrivato nel frattempo lo smentirebbe.
+   */
+  const inCorsa = useRef(false);
+
+  const [stato, succede] = useReducer(avanzaIlMotore, STATO_DEL_MOTORE_INIZIALE);
 
   const spegni = () => {
     worker.current?.terminate();
@@ -57,17 +70,8 @@ export function usaMotore(): Motore {
   // un telefono che si scalda per niente.
   useEffect(() => spegni, []);
 
-  const ferma = () => {
-    spegni();
-    setAllOpera(false);
-    setAvanzamento(null);
-  };
-
   return {
-    allOpera,
-    avanzamento,
-    frontiera,
-    guasto,
+    ...stato,
 
     costruisci(carte, impronta, richiesta) {
       if (worker.current === null) {
@@ -77,12 +81,15 @@ export function usaMotore(): Motore {
         worker.current.addEventListener("message", (evento: MessageEvent<DallaRicerca>) => {
           const messaggio = evento.data;
           if (messaggio.tipo === "avanzamento") {
-            setAvanzamento(messaggio.avanzamento);
+            succede({ tipo: "avanzamento", avanzamento: messaggio.avanzamento });
             return;
           }
-          if (messaggio.tipo === "frontiera") setFrontiera(messaggio.frontiera);
-          else setGuasto(messaggio.messaggio);
-          setAllOpera(false);
+          inCorsa.current = false;
+          if (messaggio.tipo === "frontiera") {
+            succede({ tipo: "frontiera", frontiera: messaggio.frontiera });
+          } else {
+            succede({ tipo: "guasto", messaggio: messaggio.messaggio });
+          }
         });
         // Un worker che non parte proprio — il file non si carica, la memoria
         // finisce — va spento come uno fermato a mano: se restasse installato,
@@ -90,8 +97,8 @@ export function usaMotore(): Motore {
         // schermata resterebbe su «sto costruendo» per sempre.
         worker.current.addEventListener("error", () => {
           spegni();
-          setGuasto("il motore non è partito.");
-          setAllOpera(false);
+          inCorsa.current = false;
+          succede({ tipo: "guasto", messaggio: "il motore non è partito." });
         });
       }
 
@@ -106,19 +113,24 @@ export function usaMotore(): Motore {
         poolMandato.current = impronta;
       }
 
-      setGuasto(null);
-      setFrontiera(null);
-      setAvanzamento(null);
-      setAllOpera(true);
+      inCorsa.current = true;
+      succede({ tipo: "parte" });
       manda({ tipo: "costruisci", richiesta });
     },
 
-    ferma,
+    ferma() {
+      spegni();
+      inCorsa.current = false;
+      succede({ tipo: "fermata-a-mano" });
+    },
 
-    dimentica() {
-      if (allOpera) ferma();
-      setFrontiera(null);
-      setGuasto(null);
+    dimentica(cambiati) {
+      const interrotta = inCorsa.current;
+      if (interrotta) {
+        spegni();
+        inCorsa.current = false;
+      }
+      succede({ tipo: "ripensamento", cambiati, interrotta });
     },
   };
 }
