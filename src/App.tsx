@@ -27,6 +27,7 @@ import { aggiornaInSottofondo, poolDaAprire } from "./dati/aggiornamento.js";
 import { dimenticaOrologi, leggiOrologiSalvati, salvaOrologi } from "./dati/deposito.js";
 import { identitaDelFormato } from "./dati/ambito.js";
 import { caricaFormato } from "./dati/carica-formato.js";
+import { improntaDelDocumento } from "./dati/impronta-del-documento.js";
 import { dataInItaliano } from "./dati/carica-pool.js";
 import type { Formato } from "./dati/formato.js";
 import type { Carta, Pool } from "./dati/pool.js";
@@ -298,7 +299,15 @@ export function App() {
     // Le carte e il formato si aprono **insieme**, e insieme falliscono: le
     // carte senza il formato sarebbero un catalogo di un gioco che non si sa
     // quale sia, e il formato senza le carte non ha niente da governare.
-    Promise.all([poolDaAprire(), caricaFormato()]).then(
+    //
+    // La scelta del pool aspetta l'impronta del documento, perché è lui a dire
+    // quale pool conservato gli sta accanto (ticket 32); le letture dei due
+    // file però partono insieme.
+    const letturaDelFormato = caricaFormato();
+    Promise.all([
+      poolDaAprire(letturaDelFormato.then(improntaDelDocumento)),
+      letturaDelFormato,
+    ]).then(
       ([lettoPool, lettoFormato]) => {
         if (!vivo) return;
         setPool(lettoPool);
@@ -446,14 +455,15 @@ export function App() {
   };
 
   useEffect(() => {
-    if (pool === null || giaControllato.current) return undefined;
+    if (pool === null || formato === null || giaControllato.current) return undefined;
     giaControllato.current = true;
 
     let vivo = true;
-    void aggiornaInSottofondo(pool).then((esito) => {
+    void aggiornaInSottofondo(pool, improntaDelDocumento(formato)).then((esito) => {
       // Solo i dati più freschi cambiano qualcosa. Rete assente, risposta rotta,
-      // niente di nuovo da mesi: in tutti questi casi si resta come si era, e
-      // all'utente non si dice niente perché non c'è niente da dirgli.
+      // niente di nuovo da mesi, dati fatti per un documento che arriverà col
+      // guscio nuovo: in tutti questi casi si resta come si era, e all'utente
+      // non si dice niente perché non c'è niente da dirgli.
       if (vivo && esito.tipo === "preso") setPool(esito.pool);
     })
       // Il controllo non fallisce mai rumorosamente, e se un giorno lo facesse
@@ -462,7 +472,7 @@ export function App() {
     return () => {
       vivo = false;
     };
-  }, [pool]);
+  }, [pool, formato]);
 
   // Il mazzo, ricostruito sulle carte del pool che c'è adesso. Le carte che un
   // aggiornamento dei dati facesse sparire — una rotazione, un bando — escono

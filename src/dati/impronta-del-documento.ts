@@ -21,7 +21,9 @@
  *   nuova e mette in catalogo la carta appena bandita.
  *
  * La prima si mostra e viaggia dentro i mazzi salvati; questa non si mostra a
- * nessuno: sta nel pool, la confronta la compilazione, e serve a fermarla.
+ * nessuno: sta nel pool, la confronta la compilazione per fermarla, e la
+ * confronta l'app per non aprire accanto al documento un pool arrivato dalla
+ * rete che viene da un altro (`aggiornamento.ts`, ticket 32).
  *
  * ## Che cosa ci entra, e chi lo decide
  *
@@ -138,7 +140,7 @@ export const SPARTIZIONE = {
  *
  * È corta e illeggibile, al contrario di quella di `ambito.ts`: quella finisce
  * dentro un testo che passa per messaggi e chi la guarda deve poterla capire,
- * questa sta in un campo di `pool.json` e la legge solo la compilazione.
+ * questa sta in un campo di `pool.json` e la leggono solo i confronti.
  * Scritta per esteso sarebbe l'elenco di tutte le bandite.
  */
 export function improntaDelDocumento(formato: Formato): string {

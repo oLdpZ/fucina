@@ -317,7 +317,12 @@ del pool — limitate e bandite comprese, cioè proprio le voci che l'altra lasc
 fuori apposta — perché quelle entrano nel file quando lo si genera e a runtime
 non le rilegge nessuno. Non si mostra e non viaggia dentro i mazzi: la
 confronta la compilazione, che si ferma quando i due file di dati non sono
-stati fatti insieme.
+stati fatti insieme, e la confronta l'app, che non apre accanto al documento un
+pool arrivato dalla rete che viene da un altro. Un pool che l'impronta non ce
+l'ha — scritto prima che il legame esistesse — si apre lo stesso: qui «non si
+sa» passa, al contrario che per i mazzi, perché rifiutarlo non proteggerebbe
+nessuna identità e toglierebbe a chi ha l'app da prima i dati che aveva già
+preso. La compilazione, che il pool lo può rifare, invece si ferma.
 
 ---
 

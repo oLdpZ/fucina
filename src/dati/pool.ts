@@ -279,11 +279,13 @@ export type Pool = {
    * data dice da quale archivio Scryfall vengono le carte, questa dice quale
    * documento ha deciso quali entrassero, con che tetto di copie e quali no.
    *
-   * L'app non la legge mai — non le serve. La legge la **compilazione**, che si
-   * ferma quando non combacia con l'impronta del documento incluso: le limitate
-   * e le bandite entrano qui dentro al momento della generazione e a runtime
-   * nessuno le rilegge, quindi un pool vecchio accanto a un documento nuovo è
-   * un catalogo che contiene carte che il formato ha già bandito.
+   * La legge la **compilazione**, che si ferma quando non combacia con
+   * l'impronta del documento incluso: le limitate e le bandite entrano qui
+   * dentro al momento della generazione e a runtime nessuno le rilegge, quindi
+   * un pool vecchio accanto a un documento nuovo è un catalogo che contiene
+   * carte che il formato ha già bandito. La legge anche l'app, ma solo per i
+   * pool arrivati dalla rete: quello che viene da un altro documento non si
+   * apre (`aggiornamento.ts`, ticket 32).
    *
    * Non è l'impronta di `ambito.ts`, che risponde a un'altra domanda: quella
    * dice se due mazzi sono dello stesso gioco, e le limitate e le bandite le
@@ -291,7 +293,9 @@ export type Pool = {
    *
    * Stringa vuota nei pool scritti prima che il legame esistesse: il rattoppo
    * di `carica-pool.ts` la mette perché l'app si apra lo stesso, e vale «non lo
-   * so» — che per la compilazione è un motivo per fermarsi, non per passare.
+   * so» — che per la compilazione è un motivo per fermarsi, non per passare, e
+   * per l'app no: là il pool vecchio si può rifare, qui è l'aggiornamento che
+   * l'utente aveva già preso.
    */
   improntaDelDocumento: string;
   /**

@@ -17,10 +17,17 @@ import { caricaPool, interpretaPool, scaricaPool } from "./carica-pool.js";
 import { conservaPool, dimenticaPool, leggiPoolConservato } from "./deposito.js";
 import type { Pool } from "./pool.js";
 
-/** Com'è andato il controllo di freschezza. Nessuno dei tre casi è un guasto. */
+/**
+ * Com'è andato il controllo di freschezza. Nessuno dei quattro casi è un guasto.
+ *
+ * `di-un-altro-documento` non è `nulla-di-nuovo`: di nuovo qualcosa c'è, ma è
+ * fatto per un documento di formato che l'app non ha ancora in mano, e arriverà
+ * insieme a lui.
+ */
 export type Esito =
   | { tipo: "preso"; pool: Pool }
   | { tipo: "nulla-di-nuovo" }
+  | { tipo: "di-un-altro-documento" }
   | { tipo: "non-riuscito"; motivo: string };
 
 /**
@@ -43,20 +50,47 @@ export function piuFresco(candidato: Pool, inUso: Pool): boolean {
 }
 
 /**
+ * Se un pool può stare accanto al documento di formato che l'app ha in mano.
+ *
+ * Il pool incluso ci sta per costruzione — lo garantisce la compilazione
+ * (ticket 26). Quello che arriva dalla rete no: lo si chiede scavalcando il
+ * service worker, mentre il documento l'app se lo legge dalla cache del guscio,
+ * e fra i due momenti in cui cambiano c'è una finestra (ticket 32). Un pool di
+ * un altro documento lì dentro è il catalogo di un gioco con l'impronta
+ * dell'ambito di un altro, e un mazzo salvato in quel momento se la porterebbe
+ * dietro.
+ *
+ * Un pool che non dice da dove viene passa: è stato scritto prima che il legame
+ * esistesse, e rifiutarlo vorrebbe dire togliere l'aggiornamento in sottofondo a
+ * chiunque abbia l'app da prima. «Non lo so» qui non basta a dire di no.
+ */
+export function puoStareAccanto(pool: Pool, improntaInMano: string): boolean {
+  return pool.improntaDelDocumento === "" || pool.improntaDelDocumento === improntaInMano;
+}
+
+/**
  * Fra i dati inclusi nell'app e quelli conservati sul dispositivo, quali aprire.
  *
  * `dimentica` è vero quando la copia conservata non serve più: succede quando
- * l'app stessa è stata aggiornata con dati altrettanto freschi o più. Tenerla
- * sarebbe occupare quattro megabyte per niente.
+ * l'app stessa è stata aggiornata con dati altrettanto freschi o più, e tenerla
+ * sarebbe occupare quattro megabyte per niente. Succede anche quando la copia
+ * viene da un altro documento di formato: non si apre, e al giro dopo — col
+ * guscio nuovo attivo — l'aggiornamento in sottofondo la riprende.
  */
 export function scegliPool(
   incluso: Pool | null,
   conservato: Pool | null,
+  improntaInMano: string,
 ): { pool: Pool | null; dimentica: boolean } {
   if (conservato === null) return { pool: incluso, dimentica: false };
+  // Prima delle date, e prima del ripiego sui dati inclusi che mancano: un pool
+  // di un altro documento non è una copia buona di niente, e aprirlo al posto
+  // di un guasto sarebbe mostrare le carte di un gioco sotto il nome di un altro.
+  if (!puoStareAccanto(conservato, improntaInMano)) return { pool: incluso, dimentica: true };
   // I dati inclusi possono mancare: file arrivato a metà, cache svuotata a
-  // mano. La copia sul dispositivo è comunque un pool buono, e va aperta —
-  // perdere dati che l'app aveva è proprio il caso che il ticket vieta.
+  // mano. La copia sul dispositivo, che viene dallo stesso documento, è
+  // comunque un pool buono, e va aperta — perdere dati che l'app aveva è
+  // proprio il caso che il ticket vieta.
   if (incluso === null) return { pool: conservato, dimentica: false };
   if (piuFresco(conservato, incluso)) return { pool: conservato, dimentica: false };
   return { pool: incluso, dimentica: true };
@@ -68,9 +102,15 @@ export function scegliPool(
  * Qualunque cosa vada storta — rete assente, server che risponde con la pagina
  * dell'app al posto del file, pool arrivato vuoto — finisce in `non-riuscito`:
  * i dati in uso non si toccano mai, e l'app va avanti come se niente fosse.
+ *
+ * Un pool fresco fatto da un altro documento di formato non si prende, e non si
+ * conserva: alla prossima apertura il guscio nuovo porta con sé il documento e
+ * un pool incluso altrettanto fresco, e quattro megabyte scritti ora nel
+ * deposito si dimenticherebbero lì.
  */
 export async function cercaAggiornamento(
   inUso: Pool,
+  improntaInMano: string,
   scarica: () => Promise<unknown>,
 ): Promise<Esito> {
   let candidato: Pool;
@@ -81,6 +121,7 @@ export async function cercaAggiornamento(
   }
 
   if (!piuFresco(candidato, inUso)) return { tipo: "nulla-di-nuovo" };
+  if (!puoStareAccanto(candidato, improntaInMano)) return { tipo: "di-un-altro-documento" };
   return { tipo: "preso", pool: candidato };
 }
 
@@ -105,23 +146,30 @@ export const TETTO_DEPOSITO = 3000;
  * Non aspetta mai la rete, e non aspetta il deposito oltre il tetto. Se il
  * deposito non risponde — modo privato, spazio finito, permessi negati, o
  * silenzio — si aprono i dati inclusi. Se sono i dati inclusi a non leggersi,
- * si apre la copia sul dispositivo. Solo quando mancano tutt'e due si parla di
- * guasto, e si dice quello del file incluso, che è il guasto che il manutentore
- * può riparare.
+ * si apre la copia sul dispositivo, purché venga dal documento di formato in
+ * mano. Solo quando non resta niente da aprire si parla di guasto, e si dice
+ * quello del file incluso, che è il guasto che il manutentore può riparare.
  *
  * Le due letture entrano da fuori perché i casi che contano — il deposito muto,
  * il file incluso rotto — si possano provare senza un browser.
+ *
+ * L'impronta in mano può arrivare ancora per strada: il documento si legge da
+ * un file anche lui, e aspettarlo prima di cominciare vorrebbe dire far partire
+ * i quattro megabyte del pool solo dopo. Le tre letture corrono insieme, e se è
+ * il documento a non leggersi il suo guasto è quello che si dice.
  */
 export async function poolDaAprire(
+  improntaInMano: string | Promise<string>,
   leggiIncluso: () => Promise<Pool> = caricaPool,
   leggiConservato: () => Promise<Pool | null> = leggiPoolConservato,
 ): Promise<Pool> {
-  const [incluso, conservato] = await Promise.all([
+  const [incluso, conservato, impronta] = await Promise.all([
     (async () => leggiIncluso())().catch((errore: unknown) => errore as Error),
     entroIlTetto(leggiConservato),
+    improntaInMano,
   ]);
 
-  const scelta = scegliPool(incluso instanceof Error ? null : incluso, conservato);
+  const scelta = scegliPool(incluso instanceof Error ? null : incluso, conservato, impronta);
   if (scelta.dimentica) void dimenticaPool();
   if (scelta.pool === null) {
     throw incluso instanceof Error ? incluso : new Error("Il pool delle carte non c'è.");
@@ -136,12 +184,12 @@ export async function poolDaAprire(
  * Se il dispositivo si dichiara scollegato non si tenta nemmeno: una richiesta
  * che non riceverà mai risposta costa batteria e non porta niente.
  */
-export async function aggiornaInSottofondo(inUso: Pool): Promise<Esito> {
+export async function aggiornaInSottofondo(inUso: Pool, improntaInMano: string): Promise<Esito> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     return { tipo: "non-riuscito", motivo: "Il dispositivo è senza rete." };
   }
 
-  const esito = await cercaAggiornamento(inUso, scaricaPool);
+  const esito = await cercaAggiornamento(inUso, improntaInMano, scaricaPool);
   // Le carte fresche si mostrano subito e si mettono da parte con comodo:
   // copiare quattro megabyte nel deposito impegna il filo dell'interfaccia, e
   // aspettarlo qui vorrebbe dire un'app ferma proprio mentre si aggiorna. Lo

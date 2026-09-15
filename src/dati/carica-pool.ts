@@ -111,10 +111,11 @@ export function interpretaPool(dati: unknown): Pool {
   return {
     generatoIl,
     // Da quale documento di formato viene il pool. Qui non si verifica niente:
-    // quel confronto sta nella **compilazione**, dove i due file stanno sullo
-    // stesso disco e uno dei due si può rifare. All'app serve solo aprirsi, e
-    // un pool di ieri non ce l'ha — «non lo so» è la stringa vuota, come per la
-    // stampa di una carta che non la scriveva.
+    // per il pool incluso quel confronto sta nella **compilazione**, dove i due
+    // file stanno sullo stesso disco e uno dei due si può rifare; per quelli
+    // arrivati dalla rete lo fa `aggiornamento.ts`, che decide quale pool si
+    // apre. Un pool di ieri non ce l'ha — «non lo so» è la stringa vuota, come
+    // per la stampa di una carta che non la scriveva.
     improntaDelDocumento: typeof improntaDelDocumento === "string" ? improntaDelDocumento : "",
     registroTagScryfall: senzaTag ? [] : (registroTagScryfall as TagDiScryfall[]),
     carte: (carte as Carta[]).map((carta) => {
