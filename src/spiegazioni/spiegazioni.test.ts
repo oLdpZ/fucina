@@ -26,6 +26,7 @@ import {
   type Richiesta,
 } from "../ricerca/costruisci.js";
 import { appartiene, FILTRO_TEMA_VUOTO, risolviTema, TEMA_VUOTO, type Tema } from "../tema/tema.js";
+import { percento, percentoDiUnaParte } from "./frasi.js";
 import { spiegaFrontiera, spiegaMazzo, type SpiegazioniDelMazzo } from "./spiegazioni.js";
 
 const POOL: readonly Carta[] = [...POOL_DEL_MOTORE, ...TERRE_FINTE];
@@ -72,10 +73,6 @@ function frasi(spiegazioni: SpiegazioniDelMazzo): string[] {
   ];
 }
 
-/** La percentuale come le frasi la scrivono: intera, senza decimali. */
-function percento(quota: number): string {
-  return `${Math.round(quota * 100)}%`;
-}
 
 describe("le spiegazioni della frontiera", () => {
   it("ne dà una per ogni mazzo della frontiera", () => {
@@ -141,7 +138,9 @@ describe("la spiegazione di ogni carta", () => {
         expect(riga, carta.nome).toBeDefined();
         expect(carta.quante.grezzi.probabilitaDiMana).toBe(riga!.probabilita);
         expect(carta.quante.grezzi.turno).toBe(riga!.turno);
-        expect(carta.quante.frase).toContain(percento(riga!.probabilita));
+        // Con la stessa funzione della frase, non con una copia: una copia tonda
+        // si smentirebbe al primo mazzo con una quota vicino al tutto (ticket 49).
+        expect(carta.quante.frase).toContain(percentoDiUnaParte(riga!.probabilita));
       }
     }
   });
@@ -154,7 +153,7 @@ describe("la spiegazione di ogni carta", () => {
       const grezzi = carta.quante.grezzi;
       expect(grezzi.probabilitaDiPescarla).toBeGreaterThan(0);
       expect(grezzi.probabilitaDiPescarla).toBeLessThanOrEqual(1);
-      expect(carta.quante.frase).toContain(percento(grezzi.probabilitaDiPescarla));
+      expect(carta.quante.frase).toContain(percentoDiUnaParte(grezzi.probabilitaDiPescarla));
       expect(grezzi.dimensioneMazzo).toBe(mazzo.base.dimensioneMazzo);
     }
 

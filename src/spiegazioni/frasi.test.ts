@@ -76,6 +76,11 @@ describe("come si scrivono i numeri", () => {
     expect(conArticolo("il", "0%")).toBe("lo 0%");
     expect(conArticolo("dal", "0,0%")).toBe("dallo 0,0%");
     expect(conArticolo("del", "0%")).toBe("dello 0%");
+    // Le forme che `percentoDiUnaParte` scrive ai due capi (ticket 49): conta
+    // l'intero che si pronuncia per primo, *novantanove* e *zero*.
+    expect(conArticolo("il", "99,8%")).toBe("il 99,8%");
+    expect(conArticolo("il", "99,9%")).toBe("il 99,9%");
+    expect(conArticolo("il", "0,2%")).toBe("lo 0,2%");
   });
 
   it("accorda singolare e plurale invece di scrivere «1 carte»", () => {
@@ -198,6 +203,21 @@ describe("perché la carta è nel mazzo", () => {
     ).toContain("72%");
   });
 
+  it("il posto riempito non promette il mana «il 100%» quando non c'è sempre (ticket 49)", () => {
+    const quasi = frasePerLaPresenza({
+      ...base,
+      ruolo: { ruolo: "posto", turno: 1, probabilitaDiMana: 0.998 },
+    });
+    expect(quasi).toContain("c'è il 99,8% delle volte");
+    expect(quasi).not.toContain("100%");
+
+    const sempre = frasePerLaPresenza({
+      ...base,
+      ruolo: { ruolo: "posto", turno: 1, probabilitaDiMana: 1 },
+    });
+    expect(sempre).toContain("c'è il 100% delle volte");
+  });
+
   it("con una copia sola nessun ramo dice «ci sono 1 copia» né mette il verbo al plurale", () => {
     // Le limitate del formato entrano in una copia sola, e la frase si legge a
     // voce alta (ticket 13): «ci sono 1 copia che lo fanno» non regge la prova.
@@ -289,6 +309,47 @@ describe("perché tante copie", () => {
     const frase = frasePerLeCopie({ ...base, copie: 1, massimo: Number.POSITIVE_INFINITY });
     expect(frase).toContain("1 copia l'ha scelta l'app");
     expect(frase).not.toContain("le 1");
+  });
+
+  /*
+    Ticket 49: una quota di mana di 0,998 — una carta da un mana in una base
+    molto carica, o un conto al turno più tardo — arrotondata all'intero
+    diventava «il 100% delle volte», cioè la promessa che non capiterà mai di non
+    poterla lanciare, smentita al primo tavolo. Il numero viene da un conto
+    chiuso, non da partite simulate: il decimale è vero quanto l'intero.
+  */
+  it("il mana quasi sempre presente non si scrive «il 100%»", () => {
+    const frase = frasePerLeCopie({ ...base, probabilitaDiMana: 0.998 });
+    expect(frase).toContain("il mana per lanciarla c'è il 99,8% delle volte");
+    expect(frase).not.toContain("100%");
+  });
+
+  it("una quota che col decimale direbbe ancora «100,0» si ferma a «il 99,9%»", () => {
+    const frase = frasePerLeCopie({ ...base, probabilitaDiMana: 0.9996 });
+    expect(frase).toContain("il mana per lanciarla c'è il 99,9% delle volte");
+    expect(frase).not.toContain("100");
+  });
+
+  it("il mana che c'è davvero sempre resta «il 100%», senza decimali", () => {
+    const frase = frasePerLeCopie({ ...base, probabilitaDiMana: 1 });
+    expect(frase).toContain("il mana per lanciarla c'è il 100% delle volte");
+    expect(frase).not.toContain("100,0");
+  });
+
+  it("il mana quasi mai presente non si scrive «lo 0%»", () => {
+    const frase = frasePerLeCopie({ ...base, probabilitaDiMana: 0.003 });
+    expect(frase).toContain("c'è lo 0,3% delle volte");
+  });
+
+  it("la probabilità di pescarla quasi certa non si scrive certa, e nel mezzo resta tonda", () => {
+    expect(frasePerLeCopie({ ...base, probabilitaDiPescarla: 0.997 })).toContain(
+      "te ne capita almeno una il 99,7% delle volte",
+    );
+    // Il decimale solo dove l'intero mentirebbe: dappertutto direbbe che l'app
+    // misura più fine di quanto misuri.
+    const tonda = frasePerLeCopie({ ...base, probabilitaDiPescarla: 0.4137 });
+    expect(tonda).toContain("il 41% delle volte");
+    expect(tonda).not.toContain("41,");
   });
 });
 

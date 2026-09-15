@@ -42,7 +42,13 @@ import type { ColoreMana } from "../dati/pool.js";
 
 /* --- Come si scrivono i numeri -------------------------------------------- */
 
-/** «41%»: la percentuale tonda, per le probabilità e le quote. */
+/**
+ * «41%»: la percentuale tonda, per le quote.
+ *
+ * Le probabilità di pesca e di mana non passano più di qui ma da
+ * `percentoDiUnaParte`, che è tonda uguale nel mezzo e ai due capi non promette
+ * il tutto o il niente (ticket 49).
+ */
 export function percento(quota: number): string {
   return `${Math.round(quota * 100)}%`;
 }
@@ -78,6 +84,14 @@ export function percentoFine(quota: number): string {
  *
  * Il tutto e il niente esatti restano «100%» e «0%», perché lì non c'è niente da
  * arrotondare e nessuna frase da contraddire.
+ *
+ * La usano anche le probabilità **di pesca e di mana** (ticket 49), per una
+ * ragione vicina: lì la frase non si contraddice, **promette**. «Il mana per
+ * lanciarla c'è il 100% delle volte» su una quota di 0,998 dice a chi legge che
+ * non gli capiterà mai di restare senza, e il tavolo lo smentisce. Quelle quote
+ * vengono da un conto chiuso e non da partite simulate, quindi il decimale è
+ * vero quanto l'intero; e nel mezzo restano tonde — «il 41%» — perché il
+ * decimale compare solo dove l'intero mentirebbe.
  */
 export function percentoDiUnaParte(quota: number): string {
   if (quota <= 0 || quota >= 1) return percento(quota);
@@ -308,7 +322,7 @@ function fraseDelRuolo(grezzi: GrezziDelRuolo): string {
     case "corpo":
       return `Per ${grezzi.valoreDiMana} mana mette in campo un ${grezzi.forza ?? "?"}/${grezzi.costituzione ?? "?"}: quanto corpo rende per il mana che costa vale ${decimale(grezzi.efficienza)}, contro una media di ${decimale(grezzi.efficienzaMedia)} fra le creature del mazzo.`;
     case "posto":
-      return `Riempie un posto al turno ${grezzi.turno}, e a quel turno il mana per lanciarla c'è ${conArticolo("il", percento(grezzi.probabilitaDiMana))} delle volte.`;
+      return `Riempie un posto al turno ${grezzi.turno}, e a quel turno il mana per lanciarla c'è ${conArticolo("il", percentoDiUnaParte(grezzi.probabilitaDiMana))} delle volte.`;
   }
 }
 
@@ -361,7 +375,7 @@ export type GrezziDelleCopie = {
  * metterne di più — il regolamento, o i posti che ci sono.
  */
 export function frasePerLeCopie(grezzi: GrezziDelleCopie): string {
-  const effetto = `Con ${copie(grezzi.copie)} su ${grezzi.dimensioneMazzo} carte, entro il turno ${grezzi.turno} te ne capita almeno una ${conArticolo("il", percento(grezzi.probabilitaDiPescarla))} delle volte, e a quel turno il mana per lanciarla c'è ${conArticolo("il", percento(grezzi.probabilitaDiMana))} delle volte.`;
+  const effetto = `Con ${copie(grezzi.copie)} su ${grezzi.dimensioneMazzo} carte, entro il turno ${grezzi.turno} te ne capita almeno una ${conArticolo("il", percentoDiUnaParte(grezzi.probabilitaDiPescarla))} delle volte, e a quel turno il mana per lanciarla c'è ${conArticolo("il", percentoDiUnaParte(grezzi.probabilitaDiMana))} delle volte.`;
   if (!Number.isFinite(grezzi.massimo)) {
     // Con una copia sola «le 1 le ha scelte» metteva articolo e pronome al
     // plurale attorno a un numero singolare, e lasciava per giunta il numero
