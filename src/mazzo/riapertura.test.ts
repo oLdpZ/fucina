@@ -101,8 +101,11 @@ describe("un mazzo salvato «niente nero», riaperto dopo aver cambiato tema", (
   });
 
   it("fa lo stesso giro passando per il testo da mandare a un amico", () => {
+    // Il testo si importa solo se è del formato che l'app gioca (ticket 10):
+    // quello del mazzo, e nient'altro da provare qui.
+    const formato = { nome: "Formato di prova", impronta: "una-regola/aaa" };
     const { id: _id, ...contenuto } = SALVATO_SENZA_NERO;
-    const arrivato = leggiScambio(scriviScambio(structuredClone(contenuto)));
+    const arrivato = leggiScambio(scriviScambio(structuredClone({ ...contenuto, formato })), formato);
     const { copie, consegnato } = riapri({ ...arrivato, id: "due" });
 
     const temaDelMazzo = temaInVigore(consegnato, copie) ?? TUTTO;

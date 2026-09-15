@@ -13,16 +13,28 @@ import { FILTRO_TEMA_VUOTO } from "../tema/tema.js";
  * l'app deve dire che cosa non va, mai cadere.
  */
 
+/**
+ * Il formato che l'app sta giocando nei test: inventato, perché nessun nome di
+ * formato né codice di edizione vive nel sorgente (ADR-0004), e un test è
+ * sorgente. Il mazzo di prova è di questo formato, come ogni mazzo che l'app
+ * scrive oggi: un testo senza formato è un altro caso, provato più sotto.
+ */
+const FORMATO = { nome: "Formato di prova", impronta: "una-regola/aaa+bbb" };
+
 const MAZZO: ContenutoMazzo = {
   nome: "Il mazzo dell'amico",
   salvatoIl: "2026-09-03T10:00:00.000Z",
   datiDel: "2026-09-02T09:05:48.145+00:00",
   richiesta: { origine: "a-mano", terreVolute: 22 },
+  formato: FORMATO,
   carte: [
     { nome: "Prima Carta", copie: 4 },
     { nome: "Seconda Carta", copie: 2 },
   ],
 };
+
+/** Il testo letto dall'app che gioca il formato di prova. */
+const leggi = (testo: string) => leggiScambio(testo, FORMATO);
 
 describe("il testo da scambiare", () => {
   it("si legge: c'è dentro il nome del mazzo e ogni carta con le sue copie", () => {
@@ -38,7 +50,7 @@ describe("il testo da scambiare", () => {
   });
 
   it("riletto, ricostruisce il mazzo così com'era", () => {
-    expect(leggiScambio(scriviScambio(MAZZO))).toEqual(MAZZO);
+    expect(leggi(scriviScambio(MAZZO))).toEqual(MAZZO);
   });
 
   it("ricostruisce anche un mazzo le cui terre le decide la curva", () => {
@@ -46,7 +58,7 @@ describe("il testo da scambiare", () => {
       ...MAZZO,
       richiesta: { origine: "a-mano", terreVolute: null },
     };
-    expect(leggiScambio(scriviScambio(dallaCurva))).toEqual(dallaCurva);
+    expect(leggi(scriviScambio(dallaCurva))).toEqual(dallaCurva);
   });
 
   it("sopporta gli spazi e le righe vuote che i programmi di posta aggiungono", () => {
@@ -54,23 +66,23 @@ describe("il testo da scambiare", () => {
       .split("\n")
       .map((riga) => `  ${riga}  `)
       .join("\n\n");
-    expect(leggiScambio(maltrattato)).toEqual(MAZZO);
+    expect(leggi(maltrattato)).toEqual(MAZZO);
   });
 
   it("sopporta le righe terminate come le termina Windows", () => {
-    expect(leggiScambio(scriviScambio(MAZZO).replace(/\n/gu, "\r\n"))).toEqual(MAZZO);
+    expect(leggi(scriviScambio(MAZZO).replace(/\n/gu, "\r\n"))).toEqual(MAZZO);
   });
 });
 
 describe("un testo che non si può importare", () => {
   it("dice che non è un mazzo, se non lo è", () => {
-    expect(() => leggiScambio("ciao come stai")).toThrow(/mazzo/i);
-    expect(() => leggiScambio("")).toThrow(/mazzo/i);
+    expect(() => leggi("ciao come stai")).toThrow(/mazzo/i);
+    expect(() => leggi("")).toThrow(/mazzo/i);
   });
 
   it("dice che è troncato, se finisce a metà", () => {
     const meta = scriviScambio(MAZZO).split("\n").slice(0, 6).join("\n");
-    expect(() => leggiScambio(meta)).toThrow(/tronc/i);
+    expect(() => leggi(meta)).toThrow(/tronc/i);
   });
 
   it("si accorge se manca una carta, anche se la riga finale c'è", () => {
@@ -78,7 +90,7 @@ describe("un testo che non si può importare", () => {
       .split("\n")
       .filter((riga) => !riga.includes("Seconda Carta"))
       .join("\n");
-    expect(() => leggiScambio(senzaUnaCarta)).toThrow(/(manca|incomplet|copie)/i);
+    expect(() => leggi(senzaUnaCarta)).toThrow(/(manca|incomplet|copie)/i);
   });
 
   it("non si fida di un testo che non dice quante carte contiene", () => {
@@ -86,17 +98,17 @@ describe("un testo che non si può importare", () => {
       .split("\n")
       .filter((riga) => !riga.startsWith("Carte ("))
       .join("\n");
-    expect(() => leggiScambio(senzaConta)).toThrow(/quante carte/i);
+    expect(() => leggi(senzaConta)).toThrow(/quante carte/i);
   });
 
   it("si accorge di un testo incollato due volte, e non lo chiama tagliato", () => {
     const doppio = `${scriviScambio(MAZZO)}\n${scriviScambio(MAZZO)}`;
-    expect(() => leggiScambio(doppio)).toThrow(/due volte/i);
+    expect(() => leggi(doppio)).toThrow(/due volte/i);
   });
 
   it("dice che viene da un'app più recente, se il formato è di là da venire", () => {
     const dalFuturo = scriviScambio(MAZZO).replace("formato 1", "formato 9");
-    expect(() => leggiScambio(dalFuturo)).toThrow(/recente/i);
+    expect(() => leggi(dalFuturo)).toThrow(/recente/i);
   });
 
   it("non accetta un mazzo senza carte", () => {
@@ -104,7 +116,7 @@ describe("un testo che non si può importare", () => {
       .split("\n")
       .filter((riga) => !/^\d+ /u.test(riga.trim()))
       .join("\n");
-    expect(() => leggiScambio(senzaCarte)).toThrow(/carte/i);
+    expect(() => leggi(senzaCarte)).toThrow(/carte/i);
   });
 });
 
@@ -135,30 +147,68 @@ describe("la lista da consegnare all'arbitro", () => {
 });
 
 describe("il formato scritto nel testo da scambiare", () => {
-  const FORMATO = { nome: "Formato di prova", impronta: "una-regola/aaa+bbb" };
-  const DEL_FORMATO: ContenutoMazzo = { ...MAZZO, formato: FORMATO };
-
   it("dice a parole di che formato è il mazzo", () => {
-    expect(scriviScambio(DEL_FORMATO)).toContain("Formato di prova");
+    expect(scriviScambio(MAZZO)).toContain("Formato di prova");
   });
 
   it("riletto, ricostruisce anche il formato", () => {
-    expect(leggiScambio(scriviScambio(DEL_FORMATO))).toEqual(DEL_FORMATO);
+    expect(leggi(scriviScambio(MAZZO)).formato).toEqual(FORMATO);
   });
 
   it("porta l'impronta, non solo il nome: è quella che si confronta", () => {
     // Il nome del formato è la voce del documento più esposta a cambiare. Un
     // testo che portasse solo quello direbbe «altro formato» il giorno che il
-    // gruppo decide come si chiama il proprio.
-    const rinominato = leggiScambio(
-      scriviScambio(DEL_FORMATO).replace("Formato di prova", "Come lo chiamano al tavolo"),
+    // gruppo decide come si chiama il proprio — e lo rifiuterebbe.
+    const rinominato = leggi(
+      scriviScambio(MAZZO).replace("Formato di prova", "Come lo chiamano al tavolo"),
     );
 
     expect(rinominato.formato?.impronta).toBe(FORMATO.impronta);
+    expect(rinominato.carte).toEqual(MAZZO.carte);
+  });
+});
+
+/**
+ * Ticket 10: il testo di un altro gioco si **rifiuta con la sua ragione**, per
+ * la stessa porta da cui passa la richiesta che non si riconosce — un errore
+ * che si legge all'utente così com'è.
+ */
+describe("un testo di un altro formato", () => {
+  const ALTRO = { nome: "Formato di prima", impronta: "altra-regola/ccc" };
+
+  it("si rifiuta, e il rifiuto nomina il formato del testo e quello dell'app", () => {
+    const diPrima = scriviScambio({ ...MAZZO, formato: ALTRO });
+
+    expect(() => leggi(diPrima)).toThrow(/«Formato di prima»/u);
+    expect(() => leggi(diPrima)).toThrow(/«Formato di prova»/u);
+    expect(() => leggi(diPrima)).toThrow(/non l.ho importato/u);
   });
 
-  it("regge un testo che il formato non lo dichiara: è un mazzo di prima", () => {
-    expect(leggiScambio(scriviScambio(MAZZO)).formato).toBeUndefined();
+  it("un testo che il formato non lo dichiara si rifiuta: «non si sa» non è «è il mio»", () => {
+    // È il testo esportato prima che l'app scrivesse il formato, cioè dal gioco
+    // di prima: le sue carte qui non esistono.
+    const { formato: _formato, ...senza } = MAZZO;
+
+    expect(() => leggi(scriviScambio(senza))).toThrow(/non dice di che formato/u);
+  });
+
+  it("il formato si guarda prima delle righe che il gioco di prima scriveva diverse", () => {
+    // Un tema scritto con i filtri di un altro gioco non deve coprire la ragione
+    // vera: il mazzo non si importa perché è di un altro formato.
+    const conTemaStorto = scriviScambio({ ...MAZZO, formato: ALTRO }).replace(
+      "Richiesta:",
+      'Tema: {"esclusioni":{"colori":["Nero"]}}\nRichiesta:',
+    );
+
+    expect(() => leggi(conTemaStorto)).toThrow(/«Formato di prima»/u);
+  });
+
+  it("un testo tagliato resta un testo tagliato, anche se è di un altro formato", () => {
+    // Il formato si legge dal testo: se il testo non è intero non si sa
+    // nemmeno quello, e la ragione da dire è la prima.
+    const meta = scriviScambio({ ...MAZZO, formato: ALTRO }).split("\n").slice(0, 6).join("\n");
+
+    expect(() => leggi(meta)).toThrow(/tronc/i);
   });
 });
 
@@ -195,7 +245,7 @@ describe("il tema e il tetto nel testo da scambiare", () => {
   };
 
   it("fa il giro intero e torna identico: è la promessa su cui poggiano le terre", () => {
-    expect(leggiScambio(scriviScambio(CON_VINCOLI))).toEqual(CON_VINCOLI);
+    expect(leggi(scriviScambio(CON_VINCOLI))).toEqual(CON_VINCOLI);
   });
 
   it("dice il tetto in una riga che si legge a occhio", () => {
@@ -203,9 +253,11 @@ describe("il tema e il tetto nel testo da scambiare", () => {
   });
 
   it("un testo scritto prima di questo cambio si legge lo stesso, senza vincoli", () => {
-    // La promessa di non rompere niente a chi ha già dei testi da parte: le due
-    // righe nuove semplicemente non ci sono, e il mazzo si importa intero.
-    const letto = leggiScambio(scriviScambio(MAZZO));
+    // Le due righe del ticket 31 semplicemente non ci sono, e il mazzo si
+    // importa intero — purché dichiari il formato che l'app gioca: un testo
+    // senza formato si rifiuta per quello (ticket 10), prima ancora di arrivare
+    // alle righe del tema e del tetto.
+    const letto = leggi(scriviScambio(MAZZO));
     expect(letto.richiesta.tema).toBeUndefined();
     expect(letto.richiesta.tetto).toBeUndefined();
     expect(letto.carte).toEqual(MAZZO.carte);
@@ -217,7 +269,7 @@ describe("il tema e il tetto nel testo da scambiare", () => {
       .filter((riga) => !riga.startsWith("Tema:") && !riga.startsWith("Tetto di spesa"))
       .join("\n");
 
-    const letto = leggiScambio(senzaRighe);
+    const letto = leggi(senzaRighe);
     expect(letto.richiesta.tema).toBeUndefined();
     expect(letto.richiesta.tetto).toBeUndefined();
     expect(letto.carte).toEqual(MAZZO.carte);
@@ -229,8 +281,8 @@ describe("il tema e il tetto nel testo da scambiare", () => {
     // fermarsi dicendo che cosa togliere per importare comunque la lista.
     const rotto = scriviScambio(CON_VINCOLI).replace(/^Tema: .*$/mu, 'Tema: {"esclusioni":');
 
-    expect(() => leggiScambio(rotto)).toThrow(/tema/i);
-    expect(() => leggiScambio(rotto)).toThrow(/riga/i);
+    expect(() => leggi(rotto)).toThrow(/tema/i);
+    expect(() => leggi(rotto)).toThrow(/riga/i);
   });
 
   it("un tema che non si riconosce si rifiuta invece di essere indovinato", () => {
@@ -239,7 +291,7 @@ describe("il tema e il tetto nel testo da scambiare", () => {
       'Tema: {"esclusioni":{"colori":["Nero"]}}',
     );
 
-    expect(() => leggiScambio(storto)).toThrow(/colore/i);
+    expect(() => leggi(storto)).toThrow(/colore/i);
   });
 
   it("una riga del tema che non contiene un tema si dice, invece di valere «nessun tema»", () => {
@@ -249,7 +301,7 @@ describe("il tema e il tetto nel testo da scambiare", () => {
     // porta di servizio, e va chiuso di qui.
     for (const scritto of ['Tema: {}', 'Tema: []', 'Tema: {"esclusioni":["B"]}']) {
       const storto = scriviScambio(CON_VINCOLI).replace(/^Tema: .*$/mu, scritto);
-      expect(() => leggiScambio(storto)).toThrow(/tema/i);
+      expect(() => leggi(storto)).toThrow(/tema/i);
     }
   });
 
@@ -258,7 +310,7 @@ describe("il tema e il tetto nel testo da scambiare", () => {
       ...MAZZO,
       richiesta: { ...MAZZO.richiesta, tetto: 0 },
     };
-    expect(leggiScambio(scriviScambio(gratis)).richiesta.tetto).toBe(0);
+    expect(leggi(scriviScambio(gratis)).richiesta.tetto).toBe(0);
   });
 
   it("un tetto che non è una cifra si dice, invece di passare per nessun tetto", () => {
@@ -267,6 +319,6 @@ describe("il tema e il tetto nel testo da scambiare", () => {
       "Tetto di spesa in euro: trenta",
     );
 
-    expect(() => leggiScambio(storto)).toThrow(/tetto/i);
+    expect(() => leggi(storto)).toThrow(/tetto/i);
   });
 });

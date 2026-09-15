@@ -150,8 +150,8 @@ describe("l'identità riletta da fuori", () => {
   });
 
   it("è assente, e non un guasto, quando il mazzo non la porta", () => {
-    // È il mazzo salvato prima che l'app scrivesse il formato: si apre lo
-    // stesso, e chi lo apre saprà dire che il formato non lo dichiara.
+    // È il mazzo salvato prima che l'app scrivesse il formato: si legge e
+    // resta nell'elenco, e in sola lettura dice che il formato non lo dichiara.
     expect(interpretaIdentita(undefined)).toBeUndefined();
     expect(interpretaIdentita(null)).toBeUndefined();
   });

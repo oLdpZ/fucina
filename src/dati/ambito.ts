@@ -134,10 +134,9 @@ export function identitaSeSiLegge(dati: unknown): IdentitaDiFormato | undefined 
  * un'altra assente: «non si sa» non è «è il mio», e prenderlo per sì aprirebbe
  * mazzi di un gioco che non si gioca più.
  *
- * Il confronto sta qui, ma **non lo fa ancora nessuno**: il mazzo di un altro
- * formato che si apre in sola lettura, e il file di un altro formato rifiutato
- * con la sua ragione, sono il ticket 10 — che aspettava proprio questo, cioè
- * che un mazzo dicesse di che gioco è.
+ * Lo fanno due porte, per il ticket 10: l'elenco dei mazzi salvati, dove un
+ * mazzo di un altro gioco si legge e si cancella ma non si apre, e
+ * l'importazione, che il testo di un altro gioco lo rifiuta con la sua ragione.
  */
 export function stessoFormato(
   uno: IdentitaDiFormato | undefined,

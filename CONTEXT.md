@@ -337,6 +337,10 @@ stesso gioco con una riga in più, al più con una carta da togliere dal mazzo.
 Un mazzo che **non** dichiara il formato — salvato prima che l'app lo scrivesse
 — non è del formato corrente: «non si sa» non è «è il mio».
 
+Un mazzo di un altro gioco **si legge e non si apre**: resta fra i salvati in
+sola lettura, con scritto perché, e lo cancella solo l'utente. Un testo di un
+altro gioco invece **non si importa**, e il rifiuto dice la stessa ragione.
+
 Di impronte però ce ne sono **due**, e la seconda risponde a un'altra domanda:
 l'**impronta del documento** (`dati/impronta-del-documento.ts`) dice da quale
 documento di formato viene il pool. Guarda quel che decide il contenuto del

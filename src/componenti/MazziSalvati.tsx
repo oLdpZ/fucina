@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useState } from "preact/hooks";
 
-import type { IdentitaDiFormato } from "../dati/ambito.js";
+import { stessoFormato, type IdentitaDiFormato } from "../dati/ambito.js";
 import { dataInItaliano } from "../dati/carica-pool.js";
 import { dimenticaMazzo, elencaMazziSalvati, salvaMazzo } from "../dati/mazzi-salvati.js";
 import type { Pool } from "../dati/pool.js";
@@ -27,8 +27,10 @@ import {
   fraseConLeTerreScartate,
   frasePerIlTemaSuQuelCheEsce,
   frasePerIlTettoSuQuelCheEsce,
+  frasePerUnMazzoDiUnAltroFormato,
 } from "../spiegazioni/frasi.js";
 import {
+  idDaRiscrivere,
   nomePulito,
   NOME_MASSIMO,
   type ContenutoMazzo,
@@ -127,6 +129,14 @@ export function MazziSalvati({
    */
   const [avvisoSulMazzo, setAvvisoSulMazzo] = useState<{ id: string; testo: string } | null>(null);
   const [daImportare, setDaImportare] = useState("");
+  /**
+   * Il mazzo di un altro gioco di cui si stanno leggendo le carte, o `null`.
+   *
+   * Uno solo alla volta: è una lista da sfogliare, non una seconda schermata, e
+   * due elenchi di carte aperti uno sotto l'altro in un elenco di mazzi non si
+   * leggono più.
+   */
+  const [inLettura, setInLettura] = useState<string | null>(null);
 
   /**
    * Quel che è andato bene e quel che non è andato si dicono **insieme**: un
@@ -191,9 +201,9 @@ export function MazziSalvati({
       // Di che gioco è questo mazzo. Un mazzo salvato dura più a lungo del
       // formato che l'ha prodotto — il documento si corregge — e senza questa
       // riga, il giorno che il formato cambia, il mazzo si riaprirebbe mezzo
-      // vuoto senza che nessuno sappia dire perché. Scriverla è tutto quel che
-      // si fa oggi: **leggerla** — la sola lettura, il file rifiutato con la
-      // sua ragione — è il ticket 10, che aspettava proprio questo.
+      // vuoto senza che nessuno sappia dire perché. La leggono l'elenco qui
+      // sotto, che un mazzo di un altro gioco lo mostra in sola lettura, e
+      // l'importazione, che lo rifiuta con la sua ragione (ticket 10).
       formato,
       carte,
     };
@@ -294,11 +304,18 @@ export function MazziSalvati({
     if (detto !== null) setAvvisoSulMazzo({ id: salvato.id, testo: detto });
   };
 
+  /**
+   * Il posto che «Risalva» riscrive. Non è sempre quello del mazzo aperto: se
+   * nel frattempo è diventato di un altro gioco, si salva accanto e quello di
+   * prima resta intero (`idDaRiscrivere`, ticket 10).
+   */
+  const daRiscrivere = idDaRiscrivere(aperto, salvati, formato);
+
   const salva = async () => {
     // L'orologio si legge qui: è adesso che l'utente sta salvando.
     const daSalvare = componi(new Date().toISOString());
     if (daSalvare === null) return;
-    const salvato = await salvaMazzo(daSalvare, aperto?.id);
+    const salvato = await salvaMazzo(daSalvare, daRiscrivere);
     if (salvato === null) {
       racconta(
         null,
@@ -338,7 +355,7 @@ export function MazziSalvati({
   const importa = async () => {
     let arrivato: ContenutoMazzo;
     try {
-      arrivato = leggiScambio(daImportare);
+      arrivato = leggiScambio(daImportare, formato);
     } catch (errore) {
       racconta(null, errore instanceof Error ? errore.message : String(errore));
       return;
@@ -384,7 +401,9 @@ export function MazziSalvati({
               />
             </label>
             <button type="button" class="principale" onClick={() => void salva()}>
-              {aperto === null ? "Salva sul dispositivo" : `Risalva «${aperto.nome}»`}
+              {aperto === null || daRiscrivere === undefined
+                ? "Salva sul dispositivo"
+                : `Risalva «${aperto.nome}»`}
             </button>
             <p class="nota">
               Resta su questo dispositivo e basta: non c&rsquo;è nessun account e nessun server.
@@ -411,43 +430,95 @@ export function MazziSalvati({
           <p class="nota">Non ne hai ancora salvato nessuno.</p>
         ) : (
           <ul>
-            {salvati.map((salvato) => (
-              <li key={salvato.id} data-aperto={salvato.id === aperto?.id}>
-                <div class="riga">
-                  <button
-                    type="button"
-                    class="nome-salvato"
-                    onClick={() => apriDallElenco(salvato)}
-                  >
-                    <span class="nome">{salvato.nome}</span>
-                    <span class="dettagli">
-                      {copieDi(salvato)} carte · salvato il {dataInItaliano(salvato.salvatoIl)}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    class="cancella"
-                    onClick={() => void cancella(salvato)}
-                    aria-label={`Cancella ${salvato.nome}`}
-                  >
-                    Cancella
-                  </button>
-                </div>
-                {/*
-                  La riga c'è **sempre**, anche vuota: una zona `role="status"`
-                  che nasce già piena non viene letta ad alta voce da quasi
-                  nessun lettore di schermo — annunciano quel che cambia dentro
-                  una zona che c'era, non la zona. Nata insieme alla sua frase,
-                  questa tornerebbe al silenzio da cui il ticket 28 parte, per
-                  chi la pagina la ascolta invece di guardarla. Vuota non
-                  occupa spazio e non dice niente: se ne occupa il foglio di
-                  stile.
-                */}
-                <p class="avviso-sul-mazzo" role="status">
-                  {avvisoSulMazzo?.id === salvato.id ? avvisoSulMazzo.testo : ""}
-                </p>
-              </li>
-            ))}
+            {salvati.map((salvato) => {
+              /*
+                Un mazzo di un altro gioco **non si apre** (ticket 10): le sue
+                carte non esistono nel pool, e rimetterlo in mano darebbe un
+                mazzo mezzo vuoto che il primo «Risalva» consoliderebbe sopra
+                quello intero. Si legge, con la ragione scritta, e lo cancella
+                solo chi lo tocca: niente qui lo toglie dall'elenco da sé.
+
+                Il confronto è `stessoFormato`, e un mazzo che il formato non
+                lo dichiara ne esce di un altro gioco — «non si sa» non è «è il
+                mio». Sono i mazzi salvati prima del cambio, cioè proprio quelli.
+              */
+              const diUnAltroGioco = !stessoFormato(salvato.formato, formato);
+              const sfogliato = diUnAltroGioco && inLettura === salvato.id;
+              return (
+                <li
+                  key={salvato.id}
+                  data-aperto={salvato.id === aperto?.id}
+                  data-altro-formato={diUnAltroGioco}
+                >
+                  <div class="riga">
+                    <button
+                      type="button"
+                      class="nome-salvato"
+                      aria-expanded={diUnAltroGioco ? sfogliato : undefined}
+                      onClick={() =>
+                        diUnAltroGioco
+                          ? setInLettura(sfogliato ? null : salvato.id)
+                          : apriDallElenco(salvato)
+                      }
+                    >
+                      <span class="nome">{salvato.nome}</span>
+                      <span class="dettagli">
+                        {copieDi(salvato)} carte · salvato il {dataInItaliano(salvato.salvatoIl)}
+                        {diUnAltroGioco ? " · sola lettura" : ""}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="cancella"
+                      onClick={() => void cancella(salvato)}
+                      aria-label={`Cancella ${salvato.nome}`}
+                    >
+                      Cancella
+                    </button>
+                  </div>
+                  {/*
+                    La ragione si legge **senza toccare niente**: chi scorre
+                    l'elenco deve sapere prima di premere che quel mazzo non si
+                    apre, non scoprirlo premendo. Le carte invece si sfogliano a
+                    richiesta — sessanta righe per ogni mazzo di prima
+                    seppellirebbero quelli che si aprono.
+                  */}
+                  {diUnAltroGioco ? (
+                    <div class="in-sola-lettura">
+                      <p>
+                        {frasePerUnMazzoDiUnAltroFormato({
+                          delMazzo: salvato.formato,
+                          corrente: formato,
+                          dove: "salvato",
+                        })}
+                      </p>
+                      {sfogliato ? (
+                        <div class="carte-in-lettura">
+                          {salvato.carte.map((voce) => (
+                            <span key={voce.nome}>
+                              {voce.copie} {voce.nome}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {/*
+                    La riga c'è **sempre**, anche vuota: una zona `role="status"`
+                    che nasce già piena non viene letta ad alta voce da quasi
+                    nessun lettore di schermo — annunciano quel che cambia dentro
+                    una zona che c'era, non la zona. Nata insieme alla sua frase,
+                    questa tornerebbe al silenzio da cui il ticket 28 parte, per
+                    chi la pagina la ascolta invece di guardarla. Vuota non
+                    occupa spazio e non dice niente: se ne occupa il foglio di
+                    stile.
+                  */}
+                  <p class="avviso-sul-mazzo" role="status">
+                    {avvisoSulMazzo?.id === salvato.id ? avvisoSulMazzo.testo : ""}
+                  </p>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

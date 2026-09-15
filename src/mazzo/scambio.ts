@@ -25,6 +25,12 @@
  * un'app vecchia semplicemente non guarda non le impediscono di leggere la
  * lista, e alzare il numero le farebbe rifiutare mazzi che sa leggere benissimo.
  *
+ * Il formato di gioco però **si confronta** (ticket 10): un testo di un altro
+ * gioco — o uno che non dice di quale, scritto prima che l'app lo dichiarasse —
+ * si rifiuta con la sua ragione, dalla stessa porta da cui passa la richiesta
+ * che non si riconosce. Le sue carte qui non esistono, e importarlo metterebbe
+ * nell'elenco un mazzo che non si apre.
+ *
  * ## Il tema e il tetto (ticket 31)
  *
  * Il mazzo salvato porta il tema e il tetto sotto cui le sue terre sono state
@@ -48,7 +54,8 @@
  * lista si importa lo stesso: un tema letto a metà è peggio di nessun tema.
  */
 
-import { interpretaIdentita, type IdentitaDiFormato } from "../dati/ambito.js";
+import { interpretaIdentita, stessoFormato, type IdentitaDiFormato } from "../dati/ambito.js";
+import { frasePerUnMazzoDiUnAltroFormato } from "../spiegazioni/frasi.js";
 import { interpretaTema } from "../tema/interpreta.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
 import {
@@ -133,9 +140,14 @@ const TERRE_A_MANO = /^(\d+) scelte a mano$/u;
  *
  * Ogni messaggio è una frase che si può leggere all'utente così com'è: chi
  * incolla un testo sbagliato deve capire se è il testo sbagliato, se è tagliato
- * a metà, o se è un mazzo di un'app più nuova della sua.
+ * a metà, se è un mazzo di un'app più nuova della sua, o se è un mazzo di un
+ * altro gioco.
+ *
+ * `corrente` è il formato che l'app gioca adesso. Non è facoltativo: un lettore
+ * che si potesse chiamare senza lascerebbe entrare in silenzio proprio i mazzi
+ * che il ticket 10 esiste per fermare.
  */
-export function leggiScambio(testo: string): ContenutoMazzo {
+export function leggiScambio(testo: string, corrente: IdentitaDiFormato): ContenutoMazzo {
   const righe = testo
     .split(/\r?\n/u)
     .map((riga) => riga.trim())
@@ -177,6 +189,18 @@ export function leggiScambio(testo: string): ContenutoMazzo {
     if (voce) voci.set((voce[1] as string).trim(), (voce[2] as string).trim());
   }
 
+  // Di che gioco è, **prima** di tutto quel che il gioco decide: un testo di un
+  // altro formato può avere un tema scritto con filtri che qui non esistono, e
+  // la ragione vera — non è di questo gioco — non deve restare coperta da una
+  // ragione di dettaglio. Prima però deve essere un testo intero: da un testo
+  // tagliato non si sa nemmeno di che formato sia, e quello si dice sopra.
+  const formato = leggiFormato(voci);
+  if (!stessoFormato(formato, corrente)) {
+    throw new Error(
+      frasePerUnMazzoDiUnAltroFormato({ delMazzo: formato, corrente, dove: "da-importare" }),
+    );
+  }
+
   // La riga che dichiara quante carte ci sono è la difesa contro il testo
   // tagliato: senza, un elenco a metà passerebbe per intero. Se manca, manca
   // per un motivo — qualcuno ha maltrattato il testo — e non ci si fida.
@@ -200,7 +224,7 @@ export function leggiScambio(testo: string): ContenutoMazzo {
     salvatoIl: voci.get("Salvato il"),
     datiDel: voci.get("Carte del"),
     richiesta: leggiRichiesta(voci),
-    formato: leggiFormato(voci),
+    formato,
     carte,
   });
 }
@@ -303,8 +327,9 @@ function leggiTema(riga: string | undefined): Tema | undefined {
  * Il formato di gioco, dalle due righe che lo dichiarano.
  *
  * Assenti tutte e due, è un mazzo scritto prima che l'app dichiarasse il
- * formato: si legge lo stesso. Presente una sola, il testo è stato maltrattato
- * o scritto a mano, e `interpretaIdentita` lo dice invece di indovinare.
+ * formato: si legge come «non si sa», e chi legge lo rifiuta con quella
+ * ragione. Presente una sola, il testo è stato maltrattato o scritto a mano, e
+ * `interpretaIdentita` lo dice invece di indovinare.
  */
 function leggiFormato(voci: ReadonlyMap<string, string>): IdentitaDiFormato | undefined {
   const nome = voci.get(RIGA_FORMATO);

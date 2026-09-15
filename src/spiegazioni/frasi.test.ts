@@ -51,6 +51,7 @@ import {
   frasePerIlTettoSuQuelCheEsce,
   frasePerIlTemaInVigore,
   frasePerIlTemaSuQuelCheEsce,
+  frasePerUnMazzoDiUnAltroFormato,
 } from "./frasi.js";
 
 describe("come si scrivono i numeri", () => {
@@ -1157,5 +1158,76 @@ describe("il tema che sceglie le terre del mazzo in mano", () => {
 
     expect(frase).toContain("12");
     expect(frase).toContain("Mazzo");
+  });
+});
+
+/**
+ * Ticket 10: il mazzo di un altro gioco dice **perché** non si apre, con i nomi
+ * che i due documenti di formato dichiarano e non con nomi scritti qui.
+ */
+describe("il mazzo di un altro formato", () => {
+  const CORRENTE = { nome: "Formato di adesso", impronta: "una-regola/aaa+bbb" };
+  const ALTRO = { nome: "Formato di prima", impronta: "altra-regola/ccc" };
+
+  it("nomina il formato del mazzo e quello che l'app gioca adesso", () => {
+    const frase = frasePerUnMazzoDiUnAltroFormato({
+      delMazzo: ALTRO,
+      corrente: CORRENTE,
+      dove: "salvato",
+    });
+
+    expect(frase).toContain("«Formato di prima»");
+    expect(frase).toContain("«Formato di adesso»");
+  });
+
+  it("di un mazzo che il formato non lo dichiara non inventa un nome", () => {
+    const frase = frasePerUnMazzoDiUnAltroFormato({
+      delMazzo: undefined,
+      corrente: CORRENTE,
+      dove: "salvato",
+    });
+
+    expect(frase).toContain("«Formato di adesso»");
+    expect(frase).not.toMatch(/undefined|«»/u);
+    expect(frase).toMatch(/non dice di che formato/u);
+    // Perché non lo dica non si sa: un mazzo di prima e un testo a cui qualcuno
+    // ha tolto le righe si leggono uguali.
+    expect(frase).not.toMatch(/prima/u);
+  });
+
+  it("con lo stesso nome e un altro gioco non dice «X» contro «X»", () => {
+    // Il nome si mostra e non si confronta: il giorno che il gruppo cambia le
+    // edizioni tenendo il nome, i due nomi coincidono e la ragione è altrove.
+    const frase = frasePerUnMazzoDiUnAltroFormato({
+      delMazzo: { ...ALTRO, nome: CORRENTE.nome },
+      corrente: CORRENTE,
+      dove: "salvato",
+    });
+
+    expect(frase.split("«Formato di adesso»").length - 1).toBe(1);
+    expect(frase).toMatch(/edizioni/u);
+    // Quale dei due documenti venga prima le impronte non lo dicono.
+    expect(frase).not.toMatch(/prima/u);
+  });
+
+  it("su un mazzo salvato dice che resta, e che a cancellarlo è solo l'utente", () => {
+    const frase = frasePerUnMazzoDiUnAltroFormato({
+      delMazzo: ALTRO,
+      corrente: CORRENTE,
+      dove: "salvato",
+    });
+
+    expect(frase).toMatch(/cancell/u);
+    expect(frase).not.toMatch(/importat/u);
+  });
+
+  it("su un file da importare dice che non l'ha importato", () => {
+    const frase = frasePerUnMazzoDiUnAltroFormato({
+      delMazzo: ALTRO,
+      corrente: CORRENTE,
+      dove: "da-importare",
+    });
+
+    expect(frase).toMatch(/non l.ho importato/u);
   });
 });

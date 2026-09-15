@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  idDaRiscrivere,
   interpretaMazzoSalvato,
   nomePulito,
   nuovoId,
@@ -26,6 +27,41 @@ const SALVATO: MazzoSalvato = {
     { nome: "Seconda Carta", copie: 2 },
   ],
 };
+
+/**
+ * Ticket 10, dalla revisione: il mazzo in mano quando il documento di formato
+ * si aggiorna in sottofondo diventa di un altro gioco, e «Risalva» lo
+ * riscriveva con le sole carte rimaste nel pool — cancellando alle spalle
+ * dell'utente il mazzo intero.
+ */
+describe("dove si risalva il mazzo in mano", () => {
+  const ADESSO = { nome: "Formato di adesso", impronta: "una-regola/aaa" };
+  const PRIMA = { nome: "Formato di prima", impronta: "altra-regola/bbb" };
+
+  it("sopra se stesso, se è del formato che l'app gioca", () => {
+    const salvati = [{ ...SALVATO, formato: ADESSO }];
+    expect(idDaRiscrivere({ id: "abc" }, salvati, ADESSO)).toBe("abc");
+  });
+
+  it("in un mazzo nuovo, se è di un altro gioco: quello vecchio resta intero", () => {
+    const salvati = [{ ...SALVATO, formato: PRIMA }];
+    expect(idDaRiscrivere({ id: "abc" }, salvati, ADESSO)).toBeUndefined();
+  });
+
+  it("in un mazzo nuovo anche se il salvato il formato non lo dichiara", () => {
+    expect(idDaRiscrivere({ id: "abc" }, [SALVATO], ADESSO)).toBeUndefined();
+  });
+
+  it("sopra se stesso se l'elenco non lo conosce ancora: non se ne fa un doppione", () => {
+    // L'elenco si legge dal deposito dopo il primo disegno: premere «Risalva»
+    // prima non deve moltiplicare il mazzo.
+    expect(idDaRiscrivere({ id: "abc" }, [], ADESSO)).toBe("abc");
+  });
+
+  it("in un mazzo nuovo, se in mano non ce n'è uno salvato", () => {
+    expect(idDaRiscrivere(null, [SALVATO], ADESSO)).toBeUndefined();
+  });
+});
 
 describe("il mazzo salvato", () => {
   it("si rilegge intero, con la richiesta che l'ha prodotto", () => {

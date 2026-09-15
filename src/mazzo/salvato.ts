@@ -32,7 +32,7 @@
  * rifargli le sue terre. Chi li riceve è `mazzo/in-vigore.ts`.
  */
 
-import { identitaSeSiLegge, type IdentitaDiFormato } from "../dati/ambito.js";
+import { identitaSeSiLegge, stessoFormato, type IdentitaDiFormato } from "../dati/ambito.js";
 import { temaSeSiLegge } from "../tema/interpreta.js";
 import type { Tema } from "../tema/tema.js";
 import { DIMENSIONE_MAZZO } from "./taratura.js";
@@ -97,10 +97,11 @@ export type ContenutoMazzo = {
    * Il formato che ha prodotto il mazzo.
    *
    * **Manca** nei mazzi salvati prima che l'app lo scrivesse, e non è un
-   * guasto: quei mazzi si aprono lo stesso, e chi li apre sa che il formato non
-   * lo dichiarano. Perciò è un campo facoltativo e non un campo che a volte è
-   * nullo — un mazzo che dicesse «formato: nessuno» direbbe una cosa che nessuno
-   * ha mai scritto.
+   * guasto di lettura: quei mazzi si leggono e restano nell'elenco. Non si
+   * aprono, però — sono del gioco di prima, e «non si sa» non è «è il mio»
+   * (ticket 10) — e si mostrano in sola lettura con la ragione scritta. Perciò è
+   * un campo facoltativo e non un campo che a volte è nullo — un mazzo che
+   * dicesse «formato: nessuno» direbbe una cosa che nessuno ha mai scritto.
    */
   // Scritto `| undefined` e non solo col punto interrogativo: il progetto
   // distingue il campo assente dal campo scritto assente
@@ -141,6 +142,32 @@ export function nuovoId(): string {
   }
   // Browser vecchi e contesti non sicuri: basta che non si ripeta.
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Il posto nel deposito su cui «Risalva» riscrive il mazzo in mano: il suo, o
+ * `undefined` per un mazzo nuovo.
+ *
+ * Un mazzo aperto può diventare **di un altro gioco** mentre lo si tiene in
+ * mano: il documento di formato si aggiorna in sottofondo. Riscriverlo sul suo
+ * posto lo sostituirebbe con le sole carte che il pool di adesso conosce, e il
+ * mazzo intero sparirebbe alle spalle dell'utente — la cancellazione silenziosa
+ * che il ticket 10 esclude. Si salva accanto, e quello di prima resta in sola
+ * lettura finché non lo cancella lui.
+ *
+ * Un mazzo aperto che l'elenco non conosce ancora — letto dal deposito dopo il
+ * primo disegno — si riscrive sul suo posto: è quel che è sempre successo, e
+ * un doppione per aver premuto troppo presto sarebbe un altro guasto.
+ */
+export function idDaRiscrivere(
+  aperto: { readonly id: string } | null,
+  salvati: readonly MazzoSalvato[],
+  corrente: IdentitaDiFormato,
+): string | undefined {
+  if (aperto === null) return undefined;
+  const salvato = salvati.find((mazzo) => mazzo.id === aperto.id);
+  if (salvato !== undefined && !stessoFormato(salvato.formato, corrente)) return undefined;
+  return aperto.id;
 }
 
 /**

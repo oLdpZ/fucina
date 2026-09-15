@@ -153,6 +153,26 @@
   padding: 0;
 }
 
+/* Il mazzo di un altro gioco: si legge e non si apre (ticket 10). La ragione
+   sta dentro il suo riquadro, col rientro del nome che le sta sopra. */
+.elenco-salvati .in-sola-lettura {
+  padding: 0 calc(var(--passo) * 4) calc(var(--passo) * 3);
+}
+
+.elenco-salvati .in-sola-lettura p {
+  margin: 0;
+  color: var(--inchiostro-tenue);
+  font-size: var(--testo-piccolo);
+}
+
+.elenco-salvati .carte-in-lettura {
+  display: flex;
+  flex-direction: column;
+  margin-top: calc(var(--passo) * 2);
+  font-family: var(--carattere-dati);
+  font-size: var(--dati-minuscolo);
+}
+
 .elenco-salvati .cancella {
   flex: 0 0 auto;
   margin: calc(var(--passo) * 2);

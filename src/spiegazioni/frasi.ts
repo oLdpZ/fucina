@@ -37,6 +37,7 @@
 
 import { NOMI_DEI_COLORI } from "../catalogo/vocabolario.js";
 import type { GuaioDellaCombo } from "../combo/combo.js";
+import type { IdentitaDiFormato } from "../dati/ambito.js";
 import type { ColoreMana } from "../dati/pool.js";
 
 /* --- Come si scrivono i numeri -------------------------------------------- */
@@ -1015,6 +1016,57 @@ export function fraseConLeTerreScartate(grezzi: GrezziDiQuelCheTornaInMano): str
   if (grezzi.terre.length === 0) return grezzi.annuncio;
   const terre = frasePerLeTerreScartate({ terre: grezzi.terre });
   return grezzi.annuncio === null ? terre : `${grezzi.annuncio} ${terre}`;
+}
+
+/** Il formato di un mazzo che l'app non gioca, accanto a quello che gioca. */
+export type GrezziDelMazzoDiUnAltroFormato = {
+  /** Il formato che il mazzo dichiara; assente quando non ne dichiara nessuno. */
+  readonly delMazzo: IdentitaDiFormato | undefined;
+  /** Il formato che l'app gioca adesso. */
+  readonly corrente: IdentitaDiFormato;
+  /** Dove sta il mazzo: fra i salvati del dispositivo, o in un testo da importare. */
+  readonly dove: "salvato" | "da-importare";
+};
+
+/**
+ * **Perché un mazzo non si apre: è di un altro gioco** (ticket 10).
+ *
+ * Chi aveva mazzi salvati prima del cambio di formato li ritrova, e non si
+ * aprono: le loro carte non esistono nel pool. Senza questa frase il mazzo si
+ * aprirebbe mezzo vuoto, o non si aprirebbe e basta — e in tutti e due i casi
+ * l'utente crederebbe a un guasto.
+ *
+ * I nomi vengono dai **documenti di formato**, quello di adesso e quello che il
+ * mazzo si porta dietro: qui non se ne scrive nessuno (ADR-0004). Tre casi, e
+ * nessuno inventa quel che non sa:
+ *
+ * - il mazzo il formato **non lo dichiara**: non si dà un nome a un gioco che il
+ *   mazzo non nomina — si dice che non lo dice, e non perché: può essere un
+ *   mazzo di prima come un testo a cui qualcuno ha tolto le righe;
+ * - lo dichiara con **un altro nome**: si dicono i due nomi;
+ * - lo dichiara con **lo stesso nome** e un'altra impronta: le edizioni o il
+ *   criterio sono diversi sotto lo stesso nome, e scrivere ««X», e l'app gioca
+ *   «X»» sarebbe una frase che si contraddice da sola. Si dice che cosa è
+ *   diverso, e non quale dei due venga prima: le impronte non hanno data, e il
+ *   mazzo può venire da un documento più nuovo come da quello di un altro gruppo.
+ *
+ * La coda cambia con il posto. Un mazzo **salvato** resta: si legge e lo cancella
+ * solo l'utente, e la frase lo promette perché è la promessa del ticket. Un testo
+ * **da importare** non è ancora di nessuno, e non entra.
+ */
+export function frasePerUnMazzoDiUnAltroFormato(grezzi: GrezziDelMazzoDiUnAltroFormato): string {
+  const adesso = `«${grezzi.corrente.nome}»`;
+  const di =
+    grezzi.delMazzo === undefined
+      ? `Questo mazzo non dice di che formato è, e l'app adesso gioca ${adesso}.`
+      : grezzi.delMazzo.nome === grezzi.corrente.nome
+        ? `Questo mazzo è di ${adesso} con altre edizioni ammesse o un altro criterio che decide quali carte esistono: il nome è lo stesso, il gioco no.`
+        : `Questo mazzo è del formato «${grezzi.delMazzo.nome}», e l'app adesso gioca ${adesso}.`;
+  const coda =
+    grezzi.dove === "salvato"
+      ? "Le sue carte qui non si possono rimettere in mano: lo puoi leggere, e resta su questo dispositivo finché non lo cancelli tu."
+      : "Le sue carte qui non si possono giocare, e non l'ho importato.";
+  return `${di} ${coda}`;
 }
 
 /**
