@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { letturaDegliOrologi } from "./deposito.js";
+import { conservatoLetto, letturaDegliOrologi } from "./deposito.js";
 
 const UNO = {
   nome: "Il mazzo di Marco",
@@ -69,5 +69,39 @@ describe("la lettura degli orologi conservati", () => {
     expect(
       letturaDegliOrologi({ come: "nessun-deposito", porta: "non-c-e", esito: null }).come,
     ).toBe("mai-salvati");
+  });
+});
+
+/**
+ * Il ticket 65: la stessa distinzione, per il documento di formato e il listino
+ * presi in sottofondo. Un deposito che non si è fatto guardare può tenere una
+ * copia più fresca di quella inclusa, e dirlo vuoto la perde senza saperlo.
+ */
+describe("la lettura di un dato conservato", () => {
+  it("consegna quel che il deposito ha, così com'è", () => {
+    expect(conservatoLetto({ come: "fatta", porta: "aperta", esito: { data: 1 } })).toEqual({
+      come: "c-e",
+      grezzo: { data: 1 },
+    });
+  });
+
+  it("una voce che non c'è è un vuoto", () => {
+    expect(conservatoLetto({ come: "fatta", porta: "aperta", esito: null }).come).toBe("vuoto");
+    expect(conservatoLetto({ come: "fatta", porta: "aperta", esito: undefined }).come).toBe("vuoto");
+  });
+
+  it("un deposito che c'è e non si è fatto guardare non è un vuoto", () => {
+    expect(conservatoLetto({ come: "rifiutata", porta: "aperta", esito: null }).come).toBe(
+      "non-si-e-visto",
+    );
+    expect(conservatoLetto({ come: "nessun-deposito", porta: "non-si-vede", esito: null }).come).toBe(
+      "non-si-e-visto",
+    );
+  });
+
+  it("un dispositivo senza depositi è un vuoto che sa di esserlo", () => {
+    expect(conservatoLetto({ come: "nessun-deposito", porta: "non-c-e", esito: null }).come).toBe(
+      "vuoto",
+    );
   });
 });

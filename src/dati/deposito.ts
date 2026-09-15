@@ -239,9 +239,39 @@ function aperta<T>(
  * può essere cambiata, e il deposito troncato dal browser che recupera spazio.
  */
 
-/** Il documento di formato conservato, grezzo; `null` se non ce n'è. */
-export function leggiFormatoConservato(): Promise<unknown> {
-  return transazione<unknown>(SCAFFALE, "readonly", (scaffale) => scaffale.get(CHIAVE_FORMATO));
+/**
+ * Un dato conservato, e **com'è andata** a guardarlo.
+ *
+ * `vuoto` e `non-si-e-visto` non sono la stessa risposta per la ragione del
+ * ticket 54, e il ticket 65 la porta qui: un deposito che c'è e non si è fatto
+ * guardare — un'altra scheda che ne tiene aperta una versione vecchia — può
+ * tenere un documento o un listino più freschi di quelli inclusi. Dirlo vuoto
+ * apre l'app sui dati inclusi in silenzio, e l'aggiornamento perso nessuno lo
+ * sa.
+ */
+export type Conservato =
+  | { readonly come: "c-e"; readonly grezzo: unknown }
+  | { readonly come: "vuoto" }
+  | { readonly come: "non-si-e-visto" };
+
+/**
+ * Che cosa dice la risposta del deposito su un dato conservato.
+ *
+ * È la regola del ticket 54, una volta sola: la seguono il documento, il
+ * listino e gli orologi. Pura, perché si prova senza IndexedDB.
+ */
+export function conservatoLetto({ come, porta, esito }: Eseguita<unknown>): Conservato {
+  // Dove IndexedDB non si usa affatto non ci è mai entrato niente.
+  if (porta === "non-c-e") return { come: "vuoto" };
+  if (come !== "fatta") return { come: "non-si-e-visto" };
+  return esito === null || esito === undefined ? { come: "vuoto" } : { come: "c-e", grezzo: esito };
+}
+
+/** Il documento di formato conservato, grezzo, e se non c'è **perché**. */
+export async function leggiFormatoConservato(): Promise<Conservato> {
+  return conservatoLetto(
+    await eseguita<unknown>(SCAFFALE, "readonly", (scaffale) => scaffale.get(CHIAVE_FORMATO)),
+  );
 }
 
 /** Tiene da parte il documento per la prossima apertura. `false` se non si è potuto. */
@@ -257,9 +287,11 @@ export async function dimenticaFormato(): Promise<void> {
   await transazione(SCAFFALE, "readwrite", (scaffale) => scaffale.delete(CHIAVE_FORMATO));
 }
 
-/** Il listino dei prezzi conservato, grezzo; `null` se non ce n'è. */
-export function leggiListinoConservato(): Promise<unknown> {
-  return transazione<unknown>(SCAFFALE, "readonly", (scaffale) => scaffale.get(CHIAVE_LISTINO));
+/** Il listino dei prezzi conservato, grezzo, e se non c'è **perché**. */
+export async function leggiListinoConservato(): Promise<Conservato> {
+  return conservatoLetto(
+    await eseguita<unknown>(SCAFFALE, "readonly", (scaffale) => scaffale.get(CHIAVE_LISTINO)),
+  );
 }
 
 /** Tiene da parte il listino per la prossima apertura. `false` se non si è potuto. */
@@ -354,24 +386,20 @@ export async function leggiOrologiSalvati(): Promise<LetturaDegliOrologi> {
  * si prova: IndexedDB qui non serve, e senza questa separazione la sola regola
  * che il ticket 54 scrive resterebbe l'unica cosa non coperta da un test.
  */
-export function letturaDegliOrologi({
-  come,
-  porta,
-  esito: letto,
-}: Eseguita<unknown>): LetturaDegliOrologi {
+export function letturaDegliOrologi(risposta: Eseguita<unknown>): LetturaDegliOrologi {
   // Un dispositivo dove IndexedDB non si usa affatto non ha mai conservato
   // niente: là dentro non c'è nessun mazzo dell'utente perché non ce n'è mai
   // potuto entrare uno, e dirgli «non si è potuto leggere» gli toglierebbe il
   // file di cortesia per un pericolo che non esiste. È un vuoto che sa di
-  // essere vuoto, e vale come «non ha mai deciso».
-  if (porta === "non-c-e") return { come: "mai-salvati" };
-  // Tutto il resto — il deposito che non si è fatto aprire, quello che ha
-  // rifiutato la lettura — è quel che sta sul dispositivo rimasto invisibile.
-  if (come !== "fatta") return { come: "non-si-e-letto" };
-  if (letto === null || letto === undefined) return { come: "mai-salvati" };
+  // essere vuoto, e vale come «non ha mai deciso». Tutto il resto — il
+  // deposito che non si è fatto aprire, quello che ha rifiutato la lettura — è
+  // quel che sta sul dispositivo rimasto invisibile.
+  const conservato = conservatoLetto(risposta);
+  if (conservato.come === "non-si-e-visto") return { come: "non-si-e-letto" };
+  if (conservato.come === "vuoto") return { come: "mai-salvati" };
   // Quel che elenco non è vale come «non ha mai deciso»: là non c'è nessuna
   // voce da tenere, e il file del manutentore è meglio di una schermata vuota.
-  const orologi = orologiCheSiLeggono(letto);
+  const orologi = orologiCheSiLeggono(conservato.grezzo);
   return orologi === undefined ? { come: "mai-salvati" } : { come: "letti", orologi };
 }
 

@@ -26,7 +26,9 @@ import { Vincoli } from "./componenti/Vincoli.js";
 import {
   aggiornaInSottofondo,
   dataDeiPrezzi,
+  ancoraNonVisti,
   datiDaAprire,
+  type Aggiornabile,
   type Rifiuto,
 } from "./dati/aggiornamento.js";
 import { dimenticaOrologi, leggiOrologiSalvati, salvaOrologi } from "./dati/deposito.js";
@@ -34,7 +36,7 @@ import { identitaDelFormato } from "./dati/ambito.js";
 import { dataInItaliano } from "./dati/carica-pool.js";
 import type { Formato } from "./dati/formato.js";
 import type { Listino } from "./dati/listino.js";
-import { notaDelRifiuto } from "./dati/note-dell-aggiornamento.js";
+import { notaDelNonVisto, notaDelRifiuto } from "./dati/note-dell-aggiornamento.js";
 import { poolInVigore } from "./dati/pool-in-vigore.js";
 import type { Carta, Pool } from "./dati/pool.js";
 import { FILTRI_VUOTI, type Filtri } from "./catalogo/filtri.js";
@@ -98,6 +100,11 @@ export function App() {
   const [listino, setListino] = useState<Listino | null>(null);
   /** Gli aggiornamenti arrivati rotti in questa sessione, da dire in fondo. */
   const [rifiuti, setRifiuti] = useState<readonly Rifiuto[]>([]);
+  /**
+   * Quel che il deposito del dispositivo non ha lasciato guardare all'apertura,
+   * finché la rete non ha portato qualcosa di fresco almeno quanto (ticket 65).
+   */
+  const [nonVisti, setNonVisti] = useState<readonly Aggiornabile[]>([]);
   const [guasto, setGuasto] = useState<string | null>(null);
   /**
    * Il pool **in vigore**: quello congelato, coi prezzi e il documento di adesso
@@ -342,6 +349,7 @@ export function App() {
         setCongelato(dati.pool);
         setFormato(dati.formato);
         setListino(dati.listino);
+        setNonVisti(dati.nonVisti);
       },
       (errore: unknown) => {
         if (vivo) setGuasto(errore instanceof Error ? errore.message : String(errore));
@@ -500,6 +508,11 @@ export function App() {
         // Un aggiornamento arrivato rotto invece si dice: si è tenuto il
         // vecchio, e chi legge le date in fondo deve sapere perché sono quelle.
         if (esito.rifiuti.length > 0) setRifiuti(esito.rifiuti);
+        // Quel che la rete ha confermato non ha più niente di più fresco
+        // nascosto nel deposito, e la sua nota tace.
+        if (esito.confermati.length > 0) {
+          setNonVisti((prima) => ancoraNonVisti(prima, esito.confermati));
+        }
       })
       // Il controllo non fallisce mai rumorosamente, e se un giorno lo facesse
       // non sarebbe comunque una ragione per rovinare la schermata a chi legge.
@@ -865,14 +878,24 @@ export function App() {
           </p>
         ) : null}
         {congelato !== null && formato !== null
-          ? rifiuti.map((rifiuto) => (
-              <p class="data-dati" key={rifiuto.cosa}>
-                {notaDelRifiuto(rifiuto, {
-                  documentoDel: formato.aggiornatoIl,
-                  prezziDel: dataDeiPrezzi(congelato, listino),
-                })}
-              </p>
-            ))
+          ? (() => {
+              const inUso = {
+                documentoDel: formato.aggiornatoIl,
+                prezziDel: dataDeiPrezzi(congelato, listino),
+              };
+              return [
+                ...rifiuti.map((rifiuto) => (
+                  <p class="data-dati" key={rifiuto.cosa}>
+                    {notaDelRifiuto(rifiuto, inUso)}
+                  </p>
+                )),
+                ...nonVisti.map((cosa) => (
+                  <p class="data-dati" key={`non-visto-${cosa}`}>
+                    {notaDelNonVisto(cosa, inUso)}
+                  </p>
+                )),
+              ];
+            })()
           : null}
         <NoteLegali />
       </footer>

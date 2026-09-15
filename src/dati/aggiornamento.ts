@@ -36,6 +36,7 @@ import {
   dimenticaPoolDiIeri,
   leggiFormatoConservato,
   leggiListinoConservato,
+  type Conservato,
 } from "./deposito.js";
 import type { Formato } from "./formato.js";
 import { interpretaListino, percorsoDelListino, type Listino } from "./listino.js";
@@ -53,7 +54,21 @@ export type DatiAperti = {
 };
 
 /** Un aggiornamento arrivato e non preso, con la frase che dice perché. */
-export type Rifiuto = { cosa: "documento" | "listino"; motivo: string };
+export type Rifiuto = { cosa: Aggiornabile; motivo: string };
+
+/** Le due cose che invecchiano, e le sole che l'app va a chiedere alla rete. */
+export type Aggiornabile = "documento" | "listino";
+
+/**
+ * I dati da cui l'app parte, e quel che sul dispositivo **non si è visto**.
+ *
+ * `nonVisti` non è un guasto e non ferma niente: l'app si apre sui dati
+ * inclusi lo stesso. È la differenza fra «non c'è niente di conservato» e «il
+ * deposito non si è fatto guardare» (ticket 65), che senza questo campo
+ * arrivavano all'app come la stessa risposta — e un aggiornamento preso in una
+ * sessione passata si perdeva senza che nessuno lo sapesse.
+ */
+export type AperturaDeiDati = DatiAperti & { nonVisti: readonly Aggiornabile[] };
 
 /** Come si giudica un file arrivato dalla rete. */
 export type Valutazione<T> =
@@ -205,8 +220,8 @@ export const TETTO_DEPOSITO = 3000;
 export type LettureDellApertura = {
   pool: () => Promise<Pool>;
   formato: () => Promise<Formato>;
-  formatoConservato: () => Promise<unknown>;
-  listinoConservato: () => Promise<unknown>;
+  formatoConservato: () => Promise<Conservato>;
+  listinoConservato: () => Promise<Conservato>;
   dimenticaFormato: () => Promise<void>;
   dimenticaListino: () => Promise<void>;
   /** Libera il posto del pool che l'app scaricava prima del ticket 11. */
@@ -238,8 +253,13 @@ const LETTURE: LettureDellApertura = {
  *
  * Il posto dove l'app teneva il pool scaricato si sgombera qui, una volta per
  * apertura: erano quattro megabyte, e da questa versione nessuno li rilegge.
+ *
+ * Quel che il deposito non ha lasciato guardare si apre come l'assenza — i dati
+ * inclusi — ma **non si dimentica** e si nomina in `nonVisti` (ticket 65).
  */
-export async function datiDaAprire(letture: LettureDellApertura = LETTURE): Promise<DatiAperti> {
+export async function datiDaAprire(
+  letture: LettureDellApertura = LETTURE,
+): Promise<AperturaDeiDati> {
   void letture.sgombera().catch(() => {});
 
   const [pool, incluso, formatoConservato, listinoConservato] = await Promise.all([
@@ -250,14 +270,33 @@ export async function datiDaAprire(letture: LettureDellApertura = LETTURE): Prom
   ]);
 
   const inclusoCheSiApplica = incluso instanceof Error ? incluso : formatoApplicabile(incluso, pool);
-  const sceltaDelFormato = scegliFormato(inclusoCheSiApplica, formatoConservato, pool);
+  const sceltaDelFormato = scegliFormato(inclusoCheSiApplica, grezzoDi(formatoConservato), pool);
   if (sceltaDelFormato.dimentica) void letture.dimenticaFormato().catch(() => {});
   if (sceltaDelFormato.formato instanceof Error) throw sceltaDelFormato.formato;
 
-  const sceltaDelListino = scegliListino(listinoConservato, pool);
+  const sceltaDelListino = scegliListino(grezzoDi(listinoConservato), pool);
   if (sceltaDelListino.dimentica) void letture.dimenticaListino().catch(() => {});
 
-  return { pool, formato: sceltaDelFormato.formato, listino: sceltaDelListino.listino };
+  const nonVisti: Aggiornabile[] = [];
+  if (formatoConservato.come === "non-si-e-visto") nonVisti.push("documento");
+  if (listinoConservato.come === "non-si-e-visto") nonVisti.push("listino");
+
+  return { pool, formato: sceltaDelFormato.formato, listino: sceltaDelListino.listino, nonVisti };
+}
+
+/**
+ * Quel che sul dispositivo non si è visto e che la rete non ha ancora reso
+ * superfluo.
+ *
+ * Il documento e il listino conservati sono arrivati dalla rete in una sessione
+ * passata: uno che arriva adesso e si applica è fresco almeno quanto loro, e da
+ * lì in poi «potrebbe essercene uno più fresco» non è più vero.
+ */
+export function ancoraNonVisti(
+  nonVisti: readonly Aggiornabile[],
+  confermati: readonly Aggiornabile[],
+): Aggiornabile[] {
+  return nonVisti.filter((cosa) => !confermati.includes(cosa));
 }
 
 /** Quel che l'aggiornamento in sottofondo ha preso, e quel che ha rifiutato. */
@@ -267,6 +306,11 @@ export type Aggiornamento = {
   /** Il listino più fresco preso, o `null` se restano i prezzi in uso. */
   listino: Listino | null;
   rifiuti: Rifiuto[];
+  /**
+   * Quel che è arrivato e si applica, preso o già in uso: dopo, niente di
+   * conservato può essere più fresco (ticket 65).
+   */
+  confermati: Aggiornabile[];
 };
 
 /** I tubi del sottofondo: la rete in andata, il deposito in ritorno. */
@@ -300,8 +344,9 @@ export async function aggiornaInSottofondo(
   inUso: DatiAperti,
   tubi: TubiDelSottofondo = TUBI,
 ): Promise<Aggiornamento> {
-  const nessuno: Aggiornamento = { formato: null, listino: null, rifiuti: [] };
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return nessuno;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return { formato: null, listino: null, rifiuti: [], confermati: [] };
+  }
 
   const nonArrivato = (): Arrivo => ({ arrivato: false });
   const [arrivoDelFormato, arrivoDelListino] = await Promise.all([
@@ -309,10 +354,11 @@ export async function aggiornaInSottofondo(
     tubi.scaricaListino().catch(nonArrivato),
   ]);
 
-  const esito: Aggiornamento = { ...nessuno, rifiuti: [] };
+  const esito: Aggiornamento = { formato: null, listino: null, rifiuti: [], confermati: [] };
 
   if (arrivoDelFormato.arrivato) {
     const valutato = valutaFormato(arrivoDelFormato.dati, inUso.formato, inUso.pool);
+    if (valutato.tipo !== "rifiutato") esito.confermati.push("documento");
     if (valutato.tipo === "preso") {
       esito.formato = valutato.dato;
       // Si mostra subito e si mette da parte con comodo: lo spazio esaurito non
@@ -330,6 +376,7 @@ export async function aggiornaInSottofondo(
       dataDeiPrezzi(inUso.pool, inUso.listino),
       inUso.pool,
     );
+    if (valutato.tipo !== "rifiutato") esito.confermati.push("listino");
     if (valutato.tipo === "preso") {
       esito.listino = valutato.dato;
       void tubi.conservaListino(arrivoDelListino.dati).catch(() => false);
@@ -362,14 +409,27 @@ function comeErrore(errore: unknown): Error {
   return errore instanceof Error ? errore : new Error(String(errore));
 }
 
+/** Il dato grezzo da confrontare, o `null` quando non c'è niente da confrontare. */
+function grezzoDi(conservato: Conservato): unknown {
+  return conservato.come === "c-e" ? conservato.grezzo : null;
+}
+
 /**
- * Aspetta il deposito, ma non all'infinito: scaduto il tetto si va avanti come
- * se non ci fosse niente conservato. Un deposito che si rompe vale un deposito
- * vuoto — non è un guasto dell'app.
+ * Aspetta il deposito, ma non all'infinito, e va avanti coi dati inclusi — non
+ * è un guasto dell'app.
+ *
+ * Una lettura che **solleva** non si è vista (ticket 65). Il tetto scaduto
+ * invece vale un vuoto, come il dispositivo senza IndexedDB: il deposito che
+ * resta muto per sempre è quello dei contesti ristretti, dove non ci è mai
+ * entrato niente — anche la fila delle scritture ci resta ferma dietro. Dirlo
+ * «non visto» scriverebbe la nota a ogni apertura per un pericolo che non
+ * esiste, e un'altra scheda che blocca risponde subito, con `onblocked`.
  */
-function entroIlTetto(leggi: () => Promise<unknown>): Promise<unknown> {
+function entroIlTetto(leggi: () => Promise<Conservato>): Promise<Conservato> {
   return Promise.race([
-    (async () => leggi())().catch(() => null),
-    new Promise<null>((risolvi) => setTimeout(() => risolvi(null), TETTO_DEPOSITO)),
+    (async () => leggi())().catch((): Conservato => ({ come: "non-si-e-visto" })),
+    new Promise<Conservato>((risolvi) =>
+      setTimeout(() => risolvi({ come: "vuoto" }), TETTO_DEPOSITO),
+    ),
   ]);
 }

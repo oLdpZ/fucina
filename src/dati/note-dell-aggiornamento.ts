@@ -8,7 +8,7 @@
  * spiegare.
  */
 
-import type { Rifiuto } from "./aggiornamento.js";
+import type { Aggiornabile, Rifiuto } from "./aggiornamento.js";
 import { dataInItaliano } from "./carica-pool.js";
 
 /**
@@ -26,5 +26,26 @@ export function notaDelRifiuto(
     ? `È arrivato un documento di formato che non si può usare. ${rifiuto.motivo} ` +
         `Resta quello del ${dataInItaliano(inUso.documentoDel)}.`
     : `Sono arrivati dei prezzi che non si possono usare. ${rifiuto.motivo} ` +
+        `Restano quelli del ${dataInItaliano(inUso.prezziDel)}.`;
+}
+
+/**
+ * La nota di un dato conservato che il deposito non ha lasciato guardare
+ * (ticket 65), con la data di quel che resta in uso.
+ *
+ * Dice solo quel che si sa: che là **potrebbe** esserci qualcosa di più fresco.
+ * Non promette che ci sia — il deposito può anche essere vuoto — e non dà un
+ * rimedio, perché le cause di un deposito che non si fa guardare sono più d'una.
+ */
+export function notaDelNonVisto(
+  cosa: Aggiornabile,
+  inUso: { documentoDel: string; prezziDel: string },
+): string {
+  return cosa === "documento"
+    ? "Sul dispositivo potrebbe esserci un documento di formato più fresco, preso in una " +
+        "sessione passata, che non si è potuto leggere. " +
+        `Resta quello del ${dataInItaliano(inUso.documentoDel)}.`
+    : "Sul dispositivo potrebbero esserci dei prezzi più freschi, presi in una sessione " +
+        "passata, che non si sono potuti leggere. " +
         `Restano quelli del ${dataInItaliano(inUso.prezziDel)}.`;
 }

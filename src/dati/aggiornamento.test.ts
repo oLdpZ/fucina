@@ -4,6 +4,7 @@ import { POOL_FINTO } from "../catalogo/pool-finto.js";
 import {
   TETTO_DEPOSITO,
   aggiornaInSottofondo,
+  ancoraNonVisti,
   datiDaAprire,
   piuFresca,
   valutaFormato,
@@ -76,6 +77,11 @@ const PIU_FRESCO_ANCORA = "2026-09-20T09:00:00.000+00:00";
 
 /** Il documento come arriverebbe dalla rete o dal deposito: JSON. */
 const grezzo = (formato: Formato): unknown => JSON.parse(JSON.stringify(formato));
+
+/** Un deposito che si è fatto guardare e ha dentro questo. */
+const conserva = (dati: unknown) => async () => ({ come: "c-e" as const, grezzo: dati });
+/** Un deposito che c'è e non si è fatto guardare (ticket 65). */
+const nonSiVede = async () => ({ come: "non-si-e-visto" as const });
 
 describe("quale data è più fresca", () => {
   it("riconosce una data più recente, anche scritta in un altro modo", () => {
@@ -170,8 +176,8 @@ function letture(cambi: Partial<LettureDellApertura> = {}): LettureDellApertura 
   return {
     pool: async () => POOL,
     formato: async () => FORMATO,
-    formatoConservato: async () => null,
-    listinoConservato: async () => null,
+    formatoConservato: async () => ({ come: "vuoto" }),
+    listinoConservato: async () => ({ come: "vuoto" }),
     dimenticaFormato: async () => void dimenticati.push("formato"),
     dimenticaListino: async () => void dimenticati.push("listino"),
     sgombera: async () => {},
@@ -182,18 +188,23 @@ function letture(cambi: Partial<LettureDellApertura> = {}): LettureDellApertura 
 
 describe("l'apertura dell'app", () => {
   it("senza niente sul dispositivo apre i dati inclusi, coi prezzi del pool", async () => {
-    expect(await datiDaAprire(letture())).toEqual({ pool: POOL, formato: FORMATO, listino: null });
+    expect(await datiDaAprire(letture())).toEqual({
+      pool: POOL,
+      formato: FORMATO,
+      listino: null,
+      nonVisti: [],
+    });
   });
 
   it("apre il documento conservato, se è più fresco", async () => {
-    const aperti = await datiDaAprire(letture({ formatoConservato: async () => grezzo(PIU_FRESCO) }));
+    const aperti = await datiDaAprire(letture({ formatoConservato: conserva(grezzo(PIU_FRESCO)) }));
     expect(aperti.formato).toEqual(PIU_FRESCO);
   });
 
   it("dimentica il documento conservato che un'app aggiornata ha superato", async () => {
     const lette = letture({
       formato: async () => PIU_FRESCO,
-      formatoConservato: async () => grezzo(FORMATO),
+      formatoConservato: conserva(grezzo(FORMATO)),
     });
     const aperti = await datiDaAprire(lette);
     expect(aperti.formato).toEqual(PIU_FRESCO);
@@ -201,7 +212,7 @@ describe("l'apertura dell'app", () => {
   });
 
   it("dimentica il documento conservato che non si applica più al pool", async () => {
-    const lette = letture({ formatoConservato: async () => grezzo(DI_UN_ALTRO_GIOCO) });
+    const lette = letture({ formatoConservato: conserva(grezzo(DI_UN_ALTRO_GIOCO)) });
     expect((await datiDaAprire(lette)).formato).toEqual(FORMATO);
     expect(lette.dimenticati).toEqual(["formato"]);
   });
@@ -212,7 +223,7 @@ describe("l'apertura dell'app", () => {
         formato: async () => {
           throw new Error("Il documento di formato non si legge.");
         },
-        formatoConservato: async () => grezzo(FORMATO),
+        formatoConservato: conserva(grezzo(FORMATO)),
       }),
     );
     expect(aperti.formato).toEqual(FORMATO);
@@ -243,13 +254,13 @@ describe("l'apertura dell'app", () => {
   });
 
   it("apre il listino conservato, se è più fresco dei prezzi del pool", async () => {
-    const aperti = await datiDaAprire(letture({ listinoConservato: async () => listino(FRESCO) }));
+    const aperti = await datiDaAprire(letture({ listinoConservato: conserva(listino(FRESCO)) }));
     expect(aperti.listino?.generatoIl).toBe(FRESCO);
   });
 
   it("dimentica il listino conservato che non è più fresco, o che è incompleto", async () => {
     for (const vecchio of [listino(POOL.generatoIl), listino(FRESCO, 2)]) {
-      const lette = letture({ listinoConservato: async () => vecchio });
+      const lette = letture({ listinoConservato: conserva(vecchio) });
       expect((await datiDaAprire(lette)).listino).toBeNull();
       expect(lette.dimenticati).toEqual(["listino"]);
     }
@@ -268,7 +279,14 @@ describe("l'apertura dell'app", () => {
         }),
       );
       await vi.advanceTimersByTimeAsync(TETTO_DEPOSITO + 1);
-      await expect(apertura).resolves.toEqual({ pool: POOL, formato: FORMATO, listino: null });
+      // Il deposito muto è quello dove non ci è mai entrato niente: non si
+      // scrive una nota a ogni apertura per un pericolo che non esiste.
+      await expect(apertura).resolves.toEqual({
+        pool: POOL,
+        formato: FORMATO,
+        listino: null,
+        nonVisti: [],
+      });
     } finally {
       vi.useRealTimers();
     }
@@ -282,6 +300,29 @@ describe("l'apertura dell'app", () => {
       letture({ formatoConservato: rotto, listinoConservato: rotto, sgombera: rotto }),
     );
     expect(aperti.formato).toEqual(FORMATO);
+    expect(aperti.nonVisti).toEqual(["documento", "listino"]);
+  });
+
+  /**
+   * Il ticket 65. Un'altra scheda che tiene aperta una versione vecchia del
+   * deposito non lo svuota: là dentro può esserci un documento più fresco di
+   * quello incluso. L'app si apre lo stesso sui dati inclusi, ma non come se non
+   * ci fosse niente — e non dimentica quel che non ha visto.
+   */
+  it("un deposito che non si è fatto guardare non si racconta vuoto", async () => {
+    const lette = letture({ formatoConservato: nonSiVede });
+    const aperti = await datiDaAprire(lette);
+    expect(aperti.formato).toEqual(FORMATO);
+    expect(aperti.nonVisti).toEqual(["documento"]);
+    expect(lette.dimenticati).toEqual([]);
+  });
+
+  it("vale anche per il listino", async () => {
+    const lette = letture({ listinoConservato: nonSiVede });
+    const aperti = await datiDaAprire(lette);
+    expect(aperti.listino).toBeNull();
+    expect(aperti.nonVisti).toEqual(["listino"]);
+    expect(lette.dimenticati).toEqual([]);
   });
 });
 
@@ -311,6 +352,7 @@ describe("l'aggiornamento in sottofondo", () => {
       formato: null,
       listino: null,
       rifiuti: [],
+      confermati: [],
     });
     expect(tubo.conservati).toEqual([]);
   });
@@ -365,6 +407,31 @@ describe("l'aggiornamento in sottofondo", () => {
         throw new TypeError("Failed to fetch");
       },
     });
-    expect(esito).toEqual({ formato: null, listino: null, rifiuti: [] });
+    expect(esito).toEqual({ formato: null, listino: null, rifiuti: [], confermati: [] });
+  });
+
+  /**
+   * Il ticket 65, dall'altra parte. Quel che il deposito conservava è arrivato
+   * dalla rete in una sessione passata: un documento che arriva adesso e si
+   * applica è fresco almeno quanto quello, preso o no che sia.
+   */
+  it("conferma quel che è arrivato e si applica, preso o già in uso", async () => {
+    const preso = await aggiornaInSottofondo(IN_USO, tubi(grezzo(PIU_FRESCO), "non-arriva"));
+    expect(preso.confermati).toEqual(["documento"]);
+    const giaInUso = await aggiornaInSottofondo(IN_USO, tubi(grezzo(FORMATO), listino(POOL.generatoIl)));
+    expect(giaInUso.confermati).toEqual(["documento", "listino"]);
+  });
+
+  it("non conferma quel che è arrivato rotto", async () => {
+    const esito = await aggiornaInSottofondo(IN_USO, tubi("<!doctype html>", listino(FRESCO, 5)));
+    expect(esito.confermati).toEqual([]);
+  });
+});
+
+describe("quel che non si è visto, dopo il sottofondo", () => {
+  it("resta da dire finché la rete non ha confermato niente di più fresco", () => {
+    expect(ancoraNonVisti(["documento", "listino"], [])).toEqual(["documento", "listino"]);
+    expect(ancoraNonVisti(["documento", "listino"], ["documento"])).toEqual(["listino"]);
+    expect(ancoraNonVisti(["listino"], ["documento", "listino"])).toEqual([]);
   });
 });
