@@ -553,6 +553,39 @@ describe("la base dentro un budget", () => {
     expect(impossibile.terre.reduce((somma, voce) => somma + voce.copie, 0)).toBe(22);
   });
 
+  it("dichiara di non stare nel tetto quando le rinunce non sono bastate", () => {
+    // Il ticket 63. Qui le rinunce ci sono davvero — Cinder Crossing da sei
+    // euro se ne va — ma sotto il prezzo delle sole terre base non si scende, e
+    // la base torna sopra il tetto lo stesso. Chi legge `rinunceDelBudget` non
+    // ha modo di distinguere questo dal tetto rispettato, ed è per questo che
+    // la frase annunciava un risultato che non c'era.
+    const impossibile = conBudget(0);
+
+    expect(impossibile.rinunceDelBudget.length).toBeGreaterThan(0);
+    expect(costo(impossibile)).toBeGreaterThan(0);
+    expect(impossibile.dentroIlBudget).toBe(false);
+  });
+
+  it("dichiara di stare nel tetto quando il tetto l'ha rispettato", () => {
+    // L'altra faccia, perché una bandiera sempre falsa passerebbe il test di
+    // sopra senza dire niente di vero.
+    //
+    // Qui si prova **solo** la bandiera: che la base costi davvero meno di due
+    // euro lo inchioda il test «con un budget stretto non lo sfonda», più
+    // sopra. Rifarlo qui legherebbe la bandiera a una somma che non è la sua —
+    // `dentroIlBudget` viene da `nonSupera`, che perdona mezzo centesimo, e si
+    // misura su `contoDelMazzo(...).minimo`, mentre `costo` qui somma
+    // `prezzo.euro`. Oggi le due coincidono sul pool finto; il giorno che non
+    // coincidessero il test cadrebbe su una bandiera giusta.
+    const stretta = conBudget(2);
+
+    expect(stretta.dentroIlBudget).toBe(true);
+  });
+
+  it("senza tetto non c'è niente da non rispettare", () => {
+    expect(conBudget(null).dentroIlBudget).toBe(true);
+  });
+
   it("un budget non fa mai costare la base **più** che senza budget", () => {
     // Il caso che la prima stesura sbagliava. Togliere la copia più cara e
     // metterci una terra base sembra sempre un risparmio, e non lo è: nel pool

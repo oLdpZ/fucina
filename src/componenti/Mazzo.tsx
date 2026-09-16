@@ -247,6 +247,11 @@ export function Mazzo({
                   tetto: tettoDiSpesa,
                   conIlSuoTema: temaDelMazzo !== null,
                   incontabili,
+                  // È questa la riga che promette per prima, e che promette
+                  // **sempre**: senza, prometteva «scelte per starci dentro» in
+                  // cima e la frase delle rinunce la smentiva in fondo, sulla
+                  // stessa schermata (ticket 63).
+                  dentroIlTetto: base.dentroIlBudget,
                 })}
               </p>
             ) : null}
@@ -287,6 +292,10 @@ export function Mazzo({
           <p class="spiegazione avviso-budget-terre">
             {frasePerLeRinunceDelBudget({
               tetto: tettoDiSpesa,
+              // Se la discesa ce l'ha fatta davvero. Senza, la frase
+              // racconterebbe una riuscita anche quando la base si è fermata
+              // sopra il tetto (ticket 63).
+              dentroIlTetto: base.dentroIlBudget,
               rinunce: base.rinunceDelBudget.map((voce) => ({
                 nome: voce.carta.nome,
                 copie: voce.copie,

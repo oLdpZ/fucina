@@ -253,8 +253,17 @@ export function MazziSalvati({
     () => confrontoFraTemiSulleTerre(pool.carte, tema, temaDeiVincoli),
     [pool, tema, temaDeiVincoli],
   );
+  /**
+   * Il foglio per l'arbitro, e se le terre che ci finiscono stanno nel tetto.
+   *
+   * Due cose da un memo solo perché vengono dalla **stessa** base: chiedere la
+   * bandiera a un secondo `analizzaBaseDiTerre` darebbe due conti che possono
+   * divergere, cioè una riga che promette su una base e una lista scritta da
+   * un'altra — il guasto del ticket 19 nella sua forma più difficile da vedere.
+   */
   const daTorneo = useMemo(() => {
-    if (mazzo.length === 0) return "";
+    // Nessuna terra non costa niente, e nessun tetto lo può sforare.
+    if (mazzo.length === 0) return { testo: "", dentroIlTetto: true };
     // Lo stesso budget della schermata del mazzo: è quella che mostra al
     // giocatore le terre che avrà in mano, e il foglio per l'arbitro deve
     // dirne le stesse. Con `null` qui, un mazzo costruito sotto un tetto usciva
@@ -263,11 +272,14 @@ export function MazziSalvati({
       terreVolute,
       budget: euroPerLeTerre,
     });
-    return listaDaTorneo(
-      base.righe.map((riga) => ({ nome: riga.carta.nome, copie: riga.copie })),
-      base.terre.map((voce) => ({ nome: voce.carta.nome, copie: voce.copie })),
-      formato,
-    );
+    return {
+      testo: listaDaTorneo(
+        base.righe.map((riga) => ({ nome: riga.carta.nome, copie: riga.copie })),
+        base.terre.map((voce) => ({ nome: voce.carta.nome, copie: voce.copie })),
+        formato,
+      ),
+      dentroIlTetto: base.dentroIlBudget,
+    };
   }, [mazzo, terreDelPool, terreVolute, euroPerLeTerre, formato]);
 
   /**
@@ -541,7 +553,14 @@ export function MazziSalvati({
           */}
           {tettoDiSpesa !== null ? (
             <p class="nota vincoli-in-vigore">
-              {frasePerIlTettoSuQuelCheEsce({ tetto: tettoDiSpesa, incontabili })}
+              {frasePerIlTettoSuQuelCheEsce({
+                tetto: tettoDiSpesa,
+                incontabili,
+                // Dalla stessa base che scrive la lista qui sotto: è il foglio
+                // che esce di casa, e prometterlo dentro una cifra che non
+                // tiene è il ticket 63 dove costa di più.
+                dentroIlTetto: daTorneo.dentroIlTetto,
+              })}
             </p>
           ) : null}
           {/*
@@ -564,7 +583,7 @@ export function MazziSalvati({
             titolo="La lista da consegnare all’arbitro"
             spiegazione="Il formato in testa, poi solo copie e nomi in inglese, terre
               comprese, come le vuole una lista da torneo."
-            testo={daTorneo}
+            testo={daTorneo.testo}
             nomeFile={`${nomeFile(contenuto.nome)}-torneo.txt`}
           />
         </>

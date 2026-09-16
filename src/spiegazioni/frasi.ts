@@ -486,6 +486,15 @@ export type GrezziDelleTerre = {
 export type GrezziDelleRinunce = {
   /** Il tetto chiesto, in euro. */
   tetto: number;
+  /**
+   * Se, dopo tutte queste rinunce, la base **ci sta** davvero nel tetto.
+   *
+   * Non si deduce dalle rinunce: la base scende una copia per volta e si ferma
+   * quando nessuna rinuncia abbassa più il conto, che è una resa e non una
+   * riuscita — con l'elenco pieno uguale. Va chiesto a chi le terre le ha
+   * scelte (ticket 63).
+   */
+  dentroIlTetto: boolean;
   /** Le copie che il budget ha tolto, dalla più cara: nome, copie, euro. */
   rinunce: readonly { nome: string; copie: number; euro: number }[];
 };
@@ -501,6 +510,28 @@ export type GrezziDelleRinunce = {
  * cosa verificabile: quante copie e quanti euro. Senza, il giocatore leggerebbe
  * che il tetto gli è costato qualcosa senza poter decidere se valga la pena
  * alzarlo.
+ *
+ * ## Due frasi, perché sono due notizie
+ *
+ * «Per stare dentro X €» è il racconto di una **riuscita**, e va detto solo
+ * quando c'è stata. La base si ferma anche sopra il tetto, quando nessuna
+ * rinuncia ulteriore abbassa il conto: lì le terre lasciate fuori sono le
+ * stesse, ma il tetto non è stato rispettato, e quella frase annuncerebbe un
+ * risultato che non c'è — sopra un elenco di terre che la cifra la sfonda, dove
+ * chiunque sappia sommare la smentisce (ticket 63).
+ *
+ * La seconda frase perciò non toglie soltanto la promessa: **dice** che dentro
+ * quella cifra non ci si è arrivati, ed è quel che decide se alzare il tetto o
+ * cambiare mazzo.
+ *
+ * Quel che la seconda frase **non** dice è che sotto quella spesa non si possa
+ * scendere. Sarebbe una promessa di ottimalità, e chi le terre le ha scelte
+ * dichiara per iscritto di non poterla fare: `scendiNelBudget` è avida e «non
+ * promette l'ottimo». Soprattutto, `tetto` qui è il tetto del **mazzo intero**,
+ * mentre la bandiera misura quel che resta alla base **dopo le carte**: con le
+ * carte che da sole esauriscono il tetto, la base non ha un euro e a scendere
+ * è una carta, non una terra. Dire «non si scende» manderebbe ad alzare il
+ * tetto chi doveva togliere una carta.
  */
 export function frasePerLeRinunceDelBudget(grezzi: GrezziDelleRinunce): string {
   if (grezzi.rinunce.length === 0) return "";
@@ -509,11 +540,21 @@ export function frasePerLeRinunceDelBudget(grezzi: GrezziDelleRinunce): string {
   const dette = grezzi.rinunce.map(
     (voce) => `${copie(voce.copie)} di ${voce.nome} (${decimale(voce.euro)} €)`,
   );
+  // La parte che le due frasi dicono uguale: che cosa è rimasto fuori e con
+  // che cosa è stato sostituito. Cambia solo quel che ci si promette intorno.
+  const lasciate =
+    `${elenco(dette)}: ${decimale(totale)} € di terre che il mazzo avrebbe voluto. ` +
+    "Al loro posto ci sono terre base.";
 
-  return (
-    `Per stare dentro ${decimale(grezzi.tetto)} € la base ha lasciato fuori ${elenco(dette)}: ` +
-    `${decimale(totale)} € di terre che il mazzo avrebbe voluto. Al loro posto ci sono terre base.`
-  );
+  if (!grezzi.dentroIlTetto) {
+    return (
+      `La base ha lasciato fuori ${lasciate} ` +
+      `Dentro ${decimale(grezzi.tetto)} € il mazzo non ci sta lo stesso: ` +
+      "queste rinunce non sono bastate."
+    );
+  }
+
+  return `Per stare dentro ${decimale(grezzi.tetto)} € la base ha lasciato fuori ${lasciate}`;
 }
 
 /* --- Il tetto che vale sul mazzo che si ha in mano ------------------------- */
@@ -521,6 +562,31 @@ export function frasePerLeRinunceDelBudget(grezzi: GrezziDelleRinunce): string {
 export type GrezziDelTettoInVigore = {
   /** Il tetto con cui il mazzo in mano è stato costruito, in euro. */
   tetto: number;
+  /**
+   * Se le terre che si stanno mostrando **ci stanno** davvero, in quel tetto
+   * (`BaseDiTerre.dentroIlBudget`, ticket 63).
+   *
+   * Assente vale «niente da segnalare», come per `incontabili` qui sotto: un
+   * tetto in vigore che nessuno ha dichiarato sforato è un tetto rispettato, ed
+   * è il caso normale di ogni mazzo che il motore consegna. Solo chi **sa** che
+   * la base si è fermata sopra la cifra lo dice, e allora la frase smette di
+   * promettere.
+   *
+   * La promessa cade qui e non solo nella frase delle rinunce perché è **questa**
+   * la riga che la fa per prima, e in più la fa sempre: «le terre qui sotto sono
+   * scelte per starci dentro» si legge in cima, sopra l'elenco, anche quando di
+   * rinunce non ce n'è stata nessuna.
+   *
+   * Quando è `false`, la frase dice che **il mazzo** non ci sta, e non che non
+   * ci stanno le terre. La differenza non è di stile: la bandiera nasce dal
+   * budget che resta alla base **dopo le carte**, e quel budget è agganciato a
+   * zero (`budgetPerLeTerre`). Un mazzo le cui carte da sole sfondano il tetto
+   * lascia alla base zero euro e fa cadere la bandiera con una base da due
+   * euro: incolpare le terre manderebbe ad alzare il tetto chi deve togliere
+   * una carta. Quale delle due metà abbia sforato, qui non si sa — e quel che
+   * non si sa non si scrive.
+   */
+  dentroIlTetto?: boolean;
   /**
    * Se sul mazzo in mano è in vigore anche **il tema con cui è stato
    * costruito** (ticket 31).
@@ -625,6 +691,22 @@ export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string 
       (grezzi.conIlSuoTema === true
         ? "Anche il tema con cui è stato costruito vale ancora, e si levano insieme."
         : "Togliendo il tetto, la base si rifà su tutte le terre che il tema permette.")
+    );
+  }
+
+  // Il tetto **vale** ancora anche qui — è in vigore, e va detto — ma le terre
+  // dentro non ci sono entrate. Sono due cose diverse, e la riga di prima le
+  // impastava in una promessa sola: «vale ancora, quindi sono scelte per starci
+  // dentro». Con la base che si ferma sopra la cifra quel «quindi» è falso, e
+  // lo smentiva la frase delle rinunce quaranta righe più in basso, sulla
+  // stessa schermata (ticket 63).
+  if (grezzi.dentroIlTetto === false) {
+    return (
+      `Questo mazzo è stato costruito con un tetto di ${decimale(grezzi.tetto)} €, ` +
+      "e il tetto vale ancora; ma dentro quella cifra questo mazzo non ci sta. " +
+      (grezzi.conIlSuoTema === true
+        ? "Anche il tema con cui è stato costruito vale ancora, e si levano insieme."
+        : "Togliendolo, la base si rifà su tutte le terre che il tema permette.")
     );
   }
 
@@ -757,6 +839,17 @@ export function frasePerIlTettoSuQuelCheEsce(grezzi: GrezziDelTettoInVigore): st
       `ma oggi l’app non sa il prezzo di ${incontabiliDette(grezzi.incontabili)}: ` +
       "quanto costino davvero non si sa dire, e le terre qui elencate non si possono " +
       "promettere dentro quella cifra. Sono le stesse che vedi nella schermata «Mazzo»."
+    );
+  }
+
+  // Il ticket 63 qui **più** che nella schermata del mazzo, per la stessa
+  // ragione del ticket 38 qui sopra: è il foglio che esce di casa. «Stanno
+  // dentro il tetto» è un'asserzione piatta, e su una base che il tetto non
+  // l'ha rispettato è falsa davanti all'arbitro.
+  if (grezzi.dentroIlTetto === false) {
+    return (
+      `Queste liste vengono da un mazzo costruito con un tetto di ${decimale(grezzi.tetto)} €, ` +
+      "e dentro quella cifra il mazzo non ci sta. Si leva dalla schermata «Mazzo»."
     );
   }
 

@@ -789,12 +789,13 @@ describe("quel che il tetto di spesa è costato alla base", () => {
   it("resta muta quando il tetto non ha tolto niente", () => {
     // Una frase che dicesse «non ti ho tolto niente» a ogni mazzo insegnerebbe
     // a saltarla proprio le volte che conta.
-    expect(frasePerLeRinunceDelBudget({ tetto: 100, rinunce: [] })).toBe("");
+    expect(frasePerLeRinunceDelBudget({ tetto: 100, dentroIlTetto: true, rinunce: [] })).toBe("");
   });
 
   it("nomina le terre lasciate fuori, con le copie e gli euro", () => {
     const frase = frasePerLeRinunceDelBudget({
       tetto: 300,
+      dentroIlTetto: true,
       rinunce: [
         { nome: "Terra Cara", copie: 4, euro: 480 },
         { nome: "Terra Meno Cara", copie: 1, euro: 12.5 },
@@ -808,6 +809,37 @@ describe("quel che il tetto di spesa è costato alla base", () => {
     expect(frase).toContain("12,50 €");
     // Il totale c'è: è il numero che dice se valga la pena alzare il tetto.
     expect(frase).toContain("492,50 €");
+  });
+
+  it("non promette il tetto quando le rinunce non sono bastate", () => {
+    // Il guasto del ticket 63: la base scende finché può, e quando nessuna
+    // rinuncia abbassa più il conto si ferma **sopra** il tetto. Dire «per
+    // stare dentro 5,00 €» annuncerebbe un risultato che non c'è, sopra un
+    // elenco di terre che quella cifra la sfonda.
+    const frase = frasePerLeRinunceDelBudget({
+      tetto: 5,
+      dentroIlTetto: false,
+      rinunce: [{ nome: "Taiga", copie: 4, euro: 470.95 }],
+    });
+
+    expect(frase).not.toContain("Per stare dentro");
+    // I numeri restano tutti: la cifra chiesta, la terra, quel che è costata.
+    expect(frase).toContain("5,00 €");
+    expect(frase).toContain("4 copie di Taiga");
+    expect(frase).toContain("470,95 €");
+  });
+
+  it("dice a chi legge che dentro il tetto non ci si è arrivati", () => {
+    // La seconda casella del ticket: non basta togliere la promessa, chi legge
+    // deve sapere che le rinunce non sono bastate — è quel che gli dice se
+    // alzare il tetto o cambiare mazzo.
+    const frase = frasePerLeRinunceDelBudget({
+      tetto: 5,
+      dentroIlTetto: false,
+      rinunce: [{ nome: "Taiga", copie: 4, euro: 470.95 }],
+    });
+
+    expect(frase).toMatch(/non ci sta|non basta|non sono bastate|resta sopra/i);
   });
 });
 
@@ -927,6 +959,64 @@ describe("il tetto in vigore sul mazzo in mano", () => {
   it("un elenco vuoto è il caso normale, e la frase è quella di prima", () => {
     expect(frasePerIlTettoInVigore({ tetto: 30, incontabili: [] })).toBe(
       frasePerIlTettoInVigore({ tetto: 30 }),
+    );
+  });
+
+  it("non promette «scelte per starci dentro» se la base il tetto lo supera", () => {
+    // Ticket 63: è questa la riga che la promessa la fa per prima e la fa
+    // sempre, anche a rinunce zero. Finché non guardava la base, prometteva in
+    // cima quel che la frase delle rinunce smentiva in fondo.
+    const frase = frasePerIlTettoInVigore({ tetto: 5, dentroIlTetto: false });
+
+    expect(frase).not.toMatch(/scelte per starci dentro/u);
+    expect(frase).toMatch(/questo mazzo non ci sta/u);
+    // Il tetto **vale** ancora: è in vigore, solo non è stato rispettato. Sono
+    // due cose diverse, e a tacere la prima si perde il perché della base.
+    expect(frase).toContain("5,00 €");
+  });
+
+  it("col tetto superato tiene la coda sul tema, che non c'entra col prezzo", () => {
+    // La coda dice che cosa fa **il tasto**, e il tasto c'è lo stesso: è la
+    // stessa ragione per cui sopravvive al ramo delle incontabili.
+    const frase = frasePerIlTettoInVigore({ tetto: 5, dentroIlTetto: false, conIlSuoTema: true });
+    expect(frase).toContain("si levano insieme");
+  });
+
+  it("su quel che esce non dice all'arbitro che le terre stanno nel tetto", () => {
+    // Il foglio che esce di casa: qui l'asserzione piatta «stanno dentro il
+    // tetto» costa più che altrove.
+    const frase = frasePerIlTettoSuQuelCheEsce({ tetto: 5, dentroIlTetto: false });
+
+    expect(frase).not.toMatch(/stanno dentro il tetto/u);
+    expect(frase).toMatch(/il mazzo non ci sta/u);
+    expect(frase).toContain("5,00 €");
+    expect(frase).toContain("Mazzo");
+  });
+
+  it("non incolpa le terre di uno sforo che può venire dalle carte", () => {
+    // La bandiera nasce dal budget che resta alla base **dopo le carte**, e
+    // quel budget è agganciato a zero: un mazzo le cui carte da sole sfondano
+    // il tetto la fa cadere con una base da due euro. Dire «le terre non ci
+    // stanno» manderebbe ad alzare il tetto chi deve togliere una carta — ed è
+    // la stessa trappola che la frase delle rinunce ha già evitato.
+    for (const frase of [
+      frasePerIlTettoInVigore({ tetto: 30, dentroIlTetto: false }),
+      frasePerIlTettoSuQuelCheEsce({ tetto: 30, dentroIlTetto: false }),
+    ]) {
+      expect(frase).not.toMatch(/le terre .{0,40}non ci stanno/u);
+      expect(frase).not.toMatch(/la base si è fermata/u);
+    }
+  });
+
+  it("dichiarare il tetto rispettato lascia le frasi esattamente com'erano", () => {
+    // La bandiera non deve riscrivere il caso normale: assente e `true` devono
+    // dare la stessa identica frase, o il ticket 63 avrebbe cambiato quel che
+    // leggono tutti invece del solo caso rotto.
+    expect(frasePerIlTettoInVigore({ tetto: 30, dentroIlTetto: true })).toBe(
+      frasePerIlTettoInVigore({ tetto: 30 }),
+    );
+    expect(frasePerIlTettoSuQuelCheEsce({ tetto: 30, dentroIlTetto: true })).toBe(
+      frasePerIlTettoSuQuelCheEsce({ tetto: 30 }),
     );
   });
 

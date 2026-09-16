@@ -156,6 +156,17 @@ export type BaseDiTerre = {
    * vuota sempre quando è `null`: senza tetto non c'è niente a cui rinunciare.
    */
   rinunceDelBudget: RinunciaDelBudget[];
+  /**
+   * Se la base che esce **sta** nel tetto che le è stato dato.
+   *
+   * Vera sempre senza tetto: dove nessuno ha chiesto una cifra non c'è niente
+   * da sforare. Falsa quando la discesa si è fermata sopra il tetto perché
+   * nessuna rinuncia ulteriore abbassava il conto — e quello è uno stato che
+   * `rinunceDelBudget` da solo **non distingue** da una discesa riuscita, visto
+   * che in tutti e due i casi l'elenco è pieno. Chi ne scrive una frase deve
+   * guardare qui prima di promettere un tetto rispettato (ticket 63).
+   */
+  dentroIlBudget: boolean;
   righe: RigaDelMazzo[];
   /** Le righe difficili, dalla più difficile in giù: l'avviso all'utente. */
   difficili: RigaDelMazzo[];
@@ -224,7 +235,7 @@ export function analizzaBaseDiTerre(
     }
   }
 
-  const { terre, rinunceDelBudget, terreDiUtilita, terreSenzaMana } = scegliTerre(
+  const { terre, rinunceDelBudget, dentroIlBudget, terreDiUtilita, terreSenzaMana } = scegliTerre(
     terreDelPool,
     coloriRichiesti,
     simboliPerColore,
@@ -301,6 +312,7 @@ export function analizzaBaseDiTerre(
       .filter((voce) => voce.carta.terra?.condizione != null)
       .reduce((somma, voce) => somma + voce.copie, 0),
     rinunceDelBudget,
+    dentroIlBudget,
     righe,
     difficili: righe
       .filter((riga) => riga.difficile)
@@ -373,12 +385,15 @@ function scegliTerre(
 ): {
   terre: CopieDiCarta[];
   rinunceDelBudget: RinunciaDelBudget[];
+  dentroIlBudget: boolean;
   terreDiUtilita: number;
   terreSenzaMana: number;
 } {
   const niente = {
     terre: [] as CopieDiCarta[],
     rinunceDelBudget: [] as RinunciaDelBudget[],
+    // Nessuna terra non costa niente, e nessuna cifra la può sforare.
+    dentroIlBudget: true,
     terreDiUtilita: 0,
     terreSenzaMana: 0,
   };
@@ -519,6 +534,7 @@ function scegliTerre(
   return {
     terre: [...sceso.scelte, ...basi(sceso.restanti)],
     rinunceDelBudget: sceso.rinunceDelBudget,
+    dentroIlBudget: sceso.dentroIlBudget,
     // Le copie del passo 2 che sono **sopravvissute** al budget. Si guardano i
     // nomi che quel passo ha dichiarato e non il predicato: rifare il predicato
     // su tutte le terre scelte conterebbe come terra di utilità una doppia
@@ -626,18 +642,34 @@ function riempiConLeBasi(
  * base intera lo stesso, anche se sopra il budget: dire di no non è compito
  * suo. La promessa dura — un mazzo sopra il tetto non si consegna — la fa la
  * ricerca, sul mazzo finito.
+ *
+ * Ma **quale delle due uscite** sia stata presa esce di qui con la base, in
+ * `dentroIlBudget`. Le rinunce da sole non lo dicono: una resa parziale — se
+ * n'è andato qualcosa, sotto il tetto non ci si è arrivati — ha l'elenco delle
+ * rinunce pieno esattamente come una riuscita, e chi legge solo quello annuncia
+ * un tetto rispettato che non c'è (ticket 63).
  */
 function scendiNelBudget(
   scelte: readonly CopieDiCarta[],
   restanti: number,
   budget: number | null,
   basi: (quante: number) => CopieDiCarta[],
-): { scelte: CopieDiCarta[]; restanti: number; rinunceDelBudget: RinunciaDelBudget[] } {
-  const vuoto = { scelte: [...scelte], restanti, rinunceDelBudget: [] };
+): {
+  scelte: CopieDiCarta[];
+  restanti: number;
+  rinunceDelBudget: RinunciaDelBudget[];
+  dentroIlBudget: boolean;
+} {
+  // Senza tetto non c'è niente da rispettare, e «non rispettato» sarebbe una
+  // falsità in un mazzo a cui nessuno ha chiesto una cifra.
+  const vuoto = { scelte: [...scelte], restanti, rinunceDelBudget: [], dentroIlBudget: true };
   if (budget === null) return vuoto;
 
   const rimaste = scelte.map((voce) => ({ ...voce }));
   const rinunce = new Map<string, RinunciaDelBudget>();
+  // Finché non si esce dalla porta buona, la base è sopra il tetto: è lo stato
+  // in cui il ciclo entra, non un valore di comodo.
+  let dentroIlBudget = false;
 
   for (;;) {
     // Il solo minimo, e basta: qui si confrontano fra loro due basi di terre, e
@@ -650,7 +682,11 @@ function scendiNelBudget(
     // con una cifra chiesta (`nonSupera`). Senza, la base rinuncerebbe a una
     // terra per un miliardesimo — e la rinuncia non resta qui dentro: l'utente
     // se la legge scritta, con dentro il nome della terra che non ha avuto.
-    if (nonSupera(costo, budget)) break;
+    // La porta buona: la base ci sta, e da qui esce dichiarandolo.
+    if (nonSupera(costo, budget)) {
+      dentroIlBudget = true;
+      break;
+    }
 
     // Si prova a togliere una copia per ogni terra rimasta e si guarda quanto
     // verrebbe a costare la base **intera**, terra base di rimpiazzo compresa.
@@ -709,6 +745,7 @@ function scendiNelBudget(
   return {
     scelte: rimaste.filter((voce) => voce.copie > 0),
     restanti,
+    dentroIlBudget,
     // In ordine di spesa liberata, che è l'ordine in cui una frase le nomina:
     // la rinuncia che è costata di più si legge per prima.
     rinunceDelBudget: [...rinunce.values()].sort(
