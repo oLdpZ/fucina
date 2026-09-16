@@ -40,8 +40,27 @@
 Savaen Elves: -attacca-le-terre
 
 # Del volo parla per punirlo: «if enchanted creature has flying, this Aura
-# deals 2 damage to that creature».
-Earthbind: -evasione
+# deals 2 damage to that creature». Il volo è della vittima, non un regalo:
+# cadono tutti e due i tag che quella frase fa scattare.
+#
+# Perché a mano e non con una regola: la condizione non è il tratto che
+# distingue. Nel pool cinque carte dicono «gains ⟨chiave⟩» dentro un «if», e
+# quattro il potenziamento lo danno davvero — Cocoon, Rapid Fire, Spitting
+# Slug, Wall of Caltrops. Una guardia sulla condizione ne romperebbe due
+# giuste per aggiustarne una sbagliata (ticket 61).
+Earthbind: -evasione, -potenzia
+
+# Regala l'abilità a se stessa, nominandosi: «you may have Johan gain "Johan
+# can't attack"». Non trattiene nessuno — si trattiene da sé, e in cambio le
+# sue creature attaccano senza tapparsi.
+#
+# `SU_SE_STESSO` l'auto-riferimento lo cerca scritto «this creature», e non
+# col nome. Anche normalizzandolo resterebbe fuori: la guardia sulle
+# virgolette esiste per Glyph of Delusion, che l'abilità la regala a una
+# creatura **altrui**, e Johan le virgolette ce l'ha uguali. A separarle non
+# sono le virgolette ma chi riceve, e in tutto il pool a regalarsi un'abilità
+# nominandosi è Johan e basta: una regola per una carta sola (ticket 61).
+Johan: -imbriglia
 
 # Non tolgono di mezzo niente: spostano il danno da una parte all'altra. Il
 # mestiere è l'opposto, ed è quello che il tag deve dire.

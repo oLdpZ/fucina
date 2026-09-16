@@ -201,6 +201,21 @@ const REGOLE: Record<Tag, (carta: Carta, testo: string) => boolean> = {
    * toglieva di dosso la rimozione. Quando dopo `target` compare anche un
    * permanente non-terra, la carta è una rimozione e prende il tag — e se la
    * terra la sa colpire lo stesso, quello lo dice `attacca-le-terre`.
+   *
+   * Il ramo «destroy that creature» guarda il **testo intero** per il «you
+   * control», e non la frase, ed è l'unico che lo fa. Non è una svista: il
+   * bersaglio lo dichiara la frase **precedente** — Stone Giant presta il volo
+   * a «target creature you control» e nella frase dopo la distrugge — e nessun
+   * `[^.]*` ci arriva. Il taglio più largo è misurato: delle otto carte del
+   * pool che usano questa formula, «you control» ce l'ha solo lei, e le altre
+   * sette distruggono roba altrui e tengono il tag (ticket 61).
+   *
+   * Il giorno che una carta distrugga il permanente altrui nominando «you
+   * control» per un'altra ragione, questo ramo le toglierà il tag a torto. È
+   * l'errore dalla parte giusta: un tag mancante lo rimette una riga del file
+   * delle correzioni, uno di troppo avvelena il punteggio senza farsi vedere.
+   * Gli altri rami restano come sono — quello di Control Magic il «you
+   * control» ce l'ha per mestiere, e passa dalla sua clausola.
    */
   "rimozione-mirata": (_, testo) =>
     (/\b(?:destroy|exile)\b[^.]*\btarget\b(?![^.]*\bgraveyards?\b)(?![^.]*\byou control\b)/i.test(
@@ -209,7 +224,8 @@ const REGOLE: Record<Tag, (carta: Carta, testo: string) => boolean> = {
       (!BERSAGLIO_TERRA.test(testo) || BERSAGLIO_NON_TERRA.test(testo))) ||
     /\bdeals?\b[^.]*\bdamage\b[^.]*\bto\s+(?:any target|target[^.]*creature)\b/i.test(testo) ||
     /\b(?:target|enchanted)\s+creature[^.]*\bgets?\s+-\d+\/-[1-9]/i.test(testo) ||
-    /\bdestroy (?:that|the other) creature\b/i.test(testo) ||
+    (/\bdestroy (?:that|the other) creature\b/i.test(testo) &&
+      !/\byou control\b/i.test(testo)) ||
     /\bgains? control of (?:target|enchanted)\b/i.test(testo) ||
     /\byou control enchanted creature\b/i.test(testo),
 

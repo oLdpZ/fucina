@@ -229,6 +229,30 @@ describe("le regole meccaniche", () => {
     ).toEqual([]);
   });
 
+  it("non chiama rimozione la creatura che si distrugge da sé", () => {
+    // Stone Giant presta il volo a una creatura **tua** e a fine turno te la
+    // distrugge. Il ramo «destroy that creature» era l'unico dei sei senza
+    // guardia, e la guardia per frase che usa il primo ramo qui non basterebbe:
+    // il bersaglio è dichiarato nella frase **precedente**, e nessun `[^.]*`
+    // ci arriva. Il tag la mandava nel tema «Controllare», a quattro copie.
+    expect(
+      tag(
+        "{T}: Target creature you control with toughness less than this creature's power " +
+          "gains flying until end of turn. Destroy that creature at the beginning of the " +
+          "next end step.",
+      ),
+    ).toEqual(["potenzia", "evasione"]);
+    // Le altre sette carte che usano la stessa formula distruggono roba
+    // altrui — Cockatrice, Thicket Basilisk, Venom, Abomination — e la
+    // rimozione la devono tenere.
+    expect(
+      tag(
+        "Whenever this creature blocks or becomes blocked by a creature, destroy that " +
+          "creature at end of combat.",
+      ),
+    ).toEqual(["rimozione-mirata"]);
+  });
+
   it("non chiama prigione chi gira o blocca i propri permanenti", () => {
     // Energy Tap gira una creatura **propria** per farne mana: è l'opposto di
     // una prigione, ed è la stessa ragione per cui `rimozione-mirata` salta chi
