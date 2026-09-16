@@ -29,17 +29,30 @@
  * `indexedDB.open()` **può restare muto per sempre**: non risponde né sì né no,
  * in contesti che certi browser trattano come ristretti. È un caso vero e già
  * noto a questo codice — `datiDaAprire` ha il suo tetto per la stessa ragione,
- * e per lo stesso numero — e in fila diventa molto peggio: senza tetto, un
+ * ed è questo numero, `TETTO_DEPOSITO` spiega perché — e in fila diventa molto peggio: senza tetto, un
  * turno che non finisce fermerebbe ogni operazione successiva per il resto
  * della sessione, in silenzio. Il salvataggio degli orologi, i mazzi, tutto.
  *
  * Tre secondi: un'operazione sul deposito ne prende qualche decimo anche su un
- * telefono lento, e chi ci arriva sopra non sta rispondendo. Scaduto il turno
- * il prossimo parte — l'ordine si perde solo lì, dove un deposito muto non lo
- * lasciava comunque più tenere.
+ * telefono lento, e chi ci arriva sopra non sta rispondendo.
+ *
+ * **Un turno scaduto non scivola sotto il prossimo** (ticket 69). Scaduto il
+ * tetto la fila va avanti, e se il lavoro scaduto restasse libero di atterrare
+ * atterrerebbe dopo chi è partito dopo di lui: due operazioni insieme, e la
+ * scrittura vecchia sopra la cancellazione appena annunciata — il ticket 55
+ * tornato per la porta di servizio, e proprio sul telefono lento dove
+ * un'apertura può metterci tre secondi e mezzo. Perciò, quando il prossimo
+ * **comincia davvero** e il lavoro scaduto è ancora in volo, la fila glielo
+ * dice, col segnale che gli ha consegnato, e solo dopo dà il via al prossimo:
+ * sta a lui rinunciare, e rispondere a chi l'ha chiesto che non si è fatto. La
+ * fila non può farlo al suo posto, perché non sa che lavoro sia né che cosa
+ * voglia dire «non fatto».
+ *
+ * Non glielo dice allo scadere, ma quando qualcuno arriva: finché dietro non c'è
+ * nessuno il lavoro lento non scavalca niente, e rinunciare sarebbe perdere un
+ * salvataggio che sarebbe atterrato un soffio dopo, e nel suo ordine.
  */
 export const TETTO_DEL_TURNO = 3000;
-
 /**
  * Una fila nuova. Ce n'è una sola in tutta l'app, davanti al deposito; questa
  * funzione esiste perché una fila condivisa fra i test sarebbe una fila sola
@@ -47,14 +60,28 @@ export const TETTO_DEL_TURNO = 3000;
  */
 export function creaFila(
   tetto: number = TETTO_DEL_TURNO,
-): <T>(lavoro: () => Promise<T>) => Promise<T> {
+): <T>(lavoro: Lavoro<T>) => Promise<T> {
   let ultimo: Promise<unknown> = Promise.resolve();
+  let turnoDiPrima: Turno = { segnale: new AbortController(), finito: true };
 
-  return <T>(lavoro: () => Promise<T>): Promise<T> => {
+  return <T>(lavoro: Lavoro<T>): Promise<T> => {
     const precedente = ultimo;
+    const prima = turnoDiPrima;
+    const turno: Turno = { segnale: new AbortController(), finito: false };
+    turnoDiPrima = turno;
+    const comincia = () => {
+      // Il precedente ancora in volo è un turno scaduto: lo sa adesso, prima
+      // che questo lavoro cominci a toccare il deposito.
+      if (!prima.finito) prima.segnale.abort();
+      return lavoro(turno.segnale.signal);
+    };
     // Si aspetta che il precedente abbia finito, **comunque** sia finito: un
     // lavoro andato male ha comunque smesso di toccare il deposito.
-    const mio = precedente.then(lavoro, lavoro);
+    const mio = precedente.then(comincia, comincia);
+    const chiuso = () => {
+      turno.finito = true;
+    };
+    void mio.then(chiuso, chiuso);
     // Nella catena va una promessa che non rifiuta mai e che finisce comunque.
     // Una rifiutata lasciata lì, o una che non si scioglie, fermerebbe ogni
     // operazione successiva — e in silenzio, che è il modo peggiore in cui
@@ -73,6 +100,19 @@ export function creaFila(
     );
     return mio;
   };
+}
+
+/**
+ * Un lavoro in fila. Riceve il segnale del suo turno, che scatta quando il
+ * turno è scaduto e il prossimo sta per cominciare: da quel momento il lavoro
+ * non deve più toccare il deposito.
+ */
+export type Lavoro<T> = (turno: AbortSignal) => Promise<T>;
+
+/** Un turno, e se il suo lavoro ha già finito. */
+interface Turno {
+  readonly segnale: AbortController;
+  finito: boolean;
 }
 
 /** Il turno finisce quando il lavoro ha finito, o quando scade il tetto. */

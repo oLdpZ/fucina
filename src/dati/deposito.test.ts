@@ -8,9 +8,9 @@
  * stessa risposta — si decide tutto qui.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { conservatoLetto, letturaDegliOrologi } from "./deposito.js";
+import { aperta, conservatoLetto, letturaDegliOrologi } from "./deposito.js";
 
 const UNO = {
   nome: "Il mazzo di Marco",
@@ -103,5 +103,123 @@ describe("la lettura di un dato conservato", () => {
     expect(conservatoLetto({ come: "nessun-deposito", porta: "non-c-e", esito: null }).come).toBe(
       "vuoto",
     );
+  });
+});
+
+/**
+ * Il ticket 69: che cosa fa un'operazione quando la fila le dice che il suo
+ * turno è scaduto. Il prossimo sta già partendo, e quel che questa lascia
+ * atterrare dopo atterra sopra di lui.
+ *
+ * IndexedDB non serve: l'apertura entra da fuori, e la connessione che arriva è
+ * finta quanto basta a vedere che cosa le si chiede.
+ */
+describe("un'operazione il cui turno scade", () => {
+  /** Una connessione finta, con la sua transazione e la richiesta dentro. */
+  function connessione({ siChiudeGia = false } = {}) {
+    const trans = {
+      oncomplete: null as (() => void) | null,
+      onerror: null as (() => void) | null,
+      onabort: null as (() => void) | null,
+      objectStore: () => ({}),
+      abort: vi.fn(() => {
+        // Una transazione che sta già chiudendo non si ferma più.
+        if (siChiudeGia) throw new DOMException("sta già chiudendo", "InvalidStateError");
+      }),
+    };
+    const deposito = { close: vi.fn(), transaction: vi.fn(() => trans) };
+    return { trans, deposito, comeDeposito: deposito as unknown as IDBDatabase };
+  }
+  const scrivi = () => ({ onsuccess: null, result: undefined }) as unknown as IDBRequest<undefined>;
+
+  it("se l'apertura non ha ancora risposto, rinuncia e lo dice subito", async () => {
+    const { deposito, comeDeposito } = connessione();
+    let arriva!: (d: IDBDatabase) => void;
+    const turno = new AbortController();
+
+    const esito = aperta("dati", "readwrite", scrivi, turno.signal, () =>
+      new Promise((risolvi) => (arriva = risolvi)),
+    );
+    turno.abort();
+
+    // Chi ha chiesto non resta ad aspettare un deposito muto: non si è aperto,
+    // e là dentro — per quel che se ne sa — c'è ancora tutto.
+    await expect(esito).resolves.toEqual({
+      come: "nessun-deposito",
+      porta: "non-si-vede",
+      esito: null,
+    });
+
+    // L'apertura arriva tardi: la connessione si chiude, e non si scrive niente.
+    arriva(comeDeposito);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(deposito.transaction).not.toHaveBeenCalled();
+    expect(deposito.close).toHaveBeenCalled();
+  });
+
+  it("se la transazione è in corso, la annulla: quel che c'era resta com'era", async () => {
+    const { trans, deposito, comeDeposito } = connessione();
+    const turno = new AbortController();
+
+    const esito = aperta("dati", "readwrite", scrivi, turno.signal, () =>
+      Promise.resolve(comeDeposito),
+    );
+    await vi.waitFor(() => expect(deposito.transaction).toHaveBeenCalled());
+    turno.abort();
+
+    expect(trans.abort).toHaveBeenCalled();
+    await expect(esito).resolves.toEqual({ come: "rifiutata", porta: "aperta", esito: null });
+    trans.onabort?.();
+    expect(deposito.close).toHaveBeenCalled();
+  });
+
+  it("se la transazione sta già chiudendo, si aspetta com'è andata", async () => {
+    const { trans, deposito, comeDeposito } = connessione({ siChiudeGia: true });
+    const turno = new AbortController();
+
+    const esito = aperta("dati", "readwrite", scrivi, turno.signal, () =>
+      Promise.resolve(comeDeposito),
+    );
+    await vi.waitFor(() => expect(deposito.transaction).toHaveBeenCalled());
+    turno.abort();
+    trans.oncomplete?.();
+
+    await expect(esito).resolves.toEqual({ come: "fatta", porta: "aperta", esito: null });
+  });
+
+  it("un turno già scaduto quando comincia non apre niente, e risponde lo stesso", async () => {
+    const { deposito, comeDeposito } = connessione();
+    const turno = new AbortController();
+    turno.abort();
+
+    await expect(
+      aperta("dati", "readwrite", scrivi, turno.signal, () => Promise.resolve(comeDeposito)),
+    ).resolves.toEqual({ come: "nessun-deposito", porta: "non-si-vede", esito: null });
+    await vi.waitFor(() => expect(deposito.close).toHaveBeenCalled());
+    expect(deposito.transaction).not.toHaveBeenCalled();
+  });
+
+  it("un'apertura che solleva è un deposito che non si è visto, non un'attesa", async () => {
+    const turno = new AbortController();
+    await expect(
+      aperta("dati", "readwrite", scrivi, turno.signal, () =>
+        Promise.reject(new Error("rotto")),
+      ),
+    ).resolves.toEqual({ come: "nessun-deposito", porta: "non-si-vede", esito: null });
+  });
+
+  it("un turno che non scade non cambia niente", async () => {
+    const { trans, deposito, comeDeposito } = connessione();
+    const turno = new AbortController();
+
+    const esito = aperta("dati", "readwrite", scrivi, turno.signal, () =>
+      Promise.resolve(comeDeposito),
+    );
+    await vi.waitFor(() => expect(deposito.transaction).toHaveBeenCalled());
+    trans.oncomplete?.();
+
+    await expect(esito).resolves.toEqual({ come: "fatta", porta: "aperta", esito: null });
+    expect(trans.abort).not.toHaveBeenCalled();
   });
 });

@@ -180,53 +180,105 @@ export function eseguita<T>(
   modo: IDBTransactionMode,
   lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
 ): Promise<Eseguita<T>> {
-  return inFila(() => aperta(scaffale, modo, lavoro));
+  return inFila((turno) => aperta(scaffale, modo, lavoro, turno));
 }
 
-/** Il lavoro vero, una volta che la fila ha dato il turno. */
-function aperta<T>(
+/**
+ * Il lavoro vero, una volta che la fila ha dato il turno — e finché il turno
+ * dura.
+ *
+ * **Scaduto il turno, l'operazione rinuncia** (ticket 69). La fila sta dando il
+ * via alla prossima, e quel che questa lasciasse atterrare dopo atterrerebbe
+ * sopra di lei: la scrittura vecchia sopra la cancellazione appena annunciata,
+ * il ticket 55 da capo. Che cosa voglia dire rinunciare dipende da dove è
+ * arrivata:
+ *
+ * - **L'apertura non ha ancora risposto**: chi ha chiesto riceve subito un
+ *   deposito che non si è visto, e la connessione, se mai arriva, si chiude
+ *   senza toccare niente. Non si dice «non c'è»: un'apertura lenta è quella di
+ *   un deposito che c'è — un telefono lento, un cambio di versione — e là
+ *   dentro può esserci tutto quel che l'utente ha salvato (ticket 54).
+ * - **La transazione è in corso**: si annulla, e quel che c'era dentro resta
+ *   com'era. È un rifiuto, e lo si può dire come tale.
+ * - **La transazione sta già chiudendo**: non si annulla più, e allora si
+ *   aspetta la sua risposta. Il prossimo che parte la trova già in chiusura, e
+ *   IndexedDB non gli lascia toccare lo stesso scaffale prima che abbia finito.
+ *
+ * L'apertura entra da fuori perché queste tre strade si provino senza
+ * IndexedDB.
+ */
+export function aperta<T>(
   scaffale: string,
   modo: IDBTransactionMode,
   lavoro: (scaffale: IDBObjectStore) => IDBRequest<T>,
+  turno: AbortSignal,
+  porta: () => Promise<IDBDatabase | PortaChiusa> = apri,
 ): Promise<Eseguita<T>> {
-  return apri().then(
-    (deposito) =>
-      new Promise<Eseguita<T>>((risolvi) => {
-        // Il deposito si è aperto: da qui in poi ogni rinuncia è un rifiuto suo,
-        // e di quel che ci sta dentro si può parlare — c'è, e lo si è visto.
-        const rifiuto = { come: "rifiutata", porta: "aperta", esito: null } as const;
-        if (typeof deposito === "string") {
-          return risolvi({ come: "nessun-deposito", porta: deposito, esito: null });
-        }
+  return new Promise<Eseguita<T>>((risolvi) => {
+    // Il deposito si è aperto: da qui in poi ogni rinuncia è un rifiuto suo,
+    // e di quel che ci sta dentro si può parlare — c'è, e lo si è visto.
+    const rifiuto = { come: "rifiutata", porta: "aperta", esito: null } as const;
+    const nonVista = { come: "nessun-deposito", porta: "non-si-vede", esito: null } as const;
+    let trans: IDBTransaction | null = null;
 
-        let esito: T | null = null;
+    // Un turno già scaduto non manda il suo evento a chi arriva dopo: lo si
+    // guarda qui, o chi ha chiesto resterebbe ad aspettare per sempre.
+    if (turno.aborted) risolvi(nonVista);
+    turno.addEventListener(
+      "abort",
+      () => {
+        if (trans === null) return risolvi(nonVista);
         try {
-          const trans = deposito.transaction(scaffale, modo);
-          const richiesta = lavoro(trans.objectStore(scaffale));
-          richiesta.onsuccess = () => {
-            esito = richiesta.result ?? null;
-          };
-          // Si aspetta il **completamento** della transazione, non la singola
-          // richiesta: è lì che lo spazio esaurito si fa vivo, e una scrittura
-          // dichiarata riuscita e poi annullata sarebbe una bugia.
-          trans.oncomplete = () => {
-            deposito.close();
-            risolvi({ come: "fatta", porta: "aperta", esito });
-          };
-          trans.onerror = () => {
-            deposito.close();
-            risolvi(rifiuto);
-          };
-          trans.onabort = () => {
-            deposito.close();
-            risolvi(rifiuto);
-          };
+          trans.abort();
         } catch {
+          // Sta già chiudendo: la sua risposta arriva da `oncomplete` o
+          // `onerror`, ed è quella vera.
+          return;
+        }
+        risolvi(rifiuto);
+      },
+      { once: true },
+    );
+
+    // `apri` non solleva, ma un'apertura che lo facesse lascerebbe chi ha
+    // chiesto ad aspettare una risposta che non arriva: vale un deposito che
+    // non si è lasciato vedere.
+    void porta().catch((): PortaChiusa => "non-si-vede").then((deposito) => {
+      if (typeof deposito === "string") {
+        return risolvi({ come: "nessun-deposito", porta: deposito, esito: null });
+      }
+      // Arrivata a turno scaduto: chi aveva chiesto ha già la sua risposta, e
+      // la connessione si chiude senza scrivere.
+      if (turno.aborted) return deposito.close();
+
+      let esito: T | null = null;
+      try {
+        trans = deposito.transaction(scaffale, modo);
+        const richiesta = lavoro(trans.objectStore(scaffale));
+        richiesta.onsuccess = () => {
+          esito = richiesta.result ?? null;
+        };
+        // Si aspetta il **completamento** della transazione, non la singola
+        // richiesta: è lì che lo spazio esaurito si fa vivo, e una scrittura
+        // dichiarata riuscita e poi annullata sarebbe una bugia.
+        trans.oncomplete = () => {
+          deposito.close();
+          risolvi({ come: "fatta", porta: "aperta", esito });
+        };
+        trans.onerror = () => {
           deposito.close();
           risolvi(rifiuto);
-        }
-      }),
-  );
+        };
+        trans.onabort = () => {
+          deposito.close();
+          risolvi(rifiuto);
+        };
+      } catch {
+        deposito.close();
+        risolvi(rifiuto);
+      }
+    });
+  });
 }
 
 /* --- Il documento di formato e il listino presi in sottofondo -------------- */

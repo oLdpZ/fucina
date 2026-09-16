@@ -13,6 +13,8 @@ import {
   type LettureDellApertura,
   type TubiDelSottofondo,
 } from "./aggiornamento.js";
+import type { Conservato } from "./deposito.js";
+import { creaFila } from "./fila.js";
 import type { Formato } from "./formato.js";
 import { improntaDelDocumento } from "./impronta-del-documento.js";
 import { listinoDelPool, type ListinoScritto } from "./listino.js";
@@ -287,6 +289,36 @@ describe("l'apertura dell'app", () => {
         listino: null,
         nonVisti: [],
       });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * Il ticket 69 visto da qui. All'apertura il documento e il listino stanno
+   * nella stessa fila: scaduto il turno del documento parte il listino, e il
+   * documento ancora in volo si sente dire che il suo turno è finito — e
+   * risponde «non si è visto». Succede quando scade il suo turno, cioè nello
+   * stesso istante del tetto dell'apertura, perché i due numeri sono uno. Vince
+   * il tetto dell'apertura, armato per primo: il deposito muto resta un vuoto, e
+   * nessuna nota a ogni apertura per un pericolo che non esiste.
+   */
+  it("un deposito muto resta un vuoto anche quando scade il turno della sua lettura", async () => {
+    vi.useFakeTimers();
+    try {
+      const inFila = creaFila();
+      const muta = () =>
+        inFila(
+          (turno) =>
+            new Promise<Conservato>((risolvi) =>
+              turno.addEventListener("abort", () => risolvi({ come: "non-si-e-visto" })),
+            ),
+        );
+      const apertura = datiDaAprire(
+        letture({ formatoConservato: muta, listinoConservato: muta }),
+      );
+      await vi.advanceTimersByTimeAsync(TETTO_DEPOSITO + 1);
+      expect((await apertura).nonVisti).toEqual([]);
     } finally {
       vi.useRealTimers();
     }

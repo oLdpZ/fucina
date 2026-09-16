@@ -38,6 +38,7 @@ import {
   leggiListinoConservato,
   type Conservato,
 } from "./deposito.js";
+import { TETTO_DEL_TURNO } from "./fila.js";
 import type { Formato } from "./formato.js";
 import { interpretaListino, percorsoDelListino, type Listino } from "./listino.js";
 import { applicaIlFormato, applicaIlListino } from "./pool-in-vigore.js";
@@ -213,8 +214,17 @@ export function scegliListino(
  *
  * Tre secondi: il documento e il listino pesano poche decine di kilobyte, e chi
  * ci arriva sopra non sta rispondendo.
+ *
+ * **È lo stesso numero del tetto del turno, e non per caso** (ticket 69). Il
+ * documento e il listino si leggono nella stessa fila: scaduto il turno del
+ * primo parte il secondo, e il primo ancora in volo rinuncia e risponde «non si
+ * è visto»; questo tetto invece lo conta come un vuoto. Coi due numeri uguali
+ * scadono nello stesso istante e vince questo, armato per primo — prima ancora
+ * che il turno della lettura cominci. Un turno più corto farebbe vincere la
+ * fila, e il deposito muto dei contesti ristretti scriverebbe una nota a ogni
+ * apertura.
  */
-export const TETTO_DEPOSITO = 3000;
+export const TETTO_DEPOSITO = TETTO_DEL_TURNO;
 
 /** Le letture dell'apertura. Entrano da fuori perché i casi che contano si provino senza browser. */
 export type LettureDellApertura = {
@@ -421,8 +431,9 @@ function grezzoDi(conservato: Conservato): unknown {
  * Una lettura che **solleva** non si è vista (ticket 65). Il tetto scaduto
  * invece vale un vuoto, come il dispositivo senza IndexedDB: il deposito che
  * resta muto per sempre è quello dei contesti ristretti, dove non ci è mai
- * entrato niente — anche la fila delle scritture ci resta ferma dietro. Dirlo
- * «non visto» scriverebbe la nota a ogni apertura per un pericolo che non
+ * entrato niente — e non ci entra nemmeno dopo: ogni scrittura in volo rinuncia
+ * quando il suo turno è scaduto e la fila dà il via alla prossima (ticket 69).
+ * Dirlo «non visto» scriverebbe la nota a ogni apertura per un pericolo che non
  * esiste, e un'altra scheda che blocca risponde subito, con `onblocked`.
  */
 function entroIlTetto(leggi: () => Promise<Conservato>): Promise<Conservato> {

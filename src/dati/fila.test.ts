@@ -102,8 +102,8 @@ describe("la fila davanti al deposito", () => {
  * per il resto della sessione, in silenzio: il salvataggio degli orologi, i
  * mazzi, tutto. Sarebbe un difetto più grosso di quello che la fila chiude.
  *
- * Il turno scade e il prossimo parte. L'ordine si perde solo lì, dove non era
- * comunque più possibile tenerlo.
+ * Il turno scade e il prossimo parte — ma il lavoro scaduto lo sa prima, e
+ * rinuncia: così l'ordine non si perde nemmeno lì (ticket 69).
  */
 describe("il tetto del turno", () => {
   afterEach(() => {
@@ -140,6 +140,90 @@ describe("il tetto del turno", () => {
     // Nessun timer sopravvive al lavoro che l'ha acceso: uno per operazione,
     // moltiplicato per un tasto premuto a ogni carattere, sarebbe una scia.
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  /**
+   * Il ticket 69. Scaduto il turno, il prossimo parte: se il lavoro scaduto
+   * fosse ancora libero di atterrare, atterrerebbe **dopo** di lui, che è
+   * l'inversione che la fila esiste per impedire. La fila non può fermarlo da
+   * fuori — non sa che lavoro sia —, ma può dirgli che il suo turno è finito,
+   * e prima di dare il via al prossimo.
+   */
+  it("un turno che scade lo dice al suo lavoro, prima che parta il prossimo", async () => {
+    vi.useFakeTimers();
+    const inFila = creaFila();
+    const visti: string[] = [];
+
+    void inFila((turno) => {
+      turno.addEventListener("abort", () => visti.push("scaduto"));
+      return new Promise<void>(() => {});
+    });
+    void inFila(() => {
+      visti.push("prossimo");
+      return Promise.resolve();
+    });
+
+    await vi.advanceTimersByTimeAsync(TETTO_DEL_TURNO - 1);
+    expect(visti).toEqual([]);
+    await vi.advanceTimersByTimeAsync(2);
+    expect(visti).toEqual(["scaduto", "prossimo"]);
+  });
+
+  /**
+   * Scaduto il turno non si rinuncia per niente: se dietro non c'è nessuno, il
+   * lavoro lento non scavalca nessuno, e va lasciato finire. È il telefono lento
+   * che salva un mazzo solo, con un'apertura da tre secondi e mezzo.
+   */
+  it("un turno scaduto senza nessuno dietro può ancora finire", async () => {
+    vi.useFakeTimers();
+    const inFila = creaFila();
+    let turnoDelLento!: AbortSignal;
+
+    const lento = inFila((turno) => {
+      turnoDelLento = turno;
+      return new Promise<string>((risolvi) => setTimeout(() => risolvi("fatto"), 3500));
+    });
+
+    await vi.advanceTimersByTimeAsync(3500);
+    expect(turnoDelLento.aborted).toBe(false);
+    expect(await lento).toBe("fatto");
+  });
+
+  /**
+   * E chi arriva dopo la scadenza, mentre il lento è ancora in volo, parte
+   * subito — e il lento lo sa in quel momento, non prima né dopo.
+   */
+  it("chi arriva a turno scaduto lo fa sapere al lavoro ancora in volo", async () => {
+    vi.useFakeTimers();
+    const inFila = creaFila();
+    const visti: string[] = [];
+
+    void inFila((turno) => {
+      turno.addEventListener("abort", () => visti.push("scaduto"));
+      return new Promise<void>(() => {});
+    });
+    await vi.advanceTimersByTimeAsync(TETTO_DEL_TURNO + 200);
+    expect(visti).toEqual([]);
+
+    await inFila(() => {
+      visti.push("prossimo");
+      return Promise.resolve();
+    });
+    expect(visti).toEqual(["scaduto", "prossimo"]);
+  });
+
+  it("un turno finito in tempo non si sente dire che è scaduto", async () => {
+    vi.useFakeTimers();
+    const inFila = creaFila();
+    let turnoDelPrimo!: AbortSignal;
+
+    await inFila((turno) => {
+      turnoDelPrimo = turno;
+      return Promise.resolve();
+    });
+    await vi.advanceTimersByTimeAsync(TETTO_DEL_TURNO * 2);
+    await inFila(() => Promise.resolve());
+    expect(turnoDelPrimo.aborted).toBe(false);
   });
 
   /**
