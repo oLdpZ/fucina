@@ -1245,6 +1245,16 @@ export function costruisciMazzo(
   // Il tema bastava a riempire **questo** mazzo? La domanda si fa sui posti
   // che il mazzo ha davvero, non sui trentatre del verdetto di `ampiezza.ts`,
   // che prende il caso piu favorevole al tema e risponde a un'altra domanda.
+  // Le due risposte però non si smentiscono: sotto un verdetto
+  // **insufficiente** l'esito non è mai «costruito» (ticket 70). Da una parte
+  // la capienza del tema qui conta un sottoinsieme delle carte del verdetto —
+  // `entraInMano` è più stretta di «non è una terra», esclusioni e tetto
+  // tolgono e non aggiungono — e al più quattro copie per carta, mai di più di
+  // quante ne conti il verdetto. Dall'altra i posti non-terra del mazzo sono
+  // almeno i trentatre del verdetto, perché la curva non sceglie mai più di
+  // `TERRE_MASSIME` terre e la guardia della capienza più sopra ferma prima
+  // chi non arriva a `POSTI_NON_TERRA`. Allentare una delle due smentirebbe
+  // il verdetto in silenzio: il test del ticket 70 lo guarda.
   //
   // Le carte del tema si contano **da `giocabili`**, cioè da quel che il tetto
   // lascia comprare, ed è la stessa popolazione da cui esce la capienza qui

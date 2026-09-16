@@ -254,7 +254,7 @@ describe("ogni tema della galleria sta in piedi sul pool vero", () => {
     "«%s» non fa scattare nessun avviso: il verdetto è ampio",
     (_nome, voce) => {
       const ampiezza = valutaTema(CARTE, voce.tema);
-      // «Ampio» e non solo «non impossibile»: un tema stretto in galleria
+      // «Ampio» e non solo «non insufficiente»: un tema stretto in galleria
       // aprirebbe l'app con l'avviso già acceso, che è il guasto che questa
       // schermata esiste per togliere. E un tema ampio non ha allargamenti da
       // proporre, perché non ne ha bisogno.
@@ -301,7 +301,7 @@ describe("il conto delle carte", () => {
     // di continuare a promettere il numero di ieri.
     const briciole = galleriaContata(CARTE.slice(0, 2));
     for (const { voce, ampiezza } of briciole) {
-      expect(ampiezza.verdetto, voce.nome).toBe("impossibile");
+      expect(ampiezza.verdetto, voce.nome).toBe("insufficiente");
     }
   });
 });

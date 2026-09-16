@@ -46,13 +46,13 @@ describe("il verdetto arriva prima di generare, sul solo conteggio", () => {
     expect(valutaTema(TUTTE, GOBLIN).carteDisponibili).toBe(3);
   });
 
-  it("tre Goblin non riempiono i posti non-terra: il tema è impossibile", () => {
+  it("tre Goblin non riempiono i posti non-terra: il tema è insufficiente", () => {
     const ampiezza = valutaTema(TUTTE, GOBLIN);
-    expect(ampiezza.verdetto).toBe("impossibile");
+    expect(ampiezza.verdetto).toBe("insufficiente");
     expect(ampiezza.copieDisponibili).toBeLessThan(POSTI_NON_TERRA);
   });
 
-  it("quando le copie bastano appena, il tema è stretto e non impossibile", () => {
+  it("quando le copie bastano appena, il tema è stretto e non insufficiente", () => {
     const appena = Math.ceil(POSTI_NON_TERRA / 4);
     const ampiezza = valutaTema(poolDiGoblin(appena), GOBLIN);
     expect(ampiezza.verdetto).toBe("stretto");
@@ -74,7 +74,7 @@ describe("il verdetto arriva prima di generare, sul solo conteggio", () => {
       inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Sottotipo Che Non Esiste"] },
     };
     const ampiezza = valutaTema(TUTTE, inesistente);
-    expect(ampiezza.verdetto).toBe("impossibile");
+    expect(ampiezza.verdetto).toBe("insufficiente");
     expect(ampiezza.carteDisponibili).toBe(0);
   });
 
@@ -86,7 +86,7 @@ describe("il verdetto arriva prima di generare, sul solo conteggio", () => {
 describe("gli allargamenti si propongono uno per uno, e nessuno si applica da solo", () => {
   const proposti = valutaTema(TUTTE, GOBLIN).allargamenti;
 
-  it("un tema impossibile riceve delle proposte", () => {
+  it("un tema insufficiente riceve delle proposte", () => {
     expect(proposti.length).toBeGreaterThan(0);
   });
 

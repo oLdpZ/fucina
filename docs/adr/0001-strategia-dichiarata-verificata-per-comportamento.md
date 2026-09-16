@@ -60,7 +60,7 @@ griglia che nessuno sa leggere. La leggibilità della frontiera non è cosmetica
 conosce senza misurarlo, e misurarlo vuol dire costruire: il verdetto «prima di
 costruire» sarebbe incalcolabile. La guardia lo rende possibile senza definire
 niente, perché **esclude soltanto**. È la stessa figura già usata due volte: il
-verdetto sul tema, dove *impossibile* esce da un conto non negoziabile e
+verdetto sul tema, dove *insufficiente* (allora *impossibile*, fino al ticket 70) esce da un conto non negoziabile e
 *stretto* da una soglia tarata; e i tag di sinergia, che hanno scritto in testa
 *le regole preferiscono tacere che sbagliare* — ed è per questo che 1.943 carte
 non hanno alcun tag ed è giusto così.

@@ -13,9 +13,9 @@
  * teme di più, perché scoraggia l'idea prima di provarla. Si rimisurano al
  * ticket 15, e fino a là vanno lette come sospette.
  *
- * La soglia dell'**impossibile** non è qui, ed è apposta: quella non è una
+ * La soglia dell'**insufficiente** non è qui, ed è apposta: quella non è una
  * taratura ma un conto: se le copie disponibili non arrivano a riempire i
- * posti non-terra, un mazzo legale non esiste, e nessuna taratura può
+ * posti non-terra, un mazzo del solo tema non esiste, e nessuna taratura può
  * cambiarlo.
  */
 
@@ -26,7 +26,7 @@ import { DIMENSIONE_MAZZO, TERRE_MASSIME } from "../mazzo/taratura.js";
  *
  * Si prende il **massimo** delle terre che l'app consiglia, perché è il caso
  * più favorevole al tema: più terre ci sono, meno posti restano da riempire
- * con le sue carte. Dire «impossibile» a un tema che con ventisette terre ce
+ * con le sue carte. Dire «insufficiente» a un tema che con ventisette terre ce
  * l'avrebbe fatta sarebbe un errore dell'app, non una regola del gioco — e
  * qui, dove il verdetto è un conto e non una taratura, un errore del genere
  * non ha nemmeno la scusa della soglia da ritarare.

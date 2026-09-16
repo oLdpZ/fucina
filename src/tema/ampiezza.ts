@@ -11,9 +11,13 @@
  *
  * I tre esiti:
  *
- * - **impossibile** — le copie disponibili non riempiono i posti non-terra. Non
- *   è una taratura ma un conto: un mazzo legale non esiste, e nessuna soglia
- *   ritarata potrà farlo esistere.
+ * - **insufficiente** — le copie disponibili non riempiono i posti non-terra.
+ *   Non è una taratura ma un conto: un mazzo fatto **del solo tema** non
+ *   esiste, e nessuna soglia ritarata potrà farlo esistere. Il mazzo invece sì:
+ *   il vincolo del tema è morbido (Q14), e i posti che il tema non copre li
+ *   riempiono carte fuori tema, a un prezzo di purezza che la frontiera mostra.
+ *   Per questo la parola non è «impossibile», come era: diceva che il mazzo non
+ *   si fa, e la frontiera nello stesso esito ne consegnava quattro (ticket 70).
  * - **stretto** — le carte bastano appena. Il mazzo si fa, ma la frontiera sarà
  *   corta e i mazzi si somiglieranno, perché sono quasi le stesse carte in
  *   ordine diverso.
@@ -30,7 +34,7 @@ import { proponiAllargamenti } from "./allargamenti.js";
 import { CARTE_DISTINTE_COMODE, POSTI_NON_TERRA } from "./taratura.js";
 import { carteDelTema, eTerra, risolviTema, type Allargamento, type Tema } from "./tema.js";
 
-export type Verdetto = "impossibile" | "stretto" | "ampio";
+export type Verdetto = "insufficiente" | "stretto" | "ampio";
 
 export type Ampiezza = {
   verdetto: Verdetto;
@@ -68,7 +72,7 @@ export function valutaTema(carte: readonly Carta[], tema: Tema): Ampiezza {
 
   const verdetto: Verdetto =
     copieDisponibili < POSTI_NON_TERRA
-      ? "impossibile"
+      ? "insufficiente"
       : nelTema.length < CARTE_DISTINTE_COMODE
         ? "stretto"
         : "ampio";

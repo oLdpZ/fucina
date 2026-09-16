@@ -634,6 +634,31 @@ describe("i temi degeneri, che devono dare un esito e mai un crollo", () => {
     }
   });
 
+  it("il verdetto e la frontiera non si contraddicono: a tema insufficiente l'esito lo dice", () => {
+    // Il verdetto diceva «impossibile» e la frontiera consegnava quattro mazzi
+    // (ticket 70). Il vincolo è morbido (Q14): quel che il tema da solo non
+    // riempie lo riempiono carte fuori tema, e allora il verdetto dice quanto
+    // il tema manca, non che il mazzo non esiste. Ma un tema insufficiente non
+    // può dare un mazzo «costruito» col tema e basta: l'esito deve dirlo.
+    // Zero, una e due carte: il tema che sta appena in piedi è l'ultimo, quello
+    // che la sosta ha misurato sul pool vero con «Advisor». Qui nessun
+    // sottotipo ne conta due, e i due si sommano.
+    const temi: [carte: number, tema: Tema][] = [
+      [0, tema({ inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Kavu"] } })],
+      [1, tema({ inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Sphinx"] } })],
+      [2, tema({ inclusioni: { ...FILTRO_TEMA_VUOTO, sottotipi: ["Sphinx", "Merfolk"] } })],
+    ];
+
+    for (const [carte, quale] of temi) {
+      const frontiera = costruisci({ tema: quale });
+
+      expect(frontiera.ampiezza.carteDisponibili).toBe(carte);
+      expect(frontiera.ampiezza.verdetto).toBe("insufficiente");
+      expect(frontiera.mazzi.length).toBeGreaterThan(0);
+      expect(frontiera.esito).toBe("costruito-fuori-tema");
+    }
+  });
+
   it("senza tema non si costruisce niente, e non è un guasto", () => {
     const frontiera = costruisci({ tema: TEMA_VUOTO });
     expect(frontiera.esito).toBe("tema-non-dichiarato");

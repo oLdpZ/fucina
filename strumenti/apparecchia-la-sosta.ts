@@ -111,7 +111,7 @@ function scegliIlSeme(carte: readonly Carta[]): Carta {
 
 /**
  * Il sottotipo volutamente strettissimo: quello con **almeno due** carte e il
- * minor numero possibile. Uno con una carta sola darebbe «impossibile» e non
+ * minor numero possibile. Uno con una carta sola darebbe «insufficiente» e non
  * proverebbe niente che non si sappia già; il ticket chiede un tema che stia
  * appena in piedi, non uno che cada.
  */

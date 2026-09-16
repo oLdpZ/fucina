@@ -375,7 +375,7 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   «stretto», ed è il primo esempio vero di tema che sta appena in piedi.
   Accettando il primo allargamento proposto — le carte che fanno pedine Dragon —
   diventano 41 e il tema torna comodo. Un sottotipo che non esiste dà zero carte
-  e verdetto «impossibile», senza cadere.
+  e verdetto «impossibile» (oggi «insufficiente», ticket 70), senza cadere.
 - Il verdetto sul tema costa **circa 3 ms** sul pool vero quando il tema è
   ampio, e **una decina** quando ci sono anche gli allargamenti da proporre —
   ognuno è un passaggio in più sul pool. La primissima valutazione ne costa
@@ -383,9 +383,9 @@ Verificati il 2026-09-02 contro fonti vive. Dettagli in `PROGETTO.md` §3.
   testi. Si rifà comunque a ogni tocco, ed è per questo che l'avviso arriva
   prima di generare e non dopo.
 - I posti non-terra da riempire sono **33** (sessanta carte meno il *massimo*
-  delle terre): è il conto che decide se un tema è *impossibile*, e non è una
+  delle terre): è il conto che decide se un tema è *insufficiente*, e non è una
   taratura. Si prende il massimo perché è il caso più favorevole al tema —
-  più terre, meno posti da riempire con le sue carte — e dire «impossibile» a
+  più terre, meno posti da riempire con le sue carte — e dire «insufficiente» a
   un tema che ce l'avrebbe fatta sarebbe un errore dell'app. La soglia di
   *stretto* — quaranta carte distinte — invece è una taratura, sta in
   `src/tema/taratura.ts` ed è da ritarare alla sosta.
@@ -576,7 +576,7 @@ src/tema/tema.ts         il tema come oggetto: appartenenza e purezza, e le
                          esclusioni che vincono sempre
 src/tema/allargamenti.ts le proposte per allargare un tema stretto, con le
                          frasi che le dicono ad alta voce
-src/tema/ampiezza.ts     `valutaTema(...)`: impossibile, stretto o ampio
+src/tema/ampiezza.ts     `valutaTema(...)`: insufficiente, stretto o ampio
 src/tema/taratura.ts     le soglie del tema, dichiarate provvisorie
 src/combo/combo.ts       la combo dichiarata: i nomi che l'utente afferma
                          vincano insieme, risolti sul pool di oggi. L'app non la

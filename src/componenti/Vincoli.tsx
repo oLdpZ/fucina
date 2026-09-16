@@ -145,8 +145,8 @@ export function Vincoli({
               <span>{ampiezza.carteComode} per stare comodi</span>
             </p>
             <p class="spiega-verdetto">
-              {ampiezza.verdetto === "impossibile"
-                ? `Con queste carte un mazzo non si fa: i posti da riempire sono ${ampiezza.postiNonTerra}, e contando le copie ammesse il tema ne copre ${ampiezza.copieDisponibili}.`
+              {ampiezza.verdetto === "insufficiente"
+                ? `${ampiezza.carteDisponibili === 1 ? "Questa carta da sola non fa" : "Queste carte da sole non fanno"} un mazzo: i posti da riempire sono ${ampiezza.postiNonTerra}, e contando le copie ammesse il tema ne copre ${ampiezza.copieDisponibili}. Il resto dovrà venire da fuori tema.`
                 : ampiezza.verdetto === "stretto"
                   ? `Le carte bastano appena. Un mazzo esce, ma la scelta è poca: i mazzi che ti proporrò si somiglieranno fra loro.`
                   : `C'è di che scegliere: ${carteContate(ampiezza.carteDisponibili)} per ${ampiezza.postiNonTerra} posti.`}
@@ -188,7 +188,9 @@ export function Vincoli({
 
       {dichiarato && ampiezza.allargamenti.length > 0 ? (
         <section class="gruppo-vincolo proposte">
-          <h2>{ampiezza.verdetto === "impossibile" ? "Le strade che restano" : "Se vuoi più scelta"}</h2>
+          <h2>
+            {ampiezza.verdetto === "insufficiente" ? "Per restare nel tema" : "Se vuoi più scelta"}
+          </h2>
           <p class="nota-filtro">
             Ognuna allarga il tema di quel tanto che dice. Nessuna vale finché non la accetti.
           </p>
@@ -296,7 +298,7 @@ export function Vincoli({
  *
  * Sta in cima alla schermata perché è la prima domanda a cui risponde — «da
  * dove parto?» — e perché il modo peggiore di cominciare è scrivere un'idea al
- * buio e vedersi rispondere che con quelle carte un mazzo non si fa.
+ * buio e vedersi rispondere che quelle carte da sole un mazzo non lo fanno.
  *
  * Le otto voci le sceglie `tema/galleria.ts`; il **conto** accanto a ognuna no,
  * quello si rifà sul pool di oggi. Una voce che avesse smesso di reggere resta
@@ -326,8 +328,8 @@ function Galleria({
             <span class="nome-tema">{voce.nome}</span>
             <span class="promessa-tema">{voce.promessa}</span>
             <span class="conto-tema" data-verdetto={ampiezza.verdetto}>
-              {ampiezza.verdetto === "impossibile"
-                ? `${carteContate(ampiezza.carteDisponibili)}: oggi non bastano per un mazzo`
+              {ampiezza.verdetto === "insufficiente"
+                ? `${carteContate(ampiezza.carteDisponibili)}: ${ampiezza.carteDisponibili === 1 ? "da sola non basta" : "da sole non bastano"} per un mazzo`
                 : ampiezza.verdetto === "stretto"
                   ? `${carteContate(ampiezza.carteDisponibili)}, appena appena`
                   : carteContate(ampiezza.carteDisponibili)}
