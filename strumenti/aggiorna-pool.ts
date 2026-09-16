@@ -210,9 +210,10 @@ async function principale(): Promise<void> {
   console.log("");
   console.log(raccontaDiario(confrontaPool(precedente, preparazione)));
   console.log("");
-  console.log(raccontaBuchi(contaBuchi(preparazione.pool)));
+  const buchi = contaBuchi(preparazione.pool);
+  console.log(raccontaBuchi(buchi));
   console.log("");
-  console.log(raccontaFigure(preparazione.figureDaUnAltraCopia, preparazione.pool.carte.length));
+  console.log(raccontaFigure(preparazione.figureDaUnAltraCopia, buchi));
 
   // Le carte che nessuna copia ammessa descrive. ADR-0006 dà questo caso per
   // impossibile — le stampe straniere di queste edizioni sono complete, ed è

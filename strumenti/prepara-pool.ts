@@ -1235,13 +1235,21 @@ export function raccontaBuchi(buchi: Buchi): string {
  * le descrive, per figura, ha un dorso (ADR-0007).
  *
  * Si dice sempre, anche a zero, perché è il prezzo di una decisione e non un
- * guasto: chi legge il comando deve poterlo confrontare con la volta prima.
+ * guasto: chi legge il comando deve poterlo confrontare con la volta prima. Ed
+ * è per questo che il denominatore sono le carte **con una figura**, la
+ * popolazione che la frase nomina, e si conta qui dai buchi e non da chi chiama:
+ * quelle senza immagine le conta `raccontaBuchi` a parte, e una figura presa in
+ * prestito è una figura vera (ticket 58).
  */
-export function raccontaFigure(quante: number, totale: number): string {
+export function raccontaFigure(quante: number, buchi: Buchi): string {
+  const conUnaFigura = buchi.totale - buchi.senzaImmagine;
   return (
-    `Di quelle con una figura, ${quante} la prendono in prestito da un'altra copia ` +
+    (conUnaFigura === 1
+      ? `Dell'unica carta del pool con una figura, `
+      : `Delle ${conUnaFigura} carte del pool con una figura, `) +
+    `${quante} ${quante === 1 ? "la prende" : "la prendono"} in prestito da un'altra copia ` +
     `della stessa edizione e dello stesso numero: stessa illustrazione, la scritta ` +
-    `in un'altra lingua. Su ${totale} carte del pool.`
+    `in un'altra lingua.`
   );
 }
 
@@ -1251,11 +1259,14 @@ export function raccontaFigure(quante: number, totale: number): string {
  */
 export function raccontaPosta(nomi: string[]): string {
   if (nomi.length === 0) return "";
+  const [apertura, bando] =
+    nomi.length === 1
+      ? [`Nel pool resta una carta che nel testo parla`, `se va bandita`]
+      : [`Nel pool restano ${nomi.length} carte che nel testo parlano`, `se vanno bandite`];
   return (
-    `Nel pool restano ${nomi.length} carte che nel testo parlano di posta e che la lista ` +
-    `delle bandite non nomina:\n` +
+    `${apertura} di posta e che la lista delle bandite non nomina:\n` +
     nomi.map((nome) => `    ${nome}`).join("\n") +
-    `\n  È una verifica e non una fonte: se vanno bandite, si aggiunge una riga al ` +
+    `\n  È una verifica e non una fonte: ${bando}, si aggiunge una riga al ` +
     `documento di formato.`
   );
 }

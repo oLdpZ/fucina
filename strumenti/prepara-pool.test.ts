@@ -19,6 +19,7 @@ import {
   raccontaPosta,
   verificaPoolNonVuoto,
   verificaRaccolto,
+  type Buchi,
   type CartaScryfall,
 } from "./prepara-pool.ts";
 import { indicizzaTag } from "./tag-di-scryfall.ts";
@@ -734,9 +735,31 @@ describe("la verifica della posta", () => {
     expect(raccontaPosta([])).toBe("");
     expect(raccontaPosta(["Fixture Scommessa"])).toContain("Fixture Scommessa");
   });
+
+  it("con una carta sola parla al singolare", () => {
+    // Uno è il numero più probabile per un controllo di residui (ticket 58).
+    const una = raccontaPosta(["Fixture Scommessa"]);
+    expect(una).toContain("resta una carta che nel testo parla di posta");
+    expect(una).toContain("se va bandita");
+    expect(una).not.toContain("1 carte");
+    expect(raccontaPosta(["Fixture Scommessa", "Fixture Altra"])).toContain(
+      "restano 2 carte che nel testo parlano di posta",
+    );
+  });
 });
 
 describe("i buchi del pool", () => {
+  // Alla frase delle figure servono solo il totale e le carte senza immagine:
+  // il resto dei buchi è a zero perché non conta.
+  const buchiDi = (totale: number, senzaImmagine: number): Buchi => ({
+    senzaImmagine,
+    senzaPrezzo: 0,
+    senzaTagNostri: 0,
+    senzaTag: 0,
+    prezzoDaUnAltroCartoncino: 0,
+    totale,
+  });
+
   it("conta le carte che hanno perso immagine, prezzo o tag", () => {
     const buchi = contaBuchi(preparazione().pool);
 
@@ -776,9 +799,32 @@ describe("i buchi del pool", () => {
   it("dice a schermo quante figure sono prese in prestito, anche quando sono zero", () => {
     // A zero si dice lo stesso: è il prezzo di una decisione, non un guasto, e
     // chi legge il comando deve poterlo confrontare con la volta prima.
-    expect(raccontaFigure(0, 753)).toContain("0");
-    expect(raccontaFigure(246, 753)).toContain("246");
-    expect(raccontaFigure(246, 753)).toContain("stessa edizione");
+    expect(raccontaFigure(0, buchiDi(753, 80))).toContain("0");
+    expect(raccontaFigure(246, buchiDi(753, 80))).toContain("246");
+    expect(raccontaFigure(246, buchiDi(753, 80))).toContain("stessa edizione");
+  });
+
+  it("conta le figure prese in prestito sulle carte che una figura ce l'hanno", () => {
+    // Il denominatore è la popolazione che la frase nomina, non il pool intero
+    // con le carte senza immagine che raccontaBuchi conta a parte (ticket 58).
+    const buchi = contaBuchi(preparazione().pool);
+    const conUnaFigura = buchi.totale - buchi.senzaImmagine;
+
+    expect(raccontaFigure(0, buchi)).toContain(
+      `Delle ${conUnaFigura} carte del pool con una figura, 0 `,
+    );
+    expect(raccontaFigure(246, buchiDi(753, 80))).toContain(
+      "Delle 673 carte del pool con una figura",
+    );
+    expect(raccontaFigure(246, buchiDi(753, 80))).not.toContain("carte del pool.");
+  });
+
+  it("con una carta sola le figure si contano al singolare", () => {
+    expect(raccontaFigure(1, buchiDi(753, 80))).toContain(", 1 la prende in prestito");
+    expect(raccontaFigure(0, buchiDi(753, 80))).toContain(", 0 la prendono in prestito");
+    expect(raccontaFigure(1, buchiDi(3, 2))).toContain(
+      "Dell'unica carta del pool con una figura, 1 la prende",
+    );
   });
 });
 
