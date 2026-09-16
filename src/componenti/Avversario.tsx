@@ -187,12 +187,43 @@ export function Avversario({
         </>
       ) : (
         <ul class="orologi-riassunto">
-          {orologi.map((orologio) => (
-            <li key={orologio.nome}>
-              <strong>{orologio.nome}</strong> · chiude al turno {orologio.turnoDiChiusura},{" "}
-              {orologio.rimozioni} rimozioni, {orologio.contromagie} contromagie
-            </li>
-          ))}
+          {/*
+            La chiave è l'indice, come nell'elenco modificabile qui sopra, e per
+            le stesse due ragioni (ticket 68). Il nome non è **unico** — le
+            righe appena aggiunte sono tutte senza, e i doppioni sono uno stato
+            che `vaglia()` ha un messaggio apposta per rifiutare, quindi
+            esistono — e non è **stabile**, perché cambia sotto le dita mentre
+            lo si scrive. Due chiavi uguali si manifestano come una riga che
+            scompare mentre se ne scrive un'altra: la cosa che questa schermata
+            ha promesso di non fare.
+          */}
+          {orologi.map((orologio, indice) => {
+            // Le righe che il setaccio scarta restano **in elenco** e lo
+            // dicono. Nasconderle sarebbe il mazzo scomparso in silenzio che
+            // questo progetto ha promesso di non fare; lasciarle mute è quel
+            // che faceva prima del ticket 60, quando però almeno correvano:
+            // adesso che non corrono più, una riga muta qui sarebbe un
+            // avversario dichiarato che non affronta nessuno.
+            const scartata = nonSiConserva.get(indice);
+            return (
+              <li key={indice}>
+                {/* Un nome che non c'è non si inventa e non si lascia vuoto:
+                    si dice che non c'è, o la riga esce come un punto elenco
+                    senza titolo — la forma «Contro , che chiude al turno 6»
+                    spostata di una schermata. */}
+                <strong>{orologio.nome.trim() === "" ? "(senza nome)" : orologio.nome}</strong> ·
+                chiude al turno {orologio.turnoDiChiusura}, {orologio.rimozioni} rimozioni,{" "}
+                {orologio.contromagie} contromagie
+                {scartata === undefined ? null : (
+                  // La ragione è quella che il deposito scriverebbe, ed è già
+                  // una frase per una persona. Il fatto nuovo si aggiunge
+                  // invece di riscriverla: da ticket 60 il setaccio è lo
+                  // stesso, quindi quel che non si conserva nemmeno corre.
+                  <p class="nota-filtro">{scartata} Nella corsa non entra.</p>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 

@@ -12,9 +12,11 @@ import { describe, expect, it } from "vitest";
 import {
   interpretaOrologi,
   OROLOGI_MASSIMI,
+  orologiCheCorrono,
   orologiCheSiLeggono,
   righeCheNonSiConservano,
   TURNO_DI_CHIUSURA_MASSIMO,
+  type Orologio,
 } from "./orologio.js";
 
 const BUONO = {
@@ -154,6 +156,60 @@ describe("gli orologi che si leggono", () => {
   it("un orologio senza nome continua a non entrare nella corsa", () => {
     const { nome: _, ...senzaNome } = BUONO;
     expect(orologiCheSiLeggono([senzaNome])).toEqual([]);
+  });
+});
+
+/**
+ * Quel che entra nella **corsa** (ticket 60).
+ *
+ * `Avversario` semina una riga nuova con `nome: ""` — ed è giusto, il nome lo
+ * scrive l'utente — ma quella riga non è una decisione: è una riga che si sta
+ * scrivendo. Nel deposito non entrava già (ticket 35); nella corsa entrava, e
+ * la schermata scriveva «Contro , che chiude al turno 6…».
+ *
+ * I test qui sopra provano il campo `nome` **mancante**. L'interfaccia produce
+ * un'altra cosa — la stringa **vuota** — e quel caso non lo copriva nessuno.
+ */
+describe("gli orologi che corrono", () => {
+  /** La riga come la semina il tasto «Aggiungi un mazzo»: numeri sì, nome no. */
+  const APPENA_AGGIUNTO: Orologio = {
+    nome: "",
+    perche: "",
+    turnoDiChiusura: 6,
+    rimozioni: 4,
+    contromagie: 0,
+  };
+
+  it("non manda in corsa la riga che l'interfaccia semina senza nome", () => {
+    expect(orologiCheCorrono([APPENA_AGGIUNTO])).toEqual([]);
+    // I soli spazi non sono un nome: `testo` taglia i bordi prima di guardare,
+    // e un nome che non si vede non intesta nessuna frase.
+    expect(orologiCheCorrono([{ ...APPENA_AGGIUNTO, nome: "   " }])).toEqual([]);
+  });
+
+  it("due righe senza nome non diventano due avversari", () => {
+    expect(orologiCheCorrono([APPENA_AGGIUNTO, APPENA_AGGIUNTO])).toEqual([]);
+  });
+
+  it("chi un nome ce l'ha corre, e arriva intero", () => {
+    expect(orologiCheCorrono([BUONO, APPENA_AGGIUNTO])).toEqual(interpretaOrologi([BUONO]));
+  });
+
+  it("corre contro esattamente quel che il deposito conserva", () => {
+    // La prima casella del ticket, detta come **uguaglianza**: è l'unica forma
+    // che impedisca alle due setacciature di divergere il giorno che una delle
+    // due cambia. Una copia della regola sarebbe la seconda risposta alla
+    // stessa domanda, che è il guasto da cui parte il ticket.
+    const elenchi: Orologio[][] = [
+      [BUONO],
+      [APPENA_AGGIUNTO],
+      [BUONO, APPENA_AGGIUNTO, { ...BUONO, nome: "Il mazzo dell'Abyss" }],
+      [BUONO, { ...BUONO, turnoDiChiusura: 7 }],
+      [],
+    ];
+    for (const elenco of elenchi) {
+      expect(orologiCheCorrono(elenco)).toEqual(orologiCheSiLeggono(elenco) ?? []);
+    }
   });
 });
 

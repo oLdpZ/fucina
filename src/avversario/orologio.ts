@@ -135,6 +135,34 @@ export function orologiCheSiLeggono(dati: unknown): Orologio[] | undefined {
 }
 
 /**
+ * Quali orologi entrano nella **corsa**: gli stessi che entrerebbero nel
+ * deposito, e non uno di più (ticket 60).
+ *
+ * È la stessa setacciatura di `orologiCheSiLeggono`, e lo è di proposito. La
+ * schermata tiene in mano righe che decisioni non sono ancora — il tasto
+ * «Aggiungi un mazzo» ne semina una con `nome: ""`, ed è giusto, il nome lo
+ * scrive l'utente — e quelle righe nel deposito non entravano già da
+ * ticket 35. Nella corsa entravano: il motore le contava tutte, e la schermata
+ * scriveva «Contro , che chiude al turno 6…», intestando un esito a un mazzo
+ * che un nome non ce l'ha. ADR-0002 dice che un orologio senza nome non entra
+ * nella corsa; questa è la riga che lo rende vero anche da questa porta.
+ *
+ * Non è un sinonimo con un nome nuovo: risponde a una domanda diversa — che
+ * **corre**, non che **si conserva** — e succede che la risposta sia la stessa.
+ * Che resti la stessa non è lasciato alla buona volontà: lo tiene un test
+ * scritto come uguaglianza fra le due, perché due copie della stessa regola
+ * sono due risposte che prima o poi divergono.
+ *
+ * Prende orologi **già tipati** e non `unknown`: qui non si legge niente da
+ * fuori, si setaccia quel che la schermata ha in mano. Per la stessa ragione
+ * non torna `undefined` — «non si è capito niente» non è un esito possibile su
+ * un array che esiste già.
+ */
+export function orologiCheCorrono(orologi: readonly Orologio[]): Orologio[] {
+  return vaglia(orologi).tenuti;
+}
+
+/**
  * Quali righe non entrano nel deposito, e **perché**, riga per riga.
  *
  * È la seconda metà della promessa del ticket 35. La prima è che una riga

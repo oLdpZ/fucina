@@ -9,7 +9,7 @@ import {
   notaDellaLettura,
   noteInFila,
 } from "./avversario/note-degli-orologi.js";
-import { orologiCheSiLeggono, type Orologio } from "./avversario/orologio.js";
+import { orologiCheCorrono, orologiCheSiLeggono, type Orologio } from "./avversario/orologio.js";
 import { Avversario } from "./componenti/Avversario.js";
 import { Catalogo } from "./componenti/Catalogo.js";
 import { Combo } from "./componenti/Combo.js";
@@ -283,6 +283,20 @@ export function App() {
   );
 
   /**
+   * Gli orologi che **corrono**, che non sono tutti quelli sullo schermo.
+   *
+   * La schermata tiene in mano anche righe che decisioni non sono ancora: una
+   * appena aggiunta non ha un nome finché l'utente non lo scrive. Nel deposito
+   * non entravano già (ticket 35); nella corsa entravano, e il motore le
+   * contava — «Contro , che chiude al turno 6…». Si setacciano **una volta
+   * sola** qui, e non dentro `corsa()` del punteggio, che gira a ogni mazzo
+   * valutato: là sarebbe una rivalidazione per mazzo (ticket 60).
+   *
+   * I grezzi restano ad `Avversario`, che quelle righe le deve mostrare: è lui
+   * che le sta facendo scrivere.
+   */
+  const orologiInCorsa = useMemo(() => orologiCheCorrono(orologi), [orologi]);
+  /**
    * La corsa che gli orologi scritti adesso descrivono, ridotta a quel che ne
    * fa domanda al mazzo (`impronta-della-corsa.ts`).
    *
@@ -291,8 +305,13 @@ export function App() {
    * andrebbe mentre si annota il «perché» di un avversario — una frase che il
    * motore non legge. Che cosa sia una corsa diversa è dunque una regola, e sta
    * dove la si può provare (ticket 37).
+   *
+   * Si prende i **setacciati** e non i grezzi, o il mazzo costruito se ne
+   * andrebbe anche mentre si correggono i numeri di una riga senza nome — una
+   * riga che alla corsa non partecipa, cioè un cambiamento che al mazzo in mano
+   * non cambia la domanda.
    */
-  const corsa = useMemo(() => improntaDellaCorsa(orologi), [orologi]);
+  const corsa = useMemo(() => improntaDellaCorsa(orologiInCorsa), [orologiInCorsa]);
 
   // Un mazzo costruito per un tema — o per una combo, o contro un meta — che nel
   // frattempo è stato riscritto risponde a una domanda che non gli è più stata
@@ -819,7 +838,7 @@ export function App() {
               cambiaSeme={setSeme}
               tettoDiSpesa={tettoDiSpesa}
               cambiaTetto={setTettoDiSpesa}
-              orologi={orologi}
+              orologi={orologiInCorsa}
               motore={motore}
               mettiInMano={mettiInMano}
             />

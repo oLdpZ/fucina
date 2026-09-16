@@ -357,8 +357,16 @@ export function Costruzione({
                       cui l'esito si legge davvero. */}
                   <p class="patto">{PATTO_DELLA_CORSA}</p>
                   <ul class="esiti-corsa">
-                    {mazzo.punteggio.corsa.grezzi.esiti.map((esito) => (
-                      <li key={esito.contro}>{frasePerLaCorsa(esito)}</li>
+                    {/* La chiave è l'indice e non `esito.contro` (ticket 68).
+                        Quel nome oggi è unico e non vuoto, ma non per qualcosa
+                        che si legga da qui: lo garantisce il setaccio di
+                        `vaglia()`, due moduli più in là, a cui gli orologi
+                        passano prima di correre (ticket 60). Una chiave che
+                        poggia su un'invariante scritta altrove torna a
+                        duplicarsi in silenzio il giorno che qualcuno consegna
+                        al motore orologi non setacciati. */}
+                    {mazzo.punteggio.corsa.grezzi.esiti.map((esito, indice) => (
+                      <li key={indice}>{frasePerLaCorsa(esito)}</li>
                     ))}
                   </ul>
                 </section>
