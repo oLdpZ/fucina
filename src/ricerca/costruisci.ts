@@ -90,6 +90,7 @@ import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
 import { elenco, terre as terreDette } from "../spiegazioni/frasi.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
 import { notaDelFuoriTema } from "./nota-del-fuori-tema.js";
+import { notaDelMazzoCorto } from "./nota-del-mazzo-corto.js";
 import { POSTI_NON_TERRA } from "../tema/taratura.js";
 import {
   escluso,
@@ -1203,13 +1204,24 @@ export function costruisciMazzo(
     return niente(
       "niente-da-costruire",
       corto !== null
-        ? // Col tetto acceso il numero del tetto resta accanto: gli altri passi
-          // della frontiera possono essere caduti per il prezzo, e senza «il
-          // meno caro che ho guardato costava tanto» chi legge non sa di
-          // quanto alzare. Le due cose sono vere insieme, e si dicono insieme.
-          `Con queste carte la ricerca arriva a ${corto} copie su ${DIMENSIONE_MAZZO}, e un mazzo corto non si consegna: ` +
-          `mancano le carte — o le terre — per finirlo.` +
-          (tetto === null ? "" : ` ${nessunoDentroIlTetto(tetto)}`)
+        ? // Qui il tetto **non** si racconta con `nessunoDentroIlTetto`, come
+          // faceva: per contare un mazzo corto la ricerca deve averne
+          // consegnato uno, e `cerca` consegna solo quel che è passato da
+          // `dentroIlTetto` — dentro il tetto ci stava. «Nessun mazzo sta
+          // dentro X, il meno caro che ho guardato costava Y» diceva il
+          // contrario di quel che arrivare fin qui dimostra, e mandava ad
+          // alzare una cifra che non era il vincolo che mordeva (ticket 64).
+          //
+          // I passi che il tetto ha lasciato senza mazzo viaggiano con gli
+          // altri numeri: dove ce n'è anche uno, il tetto **c'entra** — quei
+          // passi potevano essere mazzi interi — e la frase lo dice invece di
+          // negarlo. È la metà vera di quel che si diceva prima.
+          notaDelMazzoCorto({
+            copie: corto,
+            dimensione: DIMENSIONE_MAZZO,
+            tetto,
+            passiSenzaMazzo,
+          })
         : tetto === null
           ? "La ricerca non ha potuto provare nemmeno un mazzo."
           : nessunoDentroIlTetto(tetto),
