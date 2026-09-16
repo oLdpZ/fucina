@@ -128,8 +128,12 @@ export type CartaScryfall = {
  * diario li nomina a parte, perché sono le carte del file che il catalogo non
  * mostrerà.
  *
- * E porta i nomi delle **correzioni orfane**: le righe del file dei tag scritte
- * a mano che non trovano più la loro carta. Vanno dette a schermo, mai ingoiate.
+ * E porta le righe del file dei tag scritte a mano che **non trovano la loro
+ * carta** nel pool, divise in due: le **correzioni orfane**, il cui nome nessuna
+ * edizione ammessa contiene, e quelle **fuori dal criterio**, la cui carta sta
+ * in un'edizione ammessa ma il criterio non l'ha fatta entrare. Vanno dette a
+ * schermo, mai ingoiate — e separate, perché solo per le prime il nome può
+ * essere scritto storto (ticket 66).
  *
  * `postaNonBandita` è la verifica della meccanica della posta: le carte entrate
  * nel pool che nel testo parlano di posta e che la lista delle bandite non
@@ -140,6 +144,7 @@ export type Preparazione = {
   pool: Pool;
   bandite: string[];
   correzioniOrfane: string[];
+  correzioniFuoriDalCriterio: string[];
   postaNonBandita: string[];
   /**
    * Le carte di un'edizione ammessa che **non hanno nessuna stampa in una
@@ -491,7 +496,7 @@ export function preparaPool(
       carte: corrette.carte,
     },
     bandite,
-    correzioniOrfane: corrette.orfane,
+    ...divisePerCausa(corrette.senzaCarta, perNome),
     // Le bandite adesso nel pool ci sono, e la verifica le deve saltare: è la
     // carta da posta che la lista **non** nomina a dover suonare l'allarme.
     postaNonBandita: cartePerLaPosta(corrette.carte).filter((nome) => !daBandire.has(nome)),
@@ -558,6 +563,27 @@ export function verificaPoolNonVuoto(pool: Pool, formato: Formato): void {
       `riga qui sopra — e nessuna ha passato la regola. Da guardare sono le ` +
       `edizioni ammesse e il criterio nel documento di formato.`,
   );
+}
+
+/**
+ * Le correzioni che nel pool non hanno trovato la loro carta, divise per causa.
+ *
+ * `perNome` ha davanti tutte le carte delle edizioni ammesse **prima** del
+ * criterio: un nome che c'è è una carta che il criterio ha lasciato fuori, e il
+ * nome è giusto. Un nome che non c'è resta ambiguo — storto, o di un'edizione
+ * uscita dal documento — perché l'archivio arriva già setacciato per edizione,
+ * e da qui le due cose non si separano (ticket 66).
+ */
+function divisePerCausa(
+  senzaCarta: string[],
+  perNome: ReadonlyMap<string, unknown>,
+): Pick<Preparazione, "correzioniOrfane" | "correzioniFuoriDalCriterio"> {
+  const correzioniOrfane: string[] = [];
+  const correzioniFuoriDalCriterio: string[] = [];
+  for (const nome of senzaCarta) {
+    (perNome.has(nome) ? correzioniFuoriDalCriterio : correzioniOrfane).push(nome);
+  }
+  return { correzioniOrfane, correzioniFuoriDalCriterio };
 }
 
 function ammessaDalCriterio(stampe: CartaScryfall[], formato: Formato): boolean {

@@ -165,9 +165,13 @@ async function principale(): Promise<void> {
   // di battitura vuol dire una correzione che non c'è, e il manutentore la deve
   // vedere subito (user story 62). Per lo stesso motivo il comando esce con un
   // codice di errore: se un giorno girerà dentro uno script, deve accorgersene.
+  // Anche la riga su una carta che il criterio ha lasciato fuori fa uscire con
+  // errore: il nome è giusto, ma la correzione non fa niente, e chi la scrisse
+  // la crede in vigore.
   const guaiDeiTag = raccontaCorrezioni({
     problemi: lettura.problemi,
     orfane: preparazione.correzioniOrfane,
+    fuoriDalCriterio: preparazione.correzioniFuoriDalCriterio,
   });
   if (guaiDeiTag !== "") {
     console.log("");

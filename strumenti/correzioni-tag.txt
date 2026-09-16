@@ -22,9 +22,13 @@
 #     potenzia                evasione               pesca
 #     accelerazione-di-mana   si-cura-del-cimitero   rigenera
 #
-# Se una riga nomina una carta che nel pool non c'è più, `npm run dati` te lo
-# dice a schermo: su questo formato il pool è congelato, quindi vuol dire quasi
-# sempre che il nome è scritto storto.
+# Se una riga nomina una carta che nel pool non c'è, `npm run dati` te lo dice
+# a schermo, e distingue due casi: nessuna edizione ammessa contiene quel nome,
+# e allora o è scritto storto o la sua edizione è uscita dal documento di
+# formato; oppure la carta c'è ma il criterio del pool non l'ha fatta entrare, e
+# allora la riga non fa niente e si può togliere. In tutti e due i casi il
+# comando esce con un codice di errore. Le carte bandite nel pool ci sono (le
+# toglie l'app), e le loro righe valgono.
 #
 # Le correzioni qui sotto vengono dalla passata sulle 778 carte del 6 settembre
 # 2026 (ticket 06). I tag di Scryfall Tagger sono serviti a trovarle — sono

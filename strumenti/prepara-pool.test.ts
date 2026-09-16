@@ -839,14 +839,57 @@ describe("tag di sinergia", () => {
   });
 
   it("segnala la correzione che non trova più la sua carta, invece di ingoiarla", () => {
-    // È così che il manutentore scopre che una carta non è più nel pool.
+    // Un nome che nessuna edizione ammessa contiene: è così che il manutentore
+    // scopre di averlo scritto storto.
     const esito = preparaPool(FRAMMENTO, {
       formato: FORMATO,
       aggiornatoIl: QUANDO,
-      correzioni: [{ nome: "Fixture Uscita Di Scena", aggiunge: ["pesca"], toglie: [] }],
+      correzioni: [{ nome: "Fixture Scritta Storta", aggiunge: ["pesca"], toglie: [] }],
     });
 
-    expect(esito.correzioniOrfane).toEqual(["Fixture Uscita Di Scena"]);
+    expect(esito.correzioniOrfane).toEqual(["Fixture Scritta Storta"]);
+    expect(esito.correzioniFuoriDalCriterio).toEqual([]);
+  });
+
+  it("chiama orfana la carta di un'edizione non ammessa, anche se il nome è giusto (ticket 66)", () => {
+    // Il nome è giusto, ma l'archivio arriva setacciato per edizione: da qui
+    // non si separa da un refuso, ed è il racconto a nominare le due cause.
+    const esito = preparaPool(FRAMMENTO, {
+      formato: FORMATO,
+      aggiornatoIl: QUANDO,
+      correzioni: [{ nome: "Fixture Antico", aggiunge: ["pesca"], toglie: [] }],
+    });
+
+    expect(esito.correzioniOrfane).toEqual(["Fixture Antico"]);
+    expect(esito.correzioniFuoriDalCriterio).toEqual([]);
+  });
+
+  it("applica la correzione a una carta bandita, che nel pool c'è (ticket 66)", () => {
+    // Il bando lo applica l'app (ADR-0008): una carta corretta che un giorno
+    // il gruppo bandisce non deve far gridare al nome scritto storto.
+    const esito = preparaPool(FRAMMENTO, {
+      formato: FORMATO,
+      aggiornatoIl: QUANDO,
+      correzioni: [{ nome: "Fixture Contratto", aggiunge: ["pesca"], toglie: [] }],
+    });
+
+    expect(esito.correzioniOrfane).toEqual([]);
+    expect(esito.correzioniFuoriDalCriterio).toEqual([]);
+    expect(carta(esito.pool, "Fixture Contratto").tag).toContain("pesca");
+  });
+
+  it("non chiama orfana la correzione a una carta che esiste ma il criterio non ammette (ticket 66)", () => {
+    // Il nome è giusto: la carta sta in un'edizione ammessa, solo senza una
+    // stampa italiana. Dirlo scritto storto manderebbe a cercare un refuso
+    // che non c'è.
+    const esito = preparaPool(FRAMMENTO, {
+      formato: FORMATO,
+      aggiornatoIl: QUANDO,
+      correzioni: [{ nome: "Fixture Relic", aggiunge: ["pesca"], toglie: [] }],
+    });
+
+    expect(esito.correzioniOrfane).toEqual([]);
+    expect(esito.correzioniFuoriDalCriterio).toEqual(["Fixture Relic"]);
   });
 
   it("non segnala niente quando ogni correzione trova la sua carta", () => {

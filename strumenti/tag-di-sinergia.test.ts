@@ -405,7 +405,7 @@ describe("le correzioni applicate al pool", () => {
     expect(esito.carte[0]?.tag).toEqual(["evasione"]);
     // La carta che nessuno corregge resta com'era.
     expect(esito.carte[1]?.tag).toEqual(["rigenera"]);
-    expect(esito.orfane).toEqual([]);
+    expect(esito.senzaCarta).toEqual([]);
   });
 
   it("non ripetono un tag che la regola meccanica aveva già dato", () => {
@@ -415,12 +415,12 @@ describe("le correzioni applicate al pool", () => {
     expect(esito.carte[0]?.tag).toEqual(["pesca"]);
   });
 
-  it("segnalano la correzione che non trova più la sua carta", () => {
+  it("segnalano la correzione che non trova la sua carta", () => {
     const esito = applicaCorrezioni(pool, [
-      { nome: "Carta Ruotata Fuori", aggiunge: ["pesca"], toglie: [] },
+      { nome: "Carta Che Non C'è", aggiunge: ["pesca"], toglie: [] },
     ]);
 
-    expect(esito.orfane).toEqual(["Carta Ruotata Fuori"]);
+    expect(esito.senzaCarta).toEqual(["Carta Che Non C'è"]);
   });
 
   it("non toccano il pool che ricevono", () => {
@@ -433,17 +433,54 @@ describe("le correzioni applicate al pool", () => {
 
 describe("il racconto delle correzioni", () => {
   it("tace quando non c'è niente da dire", () => {
-    expect(raccontaCorrezioni({ problemi: [], orfane: [] })).toBe("");
+    expect(raccontaCorrezioni({ problemi: [], orfane: [], fuoriDalCriterio: [] })).toBe("");
   });
 
-  it("nomina la carta orfana, che è come si scopre che è ruotata fuori", () => {
-    const racconto = raccontaCorrezioni({ problemi: [], orfane: ["Carta Ruotata Fuori"] });
+  it("non dice «scritto storto» della carta che il criterio ha lasciato fuori (ticket 66)", () => {
+    const racconto = raccontaCorrezioni({
+      problemi: [],
+      orfane: [],
+      fuoriDalCriterio: ["Carta Senza Italiano"],
+    });
 
-    expect(racconto).toContain("Carta Ruotata Fuori");
+    expect(racconto).toContain("Carta Senza Italiano");
+    expect(racconto).toContain("criterio");
+    expect(racconto).not.toContain("storto");
+  });
+
+  it("tiene separate le due specie, così la carta lasciata fuori non si confonde col refuso", () => {
+    const racconto = raccontaCorrezioni({
+      problemi: [],
+      orfane: ["Carta Storta"],
+      fuoriDalCriterio: ["Carta Senza Italiano"],
+    });
+    const [storte, fuori] = racconto.split("\n\n");
+
+    expect(storte).toContain("Carta Storta");
+    expect(storte).not.toContain("Carta Senza Italiano");
+    expect(fuori).toContain("Carta Senza Italiano");
+  });
+
+  it("della carta orfana non accusa soltanto il refuso: l'edizione può essere uscita", () => {
+    // L'archivio arriva setacciato per edizione, e un nome giusto la cui
+    // edizione il documento ha tolto non si distingue da uno storto (ticket 66).
+    const racconto = raccontaCorrezioni({
+      problemi: [],
+      orfane: ["Carta Orfana"],
+      fuoriDalCriterio: [],
+    });
+
+    expect(racconto).toContain("Carta Orfana");
+    expect(racconto).toContain("storto");
+    expect(racconto).toContain("edizione è uscita");
   });
 
   it("riporta anche le righe che non si capiscono", () => {
-    const racconto = raccontaCorrezioni({ problemi: ["riga 2: non si capisce"], orfane: [] });
+    const racconto = raccontaCorrezioni({
+      problemi: ["riga 2: non si capisce"],
+      orfane: [],
+      fuoriDalCriterio: [],
+    });
 
     expect(racconto).toContain("riga 2");
   });

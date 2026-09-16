@@ -566,8 +566,11 @@ export function leggiCorrezioni(testo: string): LetturaCorrezioni {
 
 export type EsitoCorrezioni = {
   carte: Carta[];
-  /** I nomi corretti che nel pool non esistono: su un pool congelato, nomi storti. */
-  orfane: string[];
+  /**
+   * I nomi corretti che nel pool non ci sono, per qualunque ragione. Non sono
+   * ancora le orfane: quali lo siano lo decide `preparaPool` (ticket 66).
+   */
+  senzaCarta: string[];
 };
 
 /**
@@ -575,9 +578,9 @@ export type EsitoCorrezioni = {
  * esse. Le carte in ingresso non vengono toccate: ne escono di nuove.
  *
  * Una correzione che non trova la sua carta non viene ignorata: il suo nome
- * esce di qui e finisce a schermo, perché è il modo in cui il manutentore
- * scopre di avere scritto storto un nome — su un pool congelato non c'è altra
- * ragione perché una correzione non trovi la sua carta.
+ * esce di qui e finisce a schermo. Qui si sa soltanto che nel pool non c'è: se
+ * sia un nome scritto storto o una carta che il criterio ha lasciato fuori lo
+ * decide chi ha ancora davanti l'archivio (`preparaPool`, ticket 66).
  */
 export function applicaCorrezioni(carte: Carta[], correzioni: Correzione[]): EsitoCorrezioni {
   const perNome = new Map<string, Correzione[]>();
@@ -602,9 +605,9 @@ export function applicaCorrezioni(carte: Carta[], correzioni: Correzione[]): Esi
   });
 
   const presenti = new Set(carte.map((c) => c.nome));
-  const orfane = [...perNome.keys()].filter((nome) => !presenti.has(nome));
+  const senzaCarta = [...perNome.keys()].filter((nome) => !presenti.has(nome));
 
-  return { carte: corrette, orfane };
+  return { carte: corrette, senzaCarta };
 }
 
 /**
@@ -612,22 +615,36 @@ export function applicaCorrezioni(carte: Carta[], correzioni: Correzione[]): Esi
  * Vuoto quando non c'è niente da dire, così chi chiama non stampa una riga per
  * dire che va tutto bene.
  */
-export function raccontaCorrezioni(esito: { problemi: string[]; orfane: string[] }): string {
-  const righe: string[] = [];
+export function raccontaCorrezioni(esito: {
+  problemi: string[];
+  orfane: string[];
+  fuoriDalCriterio: string[];
+}): string {
+  const blocchi: string[] = [];
+  const blocco = (voci: string[], titolo: string) => {
+    if (voci.length === 0) return;
+    blocchi.push([titolo, ...voci.map((voce) => `  ${voce}`)].join("\n"));
+  };
 
-  if (esito.problemi.length > 0) {
-    righe.push(`Righe non capite nel file delle correzioni (${esito.problemi.length}):`);
-    for (const problema of esito.problemi) righe.push(`  ${problema}`);
-  }
+  blocco(esito.problemi, `Righe non capite nel file delle correzioni (${esito.problemi.length}):`);
 
-  if (esito.orfane.length > 0) {
-    if (righe.length > 0) righe.push("");
-    righe.push(
-      `Correzioni a carte che nel pool non ci sono (${esito.orfane.length}) — il pool` +
-        ` è congelato, quindi quasi certamente il nome è scritto storto:`,
-    );
-    for (const nome of esito.orfane) righe.push(`  ${nome}`);
-  }
+  // L'archivio arriva già setacciato per edizione: di un nome che non c'è, da
+  // qui non si sa se sia storto o se la sua edizione sia uscita dal documento
+  // di formato. Si dicono tutte e due, invece di accusare il refuso (ticket 66).
+  blocco(
+    esito.orfane,
+    `Correzioni a carte che nessuna edizione ammessa contiene (${esito.orfane.length})` +
+      ` — o il nome è scritto storto, o la sua edizione è uscita dal documento di formato:`,
+  );
 
-  return righe.join("\n");
+  // Qui il nome è giusto: la carta sta nelle edizioni del formato, ma il
+  // criterio non l'ha fatta entrare. Accusare un refuso manderebbe a cercare
+  // una lettera sbagliata che non c'è.
+  blocco(
+    esito.fuoriDalCriterio,
+    `Correzioni a carte che esistono ma il criterio del pool non ammette` +
+      ` (${esito.fuoriDalCriterio.length}) — la riga non fa niente e si può togliere:`,
+  );
+
+  return blocchi.join("\n\n");
 }
