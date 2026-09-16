@@ -1087,6 +1087,8 @@ describe("la corsa contro un orologio", () => {
     contro: "Mono rosso",
     turnoMio: 5,
     turnoSuo: 6,
+    ritardoInflittoConRimozioni: 0,
+    ritardoInflittoConContromagie: 0,
     ritardoDaRimozioni: 0,
     ritardoDaContromagie: 0,
     turnoMioRitardato: 5,
@@ -1133,6 +1135,41 @@ describe("la corsa contro un orologio", () => {
     });
     expect(frase).toContain("rimozioni");
     expect(frase).toContain("contromagie");
+  });
+
+  /**
+   * L'altra metà della corsa: quel che questo mazzo fa all'avversario. La frase
+   * deve decidere chi arriva prima sullo **stesso** turno dell'avversario che
+   * il voto ha usato, e mostrarlo: chi legge «lui chiude al 6» e «tu al 7,2» e
+   * poi «arrivi prima tu» non può rifare la somma se la metà che la spiega
+   * manca.
+   */
+  it("nomina il ritardo che questo mazzo infligge, e decide sul turno ritardato di lui", () => {
+    const frase = frasePerLaCorsa({
+      ...GREZZI,
+      turnoMio: 7.2,
+      turnoMioRitardato: 7.2,
+      ritardoInflittoConRimozioni: 1.5,
+      ritardoInflittoConContromagie: 0.5,
+    });
+
+    expect(frase).toContain("turno 6");
+    expect(frase).toContain("diventa 8,0");
+    expect(frase).toContain("1,5 per le rimozioni di questo mazzo");
+    expect(frase).toContain("0,5 per le contromagie di questo mazzo");
+    expect(frase).toContain("arriva prima lui");
+  });
+
+  it("non nomina il ritardo inflitto quando non c'è", () => {
+    expect(frasePerLaCorsa(GREZZI)).not.toContain("di questo mazzo");
+    expect(frasePerLaCorsa(GREZZI)).not.toContain("diventa");
+  });
+
+  it("il turno di lui si rifà dai ritardi mostrati, come quello di questo mazzo", () => {
+    // Un ritardo che si mostra «0,0» esce dall'elenco, e non sposta il turno.
+    const frase = frasePerLaCorsa({ ...GREZZI, ritardoInflittoConRimozioni: 0.02 });
+    expect(frase).not.toContain("di questo mazzo");
+    expect(frase).not.toContain("diventa");
   });
 
   it("dice il pareggio invece di scegliere un vincitore a caso", () => {

@@ -12,6 +12,7 @@
 import { describe, expect, it } from "vitest";
 
 import { POOL_DEL_MOTORE } from "../catalogo/pool-finto.js";
+import type { Tag } from "../dati/pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import { corriControUnOrologio } from "./corsa.js";
@@ -36,17 +37,32 @@ const OROLOGIO: Orologio = {
   contromagie: 0,
 };
 
-const CREATURE: CopieDiCarta[] = POOL_DEL_MOTORE.filter((carta) =>
-  carta.tipi.some((tipo) => tipo.toLowerCase() === "creature"),
-)
-  .slice(0, 6)
-  .map((carta) => ({ carta, copie: 4 }));
+/**
+ * Le stesse copie con i tag riscritti. Quel che il mio mazzo fa all'avversario
+ * lo dicono i tag, e il pool finto ne mette dove gli serve: i test della corsa
+ * li decidono da sé, perché un tag aggiunto al pool finto non sposti un conto
+ * che qui non c'entra.
+ */
+function conTag(voci: readonly CopieDiCarta[], tag: Tag[]): CopieDiCarta[] {
+  return voci.map((voce) => ({ ...voce, carta: { ...voce.carta, tag } }));
+}
 
-const MAGIE: CopieDiCarta[] = POOL_DEL_MOTORE.filter(
-  (carta) => carta.terra === null && !carta.tipi.some((tipo) => tipo.toLowerCase() === "creature"),
-)
-  .slice(0, 6)
-  .map((carta) => ({ carta, copie: 4 }));
+const CREATURE: CopieDiCarta[] = conTag(
+  POOL_DEL_MOTORE.filter((carta) => carta.tipi.some((tipo) => tipo.toLowerCase() === "creature"))
+    .slice(0, 6)
+    .map((carta) => ({ carta, copie: 4 })),
+  [],
+);
+
+const MAGIE: CopieDiCarta[] = conTag(
+  POOL_DEL_MOTORE.filter(
+    (carta) =>
+      carta.terra === null && !carta.tipi.some((tipo) => tipo.toLowerCase() === "creature"),
+  )
+    .slice(0, 6)
+    .map((carta) => ({ carta, copie: 4 })),
+  [],
+);
 
 describe("la corsa contro un orologio", () => {
   it("ha creature e magie fra cui distinguere, se no non prova niente", () => {
@@ -70,6 +86,7 @@ describe("la corsa contro un orologio", () => {
     expect(esito.turnoMio).toBe(5);
     expect(esito.turnoSuo).toBe(6);
     expect(esito.turnoMioRitardato).toBe(5);
+    expect(esito.turnoSuoRitardato).toBe(6);
     expect(esito.quotaPartiteChiuse).toBe(1);
   });
 
@@ -113,6 +130,69 @@ describe("la corsa contro un orologio", () => {
       5 + esito.ritardoDaRimozioni + esito.ritardoDaContromagie,
       9,
     );
+  });
+
+  /**
+   * L'altra metà della corsa. Senza, un mazzo di controllo e un mazzo lento che
+   * non fa niente si somigliano in tutto: tutt'e due chiudono tardi, e la corsa
+   * guardava solo quel che l'avversario fa a me.
+   */
+  it("le mie rimozioni rallentano lui", () => {
+    const esito = corriControUnOrologio(
+      SIMULAZIONE,
+      [...CREATURE, ...conTag(MAGIE.slice(0, 2), ["rimozione-mirata"])],
+      OROLOGIO,
+    );
+
+    expect(esito.ritardoInflittoConRimozioni).toBeGreaterThan(0);
+    expect(esito.ritardoInflittoConContromagie).toBe(0);
+    expect(esito.turnoSuoRitardato).toBeCloseTo(6 + esito.ritardoInflittoConRimozioni, 9);
+  });
+
+  it("anche spazzare il campo è una rimozione, e le mie contromagie contano a parte", () => {
+    const esito = corriControUnOrologio(
+      SIMULAZIONE,
+      [
+        ...conTag(MAGIE.slice(0, 1), ["spazza-via"]),
+        ...conTag(MAGIE.slice(1, 3), ["controincantesimo"]),
+      ],
+      OROLOGIO,
+    );
+
+    expect(esito.ritardoInflittoConRimozioni).toBeGreaterThan(0);
+    expect(esito.ritardoInflittoConContromagie).toBeGreaterThan(0);
+    expect(esito.turnoSuoRitardato).toBeCloseTo(
+      6 + esito.ritardoInflittoConRimozioni + esito.ritardoInflittoConContromagie,
+      9,
+    );
+  });
+
+  it("una carta che fa tutt'e due le cose non rallenta due volte come rimozione", () => {
+    const una = corriControUnOrologio(
+      SIMULAZIONE,
+      conTag(MAGIE.slice(0, 1), ["rimozione-mirata"]),
+      OROLOGIO,
+    );
+    const doppia = corriControUnOrologio(
+      SIMULAZIONE,
+      conTag(MAGIE.slice(0, 1), ["rimozione-mirata", "spazza-via"]),
+      OROLOGIO,
+    );
+
+    expect(doppia.ritardoInflittoConRimozioni).toBe(una.ritardoInflittoConRimozioni);
+  });
+
+  it("il ritardo che infliggo è quel che mi fa reggere una corsa che perderei", () => {
+    const lento = { ...SIMULAZIONE, turnoMedioDiChiusura: 7 };
+    const senza = corriControUnOrologio(lento, MAGIE, OROLOGIO);
+    const con = corriControUnOrologio(
+      lento,
+      conTag(MAGIE, ["rimozione-mirata", "controincantesimo"]),
+      OROLOGIO,
+    );
+
+    expect(senza.voto).toBeLessThan(con.voto);
+    expect(con.turnoMioRitardato!).toBeLessThanOrEqual(con.turnoSuoRitardato);
   });
 
   it("un mazzo che non chiude mai perde la corsa, e non la salta", () => {

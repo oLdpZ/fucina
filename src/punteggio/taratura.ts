@@ -113,6 +113,46 @@ export const TURNI_PERSI_PER_RIMOZIONI = 2;
  */
 export const TURNI_PERSI_PER_CONTROMAGIE = 1.5;
 
+/**
+ * Quanti turni costano **a lui** le mie rimozioni, quando ne porto tante — la
+ * metà della corsa che guarda dall'altra parte (ticket 03 della tappa 3).
+ *
+ * Senza di lei un mazzo di controllo e un mazzo lento che non fa niente si
+ * somigliano in tutto: tutt'e due chiudono tardi, e la corsa guardava solo quel
+ * che l'avversario fa a me. È questo numero a far dire all'archetipo misurato
+ * che un mazzo **regge** la corsa invece di perderla piano.
+ *
+ * La stessa scommessa di `TURNI_PERSI_PER_RIMOZIONI`, e per simmetria lo stesso
+ * numero: niente dice che una rimozione pesi di più in una mano che nell'altra.
+ * Con una differenza da sapere: dell'avversario non si sa quante creature
+ * abbia, e le mie rimozioni si contano come se trovassero sempre un bersaglio.
+ * Contro un orologio che chiude bruciando questo ritardo è falso, e l'orologio
+ * non ha un numero per dirlo.
+ *
+ * **Messo a zero, le mie rimozioni smettono di contare**, con la stessa
+ * disciplina degli altri due: alla sosta si azzera e si guarda che cosa cambia.
+ */
+export const TURNI_INFLITTI_CON_RIMOZIONI = 2;
+
+/**
+ * Quanti turni costano a lui le mie contromagie. Vedi
+ * `TURNI_INFLITTI_CON_RIMOZIONI`: stessa scommessa, stesso numero della metà
+ * che guarda me (`TURNI_PERSI_PER_CONTROMAGIE`), stessa via per toglierle.
+ */
+export const TURNI_INFLITTI_CON_CONTROMAGIE = 1.5;
+
+/**
+ * Quali tag fanno di una carta **una mia rimozione** e quali **una mia
+ * contromagia**, per la corsa.
+ *
+ * Sono i due numeri che l'orologio porta scritti per l'avversario, letti dal
+ * mio mazzo invece che da una mano dell'utente. Spazzare il campo è una
+ * rimozione come la mirata: per il tempo dell'avversario conta che le sue
+ * creature se ne vadano, non quante per volta.
+ */
+export const TAG_DELLE_MIE_RIMOZIONI: readonly Tag[] = ["rimozione-mirata", "spazza-via"];
+export const TAG_DELLE_MIE_CONTROMAGIE: readonly Tag[] = ["controincantesimo"];
+
 /* ------------------------------------------------------------------------- *
  * Velocità e affidabilità
  * ------------------------------------------------------------------------- */

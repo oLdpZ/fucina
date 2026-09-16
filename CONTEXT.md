@@ -88,6 +88,12 @@ mazzo**. Nessun elenco di archetipi è scritto nel codice come regola su cosa un
 mazzo debba contenere — è la stessa ragione per cui la forma attesa della curva
 viene dalla velocità misurata e non da un archetipo scritto a mano.
 
+Le caselle sono tre più una: **aggro** e **midrange** chiudono quasi sempre, il
+primo presto e il secondo più tardi; **controllo** chiude tardi ma regge la
+corsa **grazie al ritardo che infligge**; tutto il resto è **nessuno dei tre**,
+che si dice invece di scegliere la casella più vicina. Senza orologi il
+controllo non si misura. La combo non è un archetipo misurato: si dichiara.
+
 ## Guardia
 
 **Il conto grossolano che parla prima di costruire, e solo quando è certo.**
@@ -128,6 +134,11 @@ l'elenco.
 
 **Il confronto fra il mazzo e un orologio**: chi chiude per primo, e che cosa
 resta del mazzo dopo le rimozioni dell'avversario.
+
+Guarda **dalle due parti**: le rimozioni e le contromagie dell'avversario
+ritardano il mazzo, e quelle del mazzo — contate dai tag — ritardano
+l'avversario. Senza la seconda metà un mazzo di controllo e un mazzo lento che
+non fa niente sarebbero la stessa cosa, e l'archetipo non li saprebbe separare.
 
 L'esito della corsa è la **sesta componente del punteggio**, accanto alle
 cinque. Sta nel punteggio e non accanto al mazzo perché altrimenti l'app

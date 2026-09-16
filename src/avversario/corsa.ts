@@ -30,12 +30,31 @@
  * qualcosa direbbe il falso su un mazzo che ha scelto apposta di non darne.
  * Le **contromagie** mordono tutti: contro di loro non esiste un mazzo senza
  * bersagli, perché il bersaglio è ogni magia che si lancia.
+ *
+ * ## E il ritardo che infliggo io
+ *
+ * La corsa guarda dalle due parti. Le mie rimozioni e le mie contromagie —
+ * contate dai tag, come l'orologio conta le sue a mano — spostano **il suo**
+ * turno di chiusura. Senza questa metà un mazzo di controllo e un mazzo lento
+ * che non fa niente si somigliano in tutto, e l'archetipo misurato non
+ * saprebbe distinguerli: tutt'e due chiudono tardi, ma solo il primo tiene
+ * l'avversario più lontano del proprio arrivo.
+ *
+ * Qui la caricatura è più grossa che dall'altra parte, e va detto: dell'avversario
+ * non si sa quante creature abbia, e le mie rimozioni trovano sempre un
+ * bersaglio. I pesi sono in `punteggio/taratura.ts`, e messi a zero questa metà
+ * sparisce.
  */
 
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
+import type { Tag } from "../dati/pool.js";
 import {
   COPIE_NON_TERRA_DI_RIFERIMENTO,
+  TAG_DELLE_MIE_CONTROMAGIE,
+  TAG_DELLE_MIE_RIMOZIONI,
+  TURNI_INFLITTI_CON_CONTROMAGIE,
+  TURNI_INFLITTI_CON_RIMOZIONI,
   TURNI_PERSI_PER_CONTROMAGIE,
   TURNI_PERSI_PER_RIMOZIONI,
 } from "../punteggio/taratura.js";
@@ -55,6 +74,12 @@ export type EsitoDellaCorsa = {
   turnoMio: number | null;
   /** Il turno in cui chiude lui, scritto nell'orologio. */
   turnoSuo: number;
+  /** I turni che le **mie** rimozioni costano a lui. */
+  ritardoInflittoConRimozioni: number;
+  /** I turni che le **mie** contromagie costano a lui. */
+  ritardoInflittoConContromagie: number;
+  /** Il suo turno più i ritardi che gli infliggo: quando arriva davvero lui. */
+  turnoSuoRitardato: number;
   /** I turni che le sue **rimozioni** mi costano. */
   ritardoDaRimozioni: number;
   /** I turni che le sue **contromagie** mi costano. */
@@ -107,6 +132,13 @@ export function corriControUnOrologio(
     TURNI_PERSI_PER_RIMOZIONI * quotaBersagli * pressione(orologio.rimozioni);
   const ritardoDaContromagie = TURNI_PERSI_PER_CONTROMAGIE * pressione(orologio.contromagie);
 
+  const ritardoInflittoConRimozioni =
+    TURNI_INFLITTI_CON_RIMOZIONI * pressione(copieCon(nonTerre, TAG_DELLE_MIE_RIMOZIONI));
+  const ritardoInflittoConContromagie =
+    TURNI_INFLITTI_CON_CONTROMAGIE * pressione(copieCon(nonTerre, TAG_DELLE_MIE_CONTROMAGIE));
+  const turnoSuoRitardato =
+    orologio.turnoDiChiusura + ritardoInflittoConRimozioni + ritardoInflittoConContromagie;
+
   const turnoMio = simulazione.turnoMedioDiChiusura;
   const turnoMioRitardato =
     turnoMio === null ? null : turnoMio + ritardoDaRimozioni + ritardoDaContromagie;
@@ -115,11 +147,14 @@ export function corriControUnOrologio(
     contro: orologio.nome,
     turnoMio,
     turnoSuo: orologio.turnoDiChiusura,
+    ritardoInflittoConRimozioni,
+    ritardoInflittoConContromagie,
+    turnoSuoRitardato,
     ritardoDaRimozioni,
     ritardoDaContromagie,
     turnoMioRitardato,
     quotaPartiteChiuse: simulazione.quotaPartiteChiuse,
-    voto: voto(turnoMioRitardato, orologio.turnoDiChiusura, simulazione.quotaPartiteChiuse),
+    voto: voto(turnoMioRitardato, turnoSuoRitardato, simulazione.quotaPartiteChiuse),
   };
 }
 
@@ -153,6 +188,17 @@ function voto(mio: number | null, suo: number, quotaChiuse: number): number {
  */
 function pressione(copie: number): number {
   return Math.min(1, copie / COPIE_NON_TERRA_DI_RIFERIMENTO);
+}
+
+/**
+ * Le copie che portano almeno uno dei tag dati. Una carta che rimuove in due
+ * modi è comunque una rimozione sola: conta una volta.
+ */
+function copieCon(voci: readonly CopieDiCarta[], tag: readonly Tag[]): number {
+  return voci.reduce(
+    (somma, voce) => somma + (voce.carta.tag.some((suo) => tag.includes(suo)) ? voce.copie : 0),
+    0,
+  );
 }
 
 function eCreatura(voce: CopieDiCarta): boolean {

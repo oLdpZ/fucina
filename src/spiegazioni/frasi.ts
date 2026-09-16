@@ -1323,6 +1323,10 @@ export type GrezziDellaCorsa = {
   contro: string;
   turnoMio: number | null;
   turnoSuo: number;
+  /** Quel che questo mazzo fa all'avversario: i turni che gli costano le sue rimozioni. */
+  ritardoInflittoConRimozioni: number;
+  /** E quelli che gli costano le sue contromagie. */
+  ritardoInflittoConContromagie: number;
   ritardoDaRimozioni: number;
   ritardoDaContromagie: number;
   turnoMioRitardato: number | null;
@@ -1332,8 +1336,9 @@ export type GrezziDellaCorsa = {
 /**
  * Com'è andata contro un orologio, detto con dentro i numeri che lo dicono.
  *
- * La frase cita **tutti** i pezzi del conto — il mio turno, il suo, e quanto mi
- * costano le sue rimozioni e le sue contromagie — perché è l'unico modo di
+ * La frase cita **tutti** i pezzi del conto — il mio turno, il suo, quanto mi
+ * costano le sue rimozioni e le sue contromagie e quanto gli costano le mie —
+ * perché è l'unico modo di
  * renderla verificabile: chi la legge può rifare la somma. Una frase che dicesse
  * «vai male contro il mono rosso» non si potrebbe né controllare né usare.
  *
@@ -1361,6 +1366,27 @@ export function frasePerLaCorsa(grezzi: GrezziDellaCorsa): string {
   // somma — e qui è anche l'unico modo di tenerlo.
   const ritardato = comeSiScrive(mio + daRimozioni + daContromagie, 1);
 
+  // L'altra metà, con la stessa regola: il turno di lui si rifà dai ritardi
+  // mostrati, e chi arriva prima si decide su quello. Il voto usa il turno
+  // ritardato di lui, e una frase che confrontasse col turno scritto
+  // nell'orologio nominerebbe un vincitore diverso da quello che il punteggio
+  // ha pesato.
+  const conMieRimozioni = comeSiScrive(grezzi.ritardoInflittoConRimozioni, 1);
+  const conMieContromagie = comeSiScrive(grezzi.ritardoInflittoConContromagie, 1);
+  const suoRitardato = comeSiScrive(grezzi.turnoSuo + conMieRimozioni + conMieContromagie, 1);
+  const inflitti: string[] = [];
+  if (conMieRimozioni > 0) {
+    inflitti.push(`${decimale(conMieRimozioni, 1)} per le rimozioni di questo mazzo`);
+  }
+  if (conMieContromagie > 0) {
+    inflitti.push(`${decimale(conMieContromagie, 1)} per le contromagie di questo mazzo`);
+  }
+  const suoDiventa = inflitti.length > 0 && suoRitardato > grezzi.turnoSuo;
+  const suo = suoDiventa
+    ? `che chiude al turno ${grezzi.turnoSuo} e diventa ${decimale(suoRitardato, 1)} contando ${elenco(inflitti)}`
+    : `che chiude al turno ${grezzi.turnoSuo}`;
+  const arrivoSuo = suoDiventa ? suoRitardato : grezzi.turnoSuo;
+
   const ritardi: string[] = [];
   if (daRimozioni > 0) {
     ritardi.push(`${decimale(daRimozioni, 1)} per le sue rimozioni`);
@@ -1383,9 +1409,9 @@ export function frasePerLaCorsa(grezzi: GrezziDellaCorsa): string {
   // avanti alla terza cifra.
   const arrivoMostrato = diventa ? ritardato : mio;
   const chi =
-    arrivoMostrato < grezzi.turnoSuo
+    arrivoMostrato < arrivoSuo
       ? "arriva prima lui"
-      : arrivoMostrato > grezzi.turnoSuo
+      : arrivoMostrato > arrivoSuo
         ? "arriva prima l’avversario"
         : "arrivano insieme";
 
@@ -1401,5 +1427,5 @@ export function frasePerLaCorsa(grezzi: GrezziDellaCorsa): string {
       ? `E ci arriva tutte le volte.`
       : `E ci arriva ${percentoDiUnaParte(grezzi.quotaPartiteChiuse)} delle volte — le altre non chiude affatto, e la corsa non si vince nemmeno partendo bene.`;
 
-  return `Contro ${grezzi.contro}, che chiude al turno ${grezzi.turnoSuo}, questo mazzo ${arrivo}: ${chi}. ${quanteVolte}`;
+  return `Contro ${grezzi.contro}, ${suo}, questo mazzo ${arrivo}: ${chi}. ${quanteVolte}`;
 }
