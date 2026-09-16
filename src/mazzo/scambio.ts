@@ -208,7 +208,15 @@ export function leggiScambio(testo: string, corrente: IdentitaDiFormato): Conten
     throw new Error("Il testo del mazzo non dice quante carte contiene: è stato maltrattato.");
   }
   const copie = carte.reduce((somma, voce) => somma + voce.copie, 0);
-  if (carte.length > 0 && (copie !== copieDichiarate || carte.length !== diverseDichiarate)) {
+  // Nessuna carta **non** è un caso da lasciare fuori di qui: è il troncamento
+  // peggiore che ci sia — via il blocco delle carte, rimasta l'intestazione che
+  // dice quante ce n'erano — e chi lo incolla deve sentirsi dire che il testo è
+  // tagliato, che gli dice anche che cosa fare: farselo rimandare intero. Detto
+  // «questo mazzo non contiene carte» suonerebbe come un mazzo scritto male.
+  // Un testo che dichiara zero copie di zero carte diverse, invece, va
+  // d'accordo con sé stesso: lì non manca niente per strada, il conto torna, e
+  // a dire che quel mazzo è vuoto ci pensa `interpretaContenuto` più sotto.
+  if (copie !== copieDichiarate || carte.length !== diverseDichiarate) {
     // Ne mancano: tagliato. Ce ne sono di più: incollato due volte, che capita
     // di continuo. Sono due guai diversi e vanno detti come due guai diversi.
     const troppe = copie > copieDichiarate || carte.length > diverseDichiarate;

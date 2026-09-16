@@ -111,12 +111,24 @@ describe("un testo che non si può importare", () => {
     expect(() => leggi(dalFuturo)).toThrow(/recente/i);
   });
 
-  it("non accetta un mazzo senza carte", () => {
+  it("chiama tagliato il testo a cui è rimasta l'intestazione e non le carte", () => {
+    // Il troncamento peggiore: via il blocco delle carte, rimasta la riga che
+    // dice quante ce n'erano. Chi lo incolla deve sentirsi dire che il testo è
+    // tagliato — e quindi che deve farselo rimandare intero — non che il mazzo
+    // è senza carte, che suona come un mazzo scritto male.
     const senzaCarte = scriviScambio(MAZZO)
       .split("\n")
       .filter((riga) => !/^\d+ /u.test(riga.trim()))
       .join("\n");
-    expect(() => leggi(senzaCarte)).toThrow(/carte/i);
+    expect(() => leggi(senzaCarte)).toThrow(/tagliato a metà/i);
+  });
+
+  it("chiama senza carte il testo che dichiara di non averne", () => {
+    // L'altra faccia: qui l'intestazione e l'elenco vanno d'accordo — zero e
+    // zero. Non manca niente per strada, e dire «tagliato» manderebbe a
+    // chiedere un testo intero che è già intero.
+    const vuoto = scriviScambio({ ...MAZZO, carte: [] });
+    expect(() => leggi(vuoto)).toThrow(/non contiene carte/i);
   });
 });
 
