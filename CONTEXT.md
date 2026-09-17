@@ -105,6 +105,14 @@ corsa **grazie al ritardo che infligge**; tutto il resto è **nessuno dei tre**,
 che si dice invece di scegliere la casella più vicina. Senza orologi il
 controllo non si misura. La combo non è un archetipo misurato: si dichiara.
 
+La casella **si dice all'utente coi numeri che gliel'hanno data** e con le
+soglie accanto — «chiude al turno 4,2 in media, entro il 6º, e ci arriva 92%
+delle volte, dove la casella ne chiede almeno l'80%» — e mai con la sola
+parola: un'etichetta sarebbe indistinguibile da un archetipo scritto a mano, e
+chi legge non potrebbe controllarla. La frase è `frasePerLArchetipo`, come tutte
+in `spiegazioni/frasi.ts`, e la misura non si rifà lì: si riporta quella che il
+mazzo porta con sé.
+
 ## Guardia
 
 **Il conto grossolano che parla prima di costruire, e solo quando è certo.**

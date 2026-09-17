@@ -38,6 +38,14 @@
 import { NOMI_DEI_COLORI } from "../catalogo/vocabolario.js";
 import type { GuaioDellaCombo } from "../combo/combo.js";
 import type { VerdettoDellaGuardia } from "../strategia/guardia.js";
+import type { ArchetipoMisurato, GrezziDellArchetipo } from "../strategia/archetipo.js";
+import {
+  QUOTA_CHE_CHIUDE,
+  QUOTA_DI_CORSE_RETTE,
+  QUOTA_MINIMA_DEL_CONTROLLO,
+  TURNO_MASSIMO_AGGRO,
+  TURNO_MASSIMO_MIDRANGE,
+} from "../strategia/taratura.js";
 import type { IdentitaDiFormato } from "../dati/ambito.js";
 import type { ColoreMana } from "../dati/pool.js";
 
@@ -1341,21 +1349,202 @@ export function frasePerIlMazzoSolo(grezzi: GrezziDelMazzoSolo): string {
   }
   const strategia = grezzi.strategia;
   if (strategia !== null && strategia.passiSenzaMazzo > 0) {
-    const passi =
-      strategia.passiSenzaMazzo === 1
-        ? "un altro passo, e il mazzo che ha trovato non era"
-        : `altri ${strategia.passiSenzaMazzo} passi, e i mazzi che hanno trovato non erano`;
+    const passi = altriPassi(
+      strategia.passiSenzaMazzo,
+      "e il mazzo che ha trovato non era",
+      "e i mazzi che hanno trovato non erano",
+    );
     return `Un mazzo solo, e a lasciarlo solo è stata la strategia: l’app ha cercato ${passi} un ${strategia.dichiarata}. Dentro ${strategia.dichiarata}, con questo tema, il margine di scambio è piccolo: non vuol dire che un baratto non ci sia — vuol dire che i mazzi che lo pagherebbero giocano in un altro modo.`;
   }
   const tetto = grezzi.tetto;
   if (tetto !== null && tetto.passiSenzaMazzo > 0) {
-    const passi =
-      tetto.passiSenzaMazzo === 1
-        ? "un altro passo, e il mazzo che avrebbe trovato costava"
-        : `altri ${tetto.passiSenzaMazzo} passi, e i mazzi che avrebbero trovato costavano`;
+    const passi = altriPassi(
+      tetto.passiSenzaMazzo,
+      "e il mazzo che avrebbe trovato costava",
+      "e i mazzi che avrebbero trovato costavano",
+    );
     return `Un mazzo solo, e a lasciarlo solo è stato il tetto: l’app ha cercato ${passi} più di ${decimale(tetto.euro)} €. Non vuol dire che un baratto non ci sia — vuol dire che con questi soldi non si compra. Alza il tetto e ricompare.`;
   }
   return "Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.";
+}
+
+/**
+ * «un altro passo, e il mazzo che ha trovato non era» / «altri 3 passi, e i
+ * mazzi che avrebbero trovato costavano»: i passi cercati invano, al singolare
+ * e al plurale.
+ *
+ * Lo stesso pezzo serve alle due frasi che spiegano una frontiera accorciata —
+ * quella lunga uno e quella lunga più di uno — e sta in un posto solo perché
+ * l'accordo è la parte facile da sbagliare: «1 passi» e «i mazzi che ha
+ * trovato» sono errori che si leggono a voce alta prima che in un test.
+ */
+function altriPassi(quanti: number, uno: string, molti: string): string {
+  return quanti === 1 ? `un altro passo, ${uno}` : `altri ${quanti} passi, ${molti}`;
+}
+
+/**
+ * **Perché la frontiera è più corta del solito**, quando lo è e i mazzi sono
+ * più di uno (ticket 06 della tappa 3).
+ *
+ * `frasePerIlMazzoSolo` risponde alla stessa domanda per la frontiera lunga
+ * uno, che è il caso che si nota. Ma una frontiera di tre mazzi con due passi
+ * persi è più corta del solito nello stesso modo e per le stesse ragioni, e
+ * finché nessuno lo diceva l'utente leggeva «3 mazzi, dal più fedele al tema al
+ * più forte» e non aveva modo di sapere che ne erano stati cercati cinque.
+ *
+ * Restituisce `null` quando non manca niente: una frontiera intera non ha
+ * niente da spiegare, e una riga che dicesse «non manca nessun passo» sarebbe
+ * rumore sotto ogni singola costruzione.
+ *
+ * Il tempo non compare qui — a differenza che nel mazzo solo — perché chi
+ * mostra lo dichiara già di suo sopra la frontiera: ripeterlo due volte
+ * insegnerebbe a saltare tutt'e due le righe. I due vincoli duri restano
+ * nell'ordine di sempre, la strategia prima del tetto: dove morde la domanda
+ * più stretta, il tetto non ha nemmeno avuto modo di mordere.
+ */
+export function frasePerLaFrontieraPiuCorta(grezzi: GrezziDelMazzoSolo): string | null {
+  const strategia = grezzi.strategia;
+  if (strategia !== null && strategia.passiSenzaMazzo > 0) {
+    const passi = altriPassi(
+      strategia.passiSenzaMazzo,
+      "e il mazzo che ha trovato non era",
+      "e i mazzi che hanno trovato non erano",
+    );
+    return (
+      `La frontiera è più corta del solito, e ad accorciarla è stata la strategia: l’app ha ` +
+      `cercato ${passi} un ${strategia.dichiarata}. Dentro ${strategia.dichiarata}, con questo ` +
+      `tema, il margine di scambio è piccolo.`
+    );
+  }
+
+  const tetto = grezzi.tetto;
+  if (tetto !== null && tetto.passiSenzaMazzo > 0) {
+    const passi = altriPassi(
+      tetto.passiSenzaMazzo,
+      "e il mazzo che avrebbe trovato costava",
+      "e i mazzi che avrebbero trovato costavano",
+    );
+    return (
+      `La frontiera è più corta del solito, e ad accorciarla è stato il tetto: l’app ha cercato ` +
+      `${passi} più di ${decimale(tetto.euro)} €. Alza il tetto e ricompare il baratto che ` +
+      `pagavano.`
+    );
+  }
+
+  return null;
+}
+
+/* --- Perché questo mazzo è quel che è -------------------------------------- */
+
+/**
+ * **Perché questo mazzo è un aggro**, detto coi numeri che l'hanno stabilito
+ * (ticket 06 della tappa 3).
+ *
+ * È la frase che tiene in piedi ADR-0001 davanti a chi legge. L'archetipo lo
+ * misura l'app, e una parola sola — «aggro» — sarebbe indistinguibile da
+ * un'etichetta attaccata a mano: chi la legge non potrebbe né controllarla né
+ * imparare da lei. Perciò la frase porta dentro **la misura intera**: il turno
+ * medio di chiusura, quante volte il mazzo ci arriva, e — per il controllo — le
+ * corse che regge grazie al ritardo che infligge.
+ *
+ * ## Le soglie si dicono accanto ai numeri
+ *
+ * Senza, i numeri sarebbero veri e muti: «ci arriva 92% delle volte» non dice
+ * perché quel 92% basti. Ogni numero esce quindi col confine che lo pesa, e chi
+ * legge ha sotto gli occhi tutt'e due le metà del confronto — che è l'unico modo
+ * che ha di non crederci.
+ *
+ * Le soglie si leggono da `strategia/taratura.ts`, e sono le stesse costanti su
+ * cui `archetipoDi` ha deciso la casella. È l'unica eccezione alla regola di
+ * questa pagina — i buchi si riempiono di numeri ricevuti nei grezzi — ed è
+ * l'eccezione che la regola vuole: farsele passare da chi chiama vorrebbe dire
+ * permettergli di mostrare un confine diverso da quello che ha deciso, cioè
+ * esattamente il guasto che la regola esiste per impedire.
+ */
+export function frasePerLArchetipo({ archetipo, grezzi }: ArchetipoMisurato): string {
+  const quota = percentoDiUnaParte(grezzi.quotaPartiteChiuse);
+
+  // Un mazzo che non chiude nemmeno una partita non ha un turno medio, e
+  // scriverne uno — zero, che è il più veloce che esista — direbbe il contrario
+  // esatto di quel che la simulazione ha visto. È sempre nessuno dei tre, per
+  // costruzione (`archetipo.ts`), e da qui in giù il turno è un numero.
+  const turno = grezzi.turnoMedioDiChiusura;
+  if (turno === null) {
+    return (
+      `Questo mazzo non chiude mai entro il tempo che la simulazione guarda: delle partite ` +
+      `simulate ne chiude ${quota}, e senza un turno di chiusura non è nessuno dei tre — nella ` +
+      `casella più vicina non ce lo metto.`
+    );
+  }
+
+  /** «chiude al turno 4,2 in media — entro il 6º —, e ci arriva 92% delle volte…». */
+  const comeChiude = (confine: string, soglia: number): string =>
+    `chiude al turno ${decimale(turno, 1)} in media — ${confine} —, e ci arriva ${quota} delle ` +
+    `volte, dove la casella ne chiede almeno ${conArticolo("il", percento(soglia))}`;
+
+  /** «e non perché gliel'ho scritto sopra»: la promessa che il resto della frase mantiene. */
+  const apertura = (nome: string): string =>
+    `Questo mazzo è un ${nome}, e non perché gliel’ho scritto sopra: `;
+
+  if (archetipo === "aggro") {
+    return `${apertura("aggro")}${comeChiude(`entro il ${TURNO_MASSIMO_AGGRO}º`, QUOTA_CHE_CHIUDE)}.`;
+  }
+
+  if (archetipo === "midrange") {
+    const confine =
+      `più tardi del ${TURNO_MASSIMO_AGGRO}º, che è il confine dell’aggro, e non oltre il ` +
+      `${TURNO_MASSIMO_MIDRANGE}º`;
+    return `${apertura("midrange")}${comeChiude(confine, QUOTA_CHE_CHIUDE)}.`;
+  }
+
+  if (archetipo === "controllo") {
+    return (
+      `${apertura("controllo")}` +
+      `${comeChiude(`oltre il ${TURNO_MASSIMO_MIDRANGE}º, cioè tardi`, QUOTA_MINIMA_DEL_CONTROLLO)}; ` +
+      `e ${corseRette(grezzi)} grazie al ritardo che infligge, dove la casella ne vuole rette ` +
+      `almeno ${conArticolo("il", percento(QUOTA_DI_CORSE_RETTE))} — senza quel ritardo ` +
+      `arriverebbe dopo l’avversario.`
+    );
+  }
+
+  // Nessuno dei tre. La frase dice i numeri e si ferma lì: quale delle soglie il
+  // mazzo non abbia raggiunto lo direbbe rifacendo qui la misura, che è il
+  // secondo giudizio che ADR-0001 vieta. E non lo mette nella casella più
+  // vicina, perché l'app quella scelta non la fa (`archetipo.ts`).
+  // I numeri vengono prima del verdetto, e non dopo: la casella qui è negativa,
+  // e una frase che la annunciasse per prima suonerebbe come una bocciatura
+  // invece che come la misura che è.
+  const corse =
+    grezzi.corse === 0 ? "" : `, e ${corseRette(grezzi)} grazie al ritardo che infligge`;
+  return (
+    `Questo mazzo chiude al turno ${decimale(turno, 1)} in media, ci arriva ${quota} delle ` +
+    `volte${corse}: non è nessuno dei tre, e nella casella più vicina non ce lo metto.`
+  );
+}
+
+/**
+ * «contro gli orologi che hai dichiarato ne regge 3 su 4»: le corse rette, col
+ * loro denominatore.
+ *
+ * Due forme, e nessuna è un vezzo. Le corse si contano **sugli orologi**, che
+ * sono quel che l'utente scrive: la corsa è il confronto che ne esce, e dire
+ * «le corse che hai dichiarato» sposta la parola di un passo (`CONTEXT.md`).
+ * E con un orologio solo «ne regge 1 su 1» è una frazione che finge di essere
+ * una misura: si dice l'unico, che è la stessa cosa detta come si dice.
+ *
+ * Il conto non si scrive mai col clitico — «le regge» —, perché il clitico
+ * riprenderebbe **tutte** le corse invece delle sole rette: letta a voce alta,
+ * la frase direbbe il contrario del suo stesso numero.
+ */
+function corseRette(grezzi: GrezziDellArchetipo): string {
+  if (grezzi.corse === 1) {
+    const regge = grezzi.corseRetteGrazieAlRitardo === 1 ? "la regge" : "non la regge";
+    return `la corsa contro l’unico orologio che hai dichiarato ${regge}`;
+  }
+  return (
+    `contro gli orologi che hai dichiarato ne regge ${grezzi.corseRetteGrazieAlRitardo} su ` +
+    `${grezzi.corse}`
+  );
 }
 
 /* --- La corsa contro gli orologi ------------------------------------------ */

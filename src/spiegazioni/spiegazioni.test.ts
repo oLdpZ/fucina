@@ -70,6 +70,7 @@ function frasi(spiegazioni: SpiegazioniDelMazzo): string[] {
     spiegazioni.terre.frase,
     ...(spiegazioni.passo === null ? [] : [spiegazioni.passo.frase]),
     ...(spiegazioni.combo === null ? [] : [spiegazioni.combo.frase]),
+    spiegazioni.archetipo.frase,
   ];
 }
 
@@ -304,5 +305,27 @@ describe("la spiegazione della combo dichiarata", () => {
 
   it("dice il patto: chi ha deciso che quella combo vince", () => {
     expect(SPIEGATA?.combo?.frase).toContain("l'hai detto tu");
+  });
+});
+
+/**
+ * Ticket 06 della tappa 3: l'archetipo misurato si dice a parole, e coi numeri
+ * che il mazzo porta — non con una misura rifatta qui, che potrebbe divergere.
+ */
+describe("la spiegazione dell'archetipo misurato", () => {
+  it("ce n'è una per ogni mazzo della frontiera", () => {
+    for (const spiegazione of SPIEGATE) {
+      expect(spiegazione.archetipo.frase).not.toBe("");
+    }
+  });
+
+  it("cita i numeri che il mazzo ha misurato, e non dei suoi", () => {
+    const mazzo = FRONTIERA.mazzi[0]!;
+    const spiegata = SPIEGATE[0]!;
+    expect(spiegata.archetipo.grezzi).toEqual(mazzo.archetipo);
+    const turno = mazzo.archetipo.grezzi.turnoMedioDiChiusura;
+    if (turno !== null) {
+      expect(spiegata.archetipo.frase).toContain(turno.toFixed(1).replace(".", ","));
+    }
   });
 });

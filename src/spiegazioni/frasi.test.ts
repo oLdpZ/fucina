@@ -30,6 +30,8 @@ import {
   frasePerIlPasso,
   frasePerIlPattoDellaCombo,
   frasePerLaCombo,
+  frasePerLArchetipo,
+  frasePerLaFrontieraPiuCorta,
   PATTO_DELLA_CORSA,
   frasePerLaPresenza,
   frasePerLeCopie,
@@ -1419,3 +1421,219 @@ describe("il mazzo di un altro formato", () => {
     expect(frase).toMatch(/non l.ho importato/u);
   });
 });
+
+/**
+ * Ticket 06 della tappa 3: **perché questo mazzo è un aggro**, coi numeri che
+ * l'hanno stabilito e non con l'etichetta.
+ *
+ * L'etichetta da sola sarebbe il difetto che ADR-0001 esiste per non fare: una
+ * parola attaccata al mazzo, indistinguibile da un archetipo scritto a mano. La
+ * frase deve portare dentro la misura — il turno, la quota, le corse — **e le
+ * soglie accanto**, perché un numero senza il suo confine è vero e muto: «ci
+ * arriva 92% delle volte» non dice perché quel 92% basti.
+ */
+describe("perché questo mazzo è quel che è", () => {
+  /** Un mazzo che chiude presto e quasi sempre. */
+  const AGGRO = {
+    turnoMedioDiChiusura: 4.2,
+    quotaPartiteChiuse: 0.92,
+    corse: 0,
+    corseRetteGrazieAlRitardo: 0,
+  };
+
+  it("l'aggro dice il turno medio, quante volte chiude, e i due confini", () => {
+    const frase = frasePerLArchetipo({ archetipo: "aggro", grezzi: AGGRO });
+
+    expect(frase).toContain("aggro");
+    expect(frase).toContain("4,2");
+    expect(frase).toContain("92%");
+    // Le due soglie che quella casella l'hanno data: il turno e la quota.
+    expect(frase).toContain("6º");
+    expect(frase).toContain("80%");
+  });
+
+  it("il midrange dice tutt'e due i confini: più tardi dell'aggro, e non oltre il suo", () => {
+    const frase = frasePerLArchetipo({
+      archetipo: "midrange",
+      grezzi: { ...AGGRO, turnoMedioDiChiusura: 7.5, quotaPartiteChiuse: 0.88 },
+    });
+
+    expect(frase).toContain("midrange");
+    expect(frase).toContain("7,5");
+    expect(frase).toContain("88%");
+    expect(frase).toContain("6º");
+    expect(frase).toContain("9º");
+    expect(frase).toContain("80%");
+  });
+
+  /** Un mazzo che chiude tardi e regge le corse grazie al ritardo che infligge. */
+  const CONTROLLO = {
+    turnoMedioDiChiusura: 11.3,
+    quotaPartiteChiuse: 0.62,
+    corse: 4,
+    corseRetteGrazieAlRitardo: 3,
+  };
+
+  it("il controllo dice che chiude tardi, e le corse che regge grazie al ritardo", () => {
+    const frase = frasePerLArchetipo({ archetipo: "controllo", grezzi: CONTROLLO });
+
+    expect(frase).toContain("controllo");
+    expect(frase).toContain("11,3");
+    expect(frase).toContain("9º");
+    expect(frase).toContain("62%");
+    // Le due metà del conto delle corse, e la soglia che le pesa: senza il
+    // denominatore «ne regge 3» non si può controllare.
+    expect(frase).toContain("3 su 4");
+    expect(frase).toContain("50%");
+    expect(frase).toMatch(/ritardo/u);
+  });
+
+  it("le corse si contano sugli orologi dichiarati, che sono quel che l'utente scrive", () => {
+    // `CONTEXT.md`: l'utente dichiara **orologi**; la corsa è il confronto che
+    // ne esce. Dire «le corse che hai dichiarato» sposta la parola di un passo.
+    const frase = frasePerLArchetipo({ archetipo: "controllo", grezzi: CONTROLLO });
+
+    expect(frase).toContain("orologi che hai dichiarato");
+    expect(frase).not.toContain("corse che hai dichiarato");
+  });
+
+  it("non dice «le regge» di tre corse su quattro", () => {
+    // Il clitico riprenderebbe le quattro corse invece delle tre rette: letta a
+    // voce alta, la frase direbbe che le regge tutte.
+    const frase = frasePerLArchetipo({ archetipo: "controllo", grezzi: CONTROLLO });
+
+    expect(frase).not.toContain("le regge");
+  });
+
+  it("con un orologio solo non scrive «1 delle 1 corse»", () => {
+    const frase = frasePerLArchetipo({
+      archetipo: "controllo",
+      grezzi: { ...CONTROLLO, corse: 1, corseRetteGrazieAlRitardo: 1 },
+    });
+
+    expect(frase).not.toMatch(/1 su 1|1 delle 1/u);
+    expect(frase).toMatch(/l.unico orologio/u);
+  });
+
+  it("nessuno dei tre dice i numeri e non sceglie la casella più vicina", () => {
+    const frase = frasePerLArchetipo({
+      archetipo: "nessuno-dei-tre",
+      grezzi: {
+        turnoMedioDiChiusura: 7.1,
+        quotaPartiteChiuse: 0.45,
+        corse: 3,
+        corseRetteGrazieAlRitardo: 1,
+      },
+    });
+
+    expect(frase).toContain("nessuno dei tre");
+    expect(frase).toContain("7,1");
+    expect(frase).toContain("45%");
+    expect(frase).toContain("1 su 3");
+    expect(frase).not.toContain("aggro");
+    expect(frase).not.toContain("midrange");
+  });
+
+  it("senza orologi dichiarati non nomina nessuna corsa", () => {
+    // «ne regge 0 su 0» sarebbe una frazione che non esiste, e una riga che
+    // insegna a saltare le altre.
+    const frase = frasePerLArchetipo({
+      archetipo: "nessuno-dei-tre",
+      grezzi: {
+        turnoMedioDiChiusura: 7.1,
+        quotaPartiteChiuse: 0.45,
+        corse: 0,
+        corseRetteGrazieAlRitardo: 0,
+      },
+    });
+
+    expect(frase).not.toMatch(/corsa|corse|orolog/u);
+  });
+
+  it("un mazzo che non chiude mai non si inventa il turno «0,0», e un numero lo porta lo stesso", () => {
+    // `archetipoDi` non ha un turno da dare quando la simulazione non chiude
+    // nemmeno una partita, e un turno zero sarebbe il più veloce che esista: la
+    // frase direbbe il contrario esatto di quel che è successo. Il numero che
+    // porta è la quota, che è zero e lo dice — una frase senza numeri sarebbe
+    // un'opinione.
+    const frase = frasePerLArchetipo({
+      archetipo: "nessuno-dei-tre",
+      grezzi: {
+        turnoMedioDiChiusura: null,
+        quotaPartiteChiuse: 0,
+        corse: 0,
+        corseRetteGrazieAlRitardo: 0,
+      },
+    });
+
+    expect(frase).toContain("nessuno dei tre");
+    expect(frase).not.toContain("0,0");
+    expect(frase).toMatch(/non chiude mai/u);
+    expect(frase).toMatch(/\d/u);
+  });
+});
+
+/**
+ * Ticket 06 della tappa 3, terza casella: «perché la frontiera è **più corta**
+ * del solito, **quando lo è**» — e una frontiera più corta non è solo quella
+ * lunga uno. Con due o tre mazzi consegnati e qualche passo perso per strada,
+ * l'app diceva soltanto «3 mazzi, dal più fedele al tema al più forte», e i
+ * passi mancanti non li nominava nessuno.
+ */
+describe("la frontiera più corta del solito", () => {
+  const INTERA = { troncataPerTempo: false, tetto: null, strategia: null };
+
+  it("tace quando non manca nessun passo", () => {
+    expect(frasePerLaFrontieraPiuCorta(INTERA)).toBeNull();
+    expect(
+      frasePerLaFrontieraPiuCorta({
+        ...INTERA,
+        tetto: { euro: 50, passiSenzaMazzo: 0 },
+        strategia: { dichiarata: "aggro", passiSenzaMazzo: 0 },
+      }),
+    ).toBeNull();
+  });
+
+  it("con la strategia dice quanti passi ha lasciato senza mazzo, e quale strategia", () => {
+    const frase = frasePerLaFrontieraPiuCorta({
+      ...INTERA,
+      strategia: { dichiarata: "aggro", passiSenzaMazzo: 2 },
+    });
+
+    expect(frase).toContain("2");
+    expect(frase).toContain("aggro");
+  });
+
+  it("con un passo solo non scrive «1 passi»", () => {
+    const frase = frasePerLaFrontieraPiuCorta({
+      ...INTERA,
+      strategia: { dichiarata: "controllo", passiSenzaMazzo: 1 },
+    });
+
+    expect(frase).not.toMatch(/1 passi/u);
+  });
+
+  it("col tetto dice la cifra, perché è la risposta che si può agire", () => {
+    const frase = frasePerLaFrontieraPiuCorta({
+      ...INTERA,
+      tetto: { euro: 42.5, passiSenzaMazzo: 3 },
+    });
+
+    expect(frase).toContain("3");
+    expect(frase).toContain("42,50");
+  });
+
+  it("dove morde la strategia non incolpa il tetto", () => {
+    // La stessa regola di `frasePerIlMazzoSolo`: dove la domanda più stretta ha
+    // già tolto il mazzo, il tetto non ha nemmeno avuto modo di mordere.
+    const frase = frasePerLaFrontieraPiuCorta({
+      ...INTERA,
+      tetto: { euro: 42.5, passiSenzaMazzo: 3 },
+      strategia: { dichiarata: "midrange", passiSenzaMazzo: 1 },
+    });
+
+    expect(frase).toContain("midrange");
+    expect(frase).not.toContain("42,50");
+  });
+});
+

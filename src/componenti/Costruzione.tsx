@@ -66,7 +66,12 @@ import type { Richiesta, SpesaDellaRicerca } from "../ricerca/costruisci.js";
 import { TEMPO_MASSIMO_PREDEFINITO_MS } from "../ricerca/taratura.js";
 import { fraseDellaRicercaFermata } from "../ricerca/ripensamento.js";
 import type { Motore } from "../ricerca/usa-motore.js";
-import { frasePerIlMazzoSolo, frasePerLaCorsa, PATTO_DELLA_CORSA } from "../spiegazioni/frasi.js";
+import {
+  frasePerIlMazzoSolo,
+  frasePerLaCorsa,
+  frasePerLaFrontieraPiuCorta,
+  PATTO_DELLA_CORSA,
+} from "../spiegazioni/frasi.js";
 import { spiegaFrontiera } from "../spiegazioni/spiegazioni.js";
 import type { Strategia } from "../strategia/strategia.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
@@ -165,6 +170,29 @@ export function Costruzione({
     [motore.frontiera, tema, pool.carte],
   );
   const spiegato = spiegazioni[Math.min(scelto, spiegazioni.length - 1)] ?? null;
+  // I due vincoli duri accorciano la frontiera, e i numeri con cui dirlo sono
+  // gli stessi che spiegano una frontiera lunga uno: la frase la compone
+  // `frasi.ts`, qui si passano solo i grezzi.
+  const frontieraPiuCorta =
+    motore.frontiera === null
+      ? null
+      : frasePerLaFrontieraPiuCorta({
+          troncataPerTempo: motore.frontiera.troncataPerTempo,
+          tetto:
+            motore.frontiera.spesa === null
+              ? null
+              : {
+                  euro: motore.frontiera.spesa.tetto,
+                  passiSenzaMazzo: motore.frontiera.spesa.passiSenzaMazzo,
+                },
+          strategia:
+            motore.frontiera.strategia === null
+              ? null
+              : {
+                  dichiarata: motore.frontiera.strategia.dichiarata,
+                  passiSenzaMazzo: motore.frontiera.strategia.passiSenzaMazzo,
+                },
+        });
 
   // Quante carte del mazzo scelto un listino non ce l'hanno: sono quelle che il
   // conto non racconta, e il conto va detto «almeno» quando ce ne sono.
@@ -279,10 +307,19 @@ export function Costruzione({
           {mazzi.length > 0 ? (
             <>
               {mazzi.length > 1 ? (
-                <p class="nota-frontiera">
-                  {mazzi.length} mazzi, dal più fedele al tema al più forte. Ogni passo dice quanto
-                  tema costa e quanta potenza rende: dove fermarsi lo scegli tu.
-                </p>
+                <>
+                  <p class="nota-frontiera">
+                    {mazzi.length} mazzi, dal più fedele al tema al più forte. Ogni passo dice
+                    quanto tema costa e quanta potenza rende: dove fermarsi lo scegli tu.
+                  </p>
+                  {/* Più corta del solito non è solo la frontiera lunga uno: tre
+                      mazzi consegnati con due passi persi per strada sono la
+                      stessa cosa, e senza questa riga l'utente non saprebbe che
+                      ne erano stati cercati cinque (ticket 06 della tappa 3). */}
+                  {frontieraPiuCorta === null ? null : (
+                    <p class="nota-frontiera nota-frontiera-corta">{frontieraPiuCorta}</p>
+                  )}
+                </>
               ) : (
                 // Le tre ragioni per cui la frontiera resta lunga uno — il
                 // tempo, il tetto, e il baratto che davvero non c'è — le
@@ -387,6 +424,17 @@ export function Costruzione({
                     ))}
                   </ul>
                 </section>
+              )}
+
+              {/*
+                Perché questo mazzo è un aggro, coi numeri che gliel'hanno
+                detto (ticket 06 della tappa 3). Sta **sotto** la corsa e non
+                sopra: la frase del controllo cita le corse che il mazzo regge,
+                e ADR-0002 vuole che il patto — l'avversario è una caricatura —
+                si legga prima di qualunque numero che venga da una corsa.
+              */}
+              {spiegato === null ? null : (
+                <p class="spiegazione spiegazione-archetipo">{spiegato.archetipo.frase}</p>
               )}
 
               <p class="spiegazione spiegazione-spesa">

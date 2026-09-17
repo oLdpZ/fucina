@@ -24,12 +24,14 @@
 import type { Carta } from "../dati/pool.js";
 import { casellaDellaCurva, qualitaDiCarta } from "../punteggio/punteggio.js";
 import type { Frontiera, MazzoCostruito } from "../ricerca/costruisci.js";
+import type { ArchetipoMisurato } from "../strategia/archetipo.js";
 import { appartiene, eTerra, risolviTema, type Tema, type TemaRisolto } from "../tema/tema.js";
 import { copieMassime } from "../mazzo/copie.js";
 import { probabilitaDiPescarne } from "../mazzo/probabilita.js";
 import {
   frasePerIlPasso,
   frasePerLaCombo,
+  frasePerLArchetipo,
   frasePerLaPresenza,
   frasePerLeCopie,
   frasePerLeTerre,
@@ -76,6 +78,13 @@ export type SpiegazioniDelMazzo = {
    * dire, e dire zero sarebbe rispondere a una domanda che nessuno ha fatto.
    */
   combo: Spiegazione<GrezziDellaCombo> | null;
+  /**
+   * **Perché questo mazzo è un aggro**: la casella che ha misurato, coi numeri
+   * che gliel'hanno data. C'è sempre, anche senza strategia dichiarata e anche
+   * quando la casella è «nessuno dei tre» — è una misura del mazzo, non la
+   * risposta a una domanda dell'utente.
+   */
+  archetipo: Spiegazione<ArchetipoMisurato>;
 };
 
 /**
@@ -125,6 +134,7 @@ export function spiegaMazzo(
     terre: spiegaLeTerre(mazzo),
     passo: precedente === null ? null : spiegaIlPasso(mazzo, precedente, contesto),
     combo: spiegaLaCombo(mazzo),
+    archetipo: spiegaLArchetipo(mazzo),
   };
 }
 
@@ -362,4 +372,20 @@ function spiegaLaCombo(mazzo: MazzoCostruito): Spiegazione<GrezziDellaCombo> | n
     guai: combo.guai,
   };
   return { frase: frasePerLaCombo(grezzi), grezzi };
+}
+
+/* --- L'archetipo misurato -------------------------------------------------- */
+
+/**
+ * L'archetipo, detto a parole: **la misura non si rifà qui**.
+ *
+ * `MazzoCostruito.archetipo` è quel che `archetipoDi` ha misurato su questo
+ * mazzo, ed è la stessa misura con cui la ricerca ha deciso se il mazzo
+ * soddisfa la strategia dichiarata. Rimisurarlo qui vorrebbe dire poter
+ * scrivere una casella diversa da quella che il vincolo ha fatto rispettare —
+ * cioè un secondo modo di dire che cosa sia un aggro, che è la cosa che
+ * ADR-0001 vieta.
+ */
+function spiegaLArchetipo(mazzo: MazzoCostruito): Spiegazione<ArchetipoMisurato> {
+  return { frase: frasePerLArchetipo(mazzo.archetipo), grezzi: mazzo.archetipo };
 }

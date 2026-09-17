@@ -77,7 +77,16 @@ corta lo dice — «dentro l'aggro, con questo tema, il margine è piccolo» —
 di far credere che un baratto non ci sia. Prima di costruire parla una
 **guardia**: se con le carte che restano quella strategia non si fa, lo dice
 subito e col conto in chiaro; e in ogni altro caso tace, perché un
-«impossibile» sbagliato sarebbe un guasto dell'app.
+«impossibile» sbagliato sarebbe un guasto dell'app. E adesso tutto questo
+**sa dirsi a parole**: il mazzo non porta più l'etichetta «aggro» ma il conto
+che gliel'ha data — a che turno chiude, quante volte ci arriva, quali corse
+regge grazie al ritardo che infligge, e ogni numero col confine che lo pesa
+accanto, perché chi legge possa rifarlo e non crederci. Una frontiera più corta
+del solito dice chi l'ha accorciata anche quando i mazzi sono più di uno. E due
+guardiani tengono chiuse due scorciatoie: nessun nome di carta entra nei modelli
+di frase — i nomi ruotano, e una frase che ne nominasse uno resterebbe a parlare
+di una carta che l'app non ha — e nessuna schermata mostra un numero di corsa
+senza dichiarare che l'avversario è una caricatura.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,

@@ -188,6 +188,15 @@
   color: var(--inchiostro-tenue);
 }
 
+/*
+ * Perché la frontiera è più corta del solito: viene subito sotto il conto dei
+ * mazzi, e lo stacco serve — due righe attaccate con lo stesso inchiostro si
+ * leggerebbero come una sola frase andata a capo.
+ */
+.nota-frontiera-corta {
+  margin-top: calc(var(--passo) / 2);
+}
+
 .frontiera {
   display: flex;
   gap: calc(var(--passo) * 2);
@@ -279,16 +288,15 @@
   color: var(--inchiostro-debole);
 }
 
-/* Il passo rispetto al mazzo prima: è la frase per cui la frontiera esiste. */
-.spiegazione-passo {
-  color: var(--inchiostro);
-}
-
 /*
- * La combo dichiarata: dentro c'è il patto — non giudico, l'hai detto tu — e
- * si legge come il passo, non come una nota a piè di pagina.
+ * Le tre frasi che non sono note a piè di pagina, e si leggono a inchiostro
+ * pieno: il passo rispetto al mazzo prima — quello per cui la frontiera esiste
+ * —, la combo dichiarata col suo patto, e la misura dell'archetipo che ADR-0001
+ * promette. Sono risposte a domande che l'utente ha fatto.
  */
-.spiegazione-combo {
+.spiegazione-passo,
+.spiegazione-combo,
+.spiegazione-archetipo {
   color: var(--inchiostro);
 }
 
