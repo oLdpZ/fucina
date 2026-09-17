@@ -231,6 +231,7 @@ describe("un mazzo slegato dai vincoli e poi salvato", () => {
   const CONSEGNATO_SENZA_NERO = {
     tetto: 30,
     tema: SENZA_NERO,
+    strategia: null,
     copie: new Map([["Goblin", 4]]),
   };
 

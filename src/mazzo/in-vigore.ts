@@ -53,6 +53,7 @@
  * mai stata chiesta da nessuno.
  */
 
+import type { Strategia } from "../strategia/strategia.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
 import type { Richiesta } from "./salvato.js";
 
@@ -92,6 +93,17 @@ export type MazzoConsegnato = {
    * adesso — come facevano tutti i mazzi prima di questo ticket.
    */
   tema: Tema | null;
+  /**
+   * La strategia sotto cui è stato costruito; `null` quando nessuna lo ha
+   * prodotto, o quando è stato salvato prima che l'app la scrivesse.
+   *
+   * Viaggia col mazzo come il tema e il tetto, e cade con loro dallo stesso
+   * confronto, ma **non decide niente** di quel che si rilegge: le terre non
+   * dipendono da lei. Serve a dire, di un mazzo riaperto, sotto quale domanda è
+   * nato — e a riscriverla nel file quando lo si risalva, così che il giro non
+   * la perda per strada.
+   */
+  strategia: Strategia | null;
   /** Le copie per nome al momento della consegna. */
   copie: ReadonlyMap<string, number>;
 };
@@ -205,13 +217,14 @@ export function temaInVigore(
 export function vincoliDaSalvare(
   consegnato: MazzoConsegnato | null,
   inMano: ReadonlyMap<string, number>,
-): { tema?: Tema; tetto?: number } {
+): { tema?: Tema; tetto?: number; strategia?: Strategia } {
   const richiesta = richiestaInVigore(consegnato, inMano);
   if (richiesta === null) return {};
-  const { tema, tetto } = richiesta;
+  const { tema, tetto, strategia } = richiesta;
   return {
     ...(tema !== null && temaDichiarato(tema) ? { tema } : {}),
     ...(tetto === null ? {} : { tetto }),
+    ...(strategia === null ? {} : { strategia }),
   };
 }
 
@@ -234,11 +247,16 @@ export function vincoliDiUnMazzoRiaperto(
   richiesta: Richiesta,
   copie: ReadonlyMap<string, number>,
 ): MazzoConsegnato | null {
-  const { tema, tetto } = richiesta;
-  if (tema === undefined && tetto === undefined) return null;
+  const { tema, tetto, strategia } = richiesta;
+  if (tema === undefined && tetto === undefined && strategia === undefined) return null;
   // Le copie si fotografano in una mappa **sua**: quella di chi chiama può
   // cambiare padrone, e una fotografia che fosse lo stesso oggetto
   // confronterebbe il mazzo con se stesso — cioè non staccherebbe i vincoli mai
   // più, che è il difetto per cui questo modulo esiste.
-  return { tetto: tetto ?? null, tema: tema ?? null, copie: new Map(copie) };
+  return {
+    tetto: tetto ?? null,
+    tema: tema ?? null,
+    strategia: strategia ?? null,
+    copie: new Map(copie),
+  };
 }

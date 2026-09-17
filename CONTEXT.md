@@ -74,6 +74,17 @@ Attenzione a non confonderla col tema: *«Goblin»* è un tema, *«aggro»* è u
 strategia, e **si scelgono separatamente**. Un tema Goblin può fare un aggro o
 un midrange; un tema di draghi giganti non farà mai un aggro, e l'app lo dice.
 
+Vive in `src/strategia/strategia.ts` e arriva al motore dentro la `Richiesta`,
+accanto al tema e alla combo. Ne esistono quattro nel vocabolario, ma **tre** in
+quel tipo: la combo non è una casella che si misuri, si dichiara nominando le
+carte, ed è la `Combo` qui sotto.
+
+Viaggia col mazzo costruito come il tema e il tetto, e cade con loro alla prima
+carta cambiata a mano (`mazzo/in-vigore.ts`): dice sotto quale domanda quel mazzo
+è nato. È anche il solo campo della richiesta che ha alzato il **numero di
+formato** del testo da scambiare, perché è il solo che un'app vecchia
+perderebbe cambiando la domanda invece di perdere un dettaglio.
+
 ## Archetipo
 
 **Il comportamento che il mazzo mostra davvero quando lo si fa giocare.**
@@ -107,6 +118,14 @@ tace in ogni altro caso.
 tacere che sbagliare* — applicato a un problema nuovo. Una guardia che sbaglia
 dicendo «impossibile» a un tema che ce l'avrebbe fatta è un guasto dell'app; una
 guardia che tace troppo spesso è solo una guardia timida.
+
+Vive in `src/strategia/guardia.ts`, ed è il **solo** modulo della strategia che
+le carte le guarda: gli altri ricevono un comportamento misurato e non hanno
+niente da contare. I conti che le danno il diritto di parlare sono due, e sono
+quelli certi: il danno che quelle carte non arrivano a fare entro il turno che
+l'archetipo chiede, e il controllo chiesto senza nemmeno un orologio — dove una
+corsa da reggere non esiste. Il suo verdetto ha due valori, *impossibile* e
+*tace*: «possibile» non c'è, e non è una dimenticanza.
 
 ## Orologio
 

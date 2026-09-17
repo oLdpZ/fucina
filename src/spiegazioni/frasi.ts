@@ -37,6 +37,7 @@
 
 import { NOMI_DEI_COLORI } from "../catalogo/vocabolario.js";
 import type { GuaioDellaCombo } from "../combo/combo.js";
+import type { VerdettoDellaGuardia } from "../strategia/guardia.js";
 import type { IdentitaDiFormato } from "../dati/ambito.js";
 import type { ColoreMana } from "../dati/pool.js";
 
@@ -1244,6 +1245,44 @@ export function frasePerIlGuaioDellaCombo(guaio: GuaioDellaCombo): string {
   }
 }
 
+/* --- La strategia dichiarata ---------------------------------------------- */
+
+/**
+ * **La frase della guardia**: perché con queste carte quella strategia non si
+ * fa (ticket 04 della tappa 3).
+ *
+ * È la frase più delicata di questa tappa, e per una ragione sola: dice
+ * *impossibile*. Perciò dice anche **da che conto** esce, e lo dice coi numeri —
+ * chi la legge deve poter rifare il conto e non fidarsi. E non dice mai che
+ * cosa sia un aggro: dice che venti punti vita, entro quel turno, con queste
+ * carte non si toglieranno.
+ *
+ * La differenza fra le due frasi non è di forma. «Nessuna corsa da reggere» non
+ * è un giudizio sulle carte e non manda a cambiare mazzo: manda a scrivere un
+ * avversario, che è una cosa che l'utente può fare in trenta secondi. Quella sul
+ * danno manda a cambiare strategia o ad allargare il tema.
+ */
+export function frasePerLaGuardia(verdetto: VerdettoDellaGuardia): string | null {
+  if (verdetto.verdetto === "tace") return null;
+  const { strategia, turno, dannoMassimo, vite } = verdetto.grezzi;
+  if (verdetto.motivo === "controllo-senza-orologi") {
+    return (
+      `Un ${strategia} non lo so verificare finché non mi dici chi incontri: il controllo si riconosce ` +
+      "dal tenere l’avversario più lontano del proprio arrivo, e senza nemmeno un mazzo avversario " +
+      "scritto non c’è nessuna corsa da reggere. Scrivi un avversario in «Chi incontri», oppure chiedi " +
+      "un’altra strategia."
+    );
+  }
+  return (
+    `Con queste carte un ${strategia} non si fa, e non è un’opinione: perché lo sia, il mazzo deve ` +
+    `chiudere qualche partita entro il turno ${turno}, e da qui al turno ${turno} queste carte non ` +
+    `arrivano a togliere ${vite} punti vita nemmeno nella partita più fortunata che sappia immaginare — ` +
+    `al massimo ${decimale(dannoMassimo ?? 0, 0)}. Il conto è grossolano e generoso: non paga i colori ` +
+    "del mana, si tiene in mano le carte che servono, e rilancia le stesse copie ogni turno. Se dice no, " +
+    "è no. Cambia strategia, allarga il tema, o togli qualche esclusione."
+  );
+}
+
 /**
  * Quel che serve a spiegare una frontiera lunga **uno**.
  *
@@ -1258,6 +1297,12 @@ export type GrezziDelMazzoSolo = {
    * tetto è spento, e allora di soldi non si parla affatto.
    */
   tetto: { euro: number; passiSenzaMazzo: number } | null;
+  /**
+   * La strategia dichiarata e quanti passi ha lasciato senza mazzo; `null`
+   * quando non ne è stata dichiarata nessuna, e allora di strategia non si parla
+   * affatto — come per il tetto spento.
+   */
+  strategia: { dichiarata: string; passiSenzaMazzo: number } | null;
 };
 
 /**
@@ -1277,14 +1322,30 @@ export type GrezziDelMazzoSolo = {
  * agire: alza il tetto e il baratto ricompare. Per questo porta dentro il
  * numero — senza, sarebbe un no come gli altri.
  *
- * L'ordine delle tre non è casuale: il tempo viene prima del tetto perché una
- * ricerca troncata non ha nemmeno **provato** i passi che mancano, e dire che
- * il tetto li ha tolti sarebbe accusare il portafoglio di una cosa che ha fatto
- * l'orologio.
+ * La **strategia** dichiarata ne aggiunge una quarta, e della stessa specie: il
+ * passo un mazzo lo aveva, e quel mazzo non si comportava come è stato chiesto.
+ * Anche questa si può agire, e in un altro modo — non alzando un tetto ma
+ * allargando il tema o cambiando strategia — e senza di lei l'app direbbe che un
+ * baratto non esiste dove invece esiste e sta fuori dalla casella chiesta.
+ *
+ * L'ordine non è casuale: il tempo viene prima di tutto perché una ricerca
+ * troncata non ha nemmeno **provato** i passi che mancano, e dire che il tetto o
+ * la strategia li ha tolti sarebbe accusare qualcuno di quel che ha fatto
+ * l'orologio. Fra i due vincoli duri viene prima la strategia, perché è la
+ * domanda più stretta: dove morde lei, il tetto non ha nemmeno avuto la
+ * possibilità di mordere.
  */
 export function frasePerIlMazzoSolo(grezzi: GrezziDelMazzoSolo): string {
   if (grezzi.troncataPerTempo) {
     return "Un mazzo solo: il tempo è finito prima che l’app potesse cercare gli altri. Non vuol dire che un baratto non ci sia — vuol dire che non è stato cercato.";
+  }
+  const strategia = grezzi.strategia;
+  if (strategia !== null && strategia.passiSenzaMazzo > 0) {
+    const passi =
+      strategia.passiSenzaMazzo === 1
+        ? "un altro passo, e il mazzo che ha trovato non era"
+        : `altri ${strategia.passiSenzaMazzo} passi, e i mazzi che hanno trovato non erano`;
+    return `Un mazzo solo, e a lasciarlo solo è stata la strategia: l’app ha cercato ${passi} un ${strategia.dichiarata}. Dentro ${strategia.dichiarata}, con questo tema, il margine di scambio è piccolo: non vuol dire che un baratto non ci sia — vuol dire che i mazzi che lo pagherebbero giocano in un altro modo.`;
   }
   const tetto = grezzi.tetto;
   if (tetto !== null && tetto.passiSenzaMazzo > 0) {

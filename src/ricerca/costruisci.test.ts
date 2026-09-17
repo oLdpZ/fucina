@@ -22,6 +22,8 @@ import type { Carta } from "../dati/pool.js";
 import { COPIE_DI_UNA_LIMITATA, copieMassime } from "../mazzo/copie.js";
 import { probabilitaDiAssemblarne } from "../mazzo/probabilita.js";
 import { COPIE_MASSIME, DIMENSIONE_MAZZO } from "../mazzo/taratura.js";
+import { frasePerIlMazzoSolo } from "../spiegazioni/frasi.js";
+import { archetipoDi } from "../strategia/archetipo.js";
 import { escluso, FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import { analizzaBaseDiTerre } from "../mazzo/base-di-terre.js";
 import { comprabile, contoDelMazzo, PARI_IN_EURO } from "../mazzo/spesa.js";
@@ -1282,5 +1284,146 @@ describe("il tetto di spesa", () => {
     const due = costruisci({ tema: NERO, tettoDiSpesa: 30 });
 
     expect(lista(uno)).toBe(lista(due));
+  });
+});
+
+describe("la strategia dichiarata, che è un vincolo duro", () => {
+  /**
+   * Le manopole della strategia sono più larghe di `SVELTA`, e per una ragione
+   * che vale la pena scrivere: la ricerca sceglie su poche partite simulate e il
+   * mazzo consegnato si rimisura su cinquecento, quindi un mazzo al bordo della
+   * casella può cadere fuori proprio all'ultimo passo. Con dodici partite in
+   * ricerca il bordo è largo, e un test verde o rosso a seconda del rumore non
+   * proverebbe niente.
+   */
+  const CON_STRATEGIA: Opzioni = {
+    orologio: OROLOGIO_FERMO,
+    taratura: {
+      partenze: 2,
+      partiteInRicerca: 40,
+      valutazioniMassimePerPartenza: 150,
+      candidatiMassimi: 40,
+    },
+  };
+
+  /** Un avversario qualunque: serve dove il controllo va misurato. */
+  const OROLOGIO = { nome: "Rossi", turnoDiChiusura: 6, rimozioni: 4, contromagie: 0, perche: "" };
+
+  it("consegna solo mazzi che misurano l'archetipo chiesto", () => {
+    const frontiera = costruisci({ strategia: "aggro" }, CON_STRATEGIA);
+
+    expect(frontiera.mazzi.length).toBeGreaterThan(0);
+    // La misura si rifà da `archetipoDi` e non si legge da `mazzo.archetipo`:
+    // se il motore si scrivesse l'etichetta da sé, leggerla sarebbe crederci.
+    for (const mazzo of frontiera.mazzi) {
+      expect(archetipoDi(mazzo).archetipo).toBe("aggro");
+    }
+    // E quel che il mazzo porta scritto è la stessa misura, non una seconda.
+    for (const mazzo of frontiera.mazzi) {
+      expect(mazzo.archetipo).toEqual(archetipoDi(mazzo));
+    }
+  });
+
+  it("senza strategia dichiarata non cambia una parola", () => {
+    const senza = costruisci({}, CON_STRATEGIA);
+
+    expect(senza.strategia).toBeNull();
+    expect(senza.mazzi.length).toBeGreaterThan(0);
+    // I mazzi portano comunque il loro archetipo misurato: è una misura del
+    // mazzo, non la risposta a una domanda dell'utente.
+    for (const mazzo of senza.mazzi) expect(mazzo.archetipo.archetipo).toBeDefined();
+  });
+
+  it("i passi che la strategia lascia senza mazzo si contano, e non sul tetto", () => {
+    const frontiera = costruisci({ strategia: "aggro" }, CON_STRATEGIA);
+
+    expect(frontiera.strategia?.dichiarata).toBe("aggro");
+    // La frontiera dentro un archetipo è più corta, e i passi mancanti sono
+    // quelli in cui il mazzo migliore giocava in un altro modo. Non tutti i
+    // passi mancanti sono suoi — un duplicato o un dominato cade per conto suo,
+    // com'è sempre stato — e il conto sta dentro quel che la frontiera ha perso.
+    expect(frontiera.strategia!.passiSenzaMazzo).toBeGreaterThan(0);
+    expect(frontiera.mazzi.length + frontiera.strategia!.passiSenzaMazzo).toBeLessThanOrEqual(
+      PESI_DELLA_PUREZZA.length,
+    );
+    // Il tetto non c'entra niente, ed è spento: il suo conto non deve esistere.
+    expect(frontiera.spesa).toBeNull();
+  });
+
+  it("la frontiera più corta si spiega con la strategia, non col baratto che non c'è", () => {
+    const frontiera = costruisci({ strategia: "aggro" }, CON_STRATEGIA);
+    expect(frontiera.mazzi).toHaveLength(1);
+
+    const detto = frasePerIlMazzoSolo({
+      troncataPerTempo: frontiera.troncataPerTempo,
+      tetto: null,
+      strategia: frontiera.strategia,
+    });
+
+    expect(detto).toContain("aggro");
+    // La frase storica direbbe il falso: un baratto c'è, e sta fuori dalla
+    // casella chiesta.
+    expect(detto).not.toContain("non si guadagna potenza");
+  });
+
+  it("resta ripetibile: stessa strategia e stesso seme, stessa frontiera", () => {
+    const uno = costruisci({ strategia: "aggro" }, CON_STRATEGIA);
+    const due = costruisci({ strategia: "aggro" }, CON_STRATEGIA);
+
+    expect(lista(uno)).toBe(lista(due));
+  });
+
+  describe("la guardia, che parla prima di costruire e solo quando è certa", () => {
+    it("dice impossibile a un controllo senza nessun avversario dichiarato", () => {
+      const frontiera = costruisci({ strategia: "controllo" }, CON_STRATEGIA);
+
+      expect(frontiera.esito).toBe("strategia-impossibile");
+      expect(frontiera.mazzi).toHaveLength(0);
+      // La frase manda dove si rimedia: a scrivere un avversario, non a
+      // cambiare mazzo.
+      expect(frontiera.motivo).toContain("Chi incontri");
+      // E non ha nemmeno cercato: i contatori dicono zero.
+      expect(frontiera.scambiProvati).toBe(0);
+      expect(frontiera.partenze).toBe(0);
+    });
+
+    it("e tace su quello stesso controllo appena un avversario c'è", () => {
+      const frontiera = costruisci(
+        { strategia: "controllo", orologi: [OROLOGIO] },
+        CON_STRATEGIA,
+      );
+
+      // Che un controllo su questo pool si trovi o no non è la promessa: la
+      // promessa è che la guardia non lo escluda più. Se la ricerca non lo
+      // trova, la ragione è un'altra e la porta un altro esito.
+      expect(frontiera.esito).not.toBe("strategia-impossibile");
+    });
+
+    it("dice impossibile a un aggro senza nessuna creatura da cui far danno", () => {
+      // Il tema esclude le creature: senza creature la simulazione non fa danno
+      // — è la sua regola, non una nostra soglia — e nessun mazzo di queste
+      // carte chiude una partita, mai. Il conto è certo, e la guardia parla.
+      const senzaCreature = tema({
+        inclusioni: { ...FILTRO_TEMA_VUOTO, colori: ["B"] },
+        esclusioni: { ...FILTRO_TEMA_VUOTO, tipi: ["Creature"] },
+      });
+
+      const frontiera = costruisci(
+        { tema: senzaCreature, strategia: "aggro" },
+        CON_STRATEGIA,
+      );
+
+      expect(frontiera.esito).toBe("strategia-impossibile");
+      expect(frontiera.mazzi).toHaveLength(0);
+      // Il conto si legge nella frase: chi la riceve deve poterlo rifare.
+      expect(frontiera.motivo).toContain("20 punti vita");
+      expect(frontiera.scambiProvati).toBe(0);
+    });
+
+    it("tace invece su un tema che di creature ne ha", () => {
+      const frontiera = costruisci({ strategia: "aggro" }, CON_STRATEGIA);
+
+      expect(frontiera.esito).not.toBe("strategia-impossibile");
+    });
   });
 });

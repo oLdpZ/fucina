@@ -14,6 +14,33 @@
  * Sono soglie sul **comportamento** — turni, quote, corse — e su nient'altro.
  * Una soglia sulla composizione («almeno N creature») qui non entra: è la
  * riga che ADR-0001 traccia.
+ *
+ * ## E la quarta taratura: quale conto sia «ovvio» abbastanza
+ *
+ * La **guardia** (`guardia.ts`) dice *impossibile* prima di costruire, e quali
+ * conti le diano il diritto di dirlo è la quarta delle sei tarature che questa
+ * tappa consegna alla sosta. Non è un numero, ed è per questo che non c'è una
+ * costante qui sotto: è una **scelta fra conti**, e oggi la scelta è la più
+ * prudente che esista — solo conti **certi**, cioè che non possono sbagliare
+ * nemmeno su un pool che nessuno ha ancora guardato:
+ *
+ * - il danno che quelle carte non arrivano a fare entro il turno che
+ *   l'archetipo chiede, con un limite generoso di proposito;
+ * - il controllo chiesto senza nemmeno un avversario dichiarato, che non è una
+ *   casella misurabile.
+ *
+ * Alla sosta si guarda quanto spesso la guardia parla sui temi veri. Se non
+ * parla quasi mai, ci sono due strade e vanno pesate in quest'ordine: allargare
+ * i conti accettando conti **probabili** invece che certi — e allora la guardia
+ * può sbagliare, che è un guasto dell'app e va scritto in un ADR — oppure
+ * concludere che il verdetto «prima di costruire» promesso all'utente non
+ * arriva mai, e allora è ADR-0001 a riaprirsi: se lo dice lui, nella sezione
+ * «Si riaprirebbe se».
+ *
+ * La strada che **non** si prende è fare della guardia una definizione: un
+ * conto che dica «con tante creature così questo non sarà un aggro» sembra
+ * innocuo e sarebbe l'elenco di archetipi sulla composizione che il ticket 10
+ * della tappa 2 ha rifiutato, entrato dalla finestra.
  */
 
 /**

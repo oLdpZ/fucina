@@ -1,0 +1,59 @@
+/*
+ * La strategia dichiarata (ticket 04 della tappa 3): il riquadro in cui
+ * l'utente dice come vuole vincere.
+ *
+ * Sta accanto alla combo e ne prende la forma, perché sono la stessa cosa vista
+ * da due parti — due ingressi facoltativi della richiesta, ognuno con il suo
+ * patto scritto in cima. Nessun colore letterale: solo le variabili di
+ * `tema.css`, come nel resto dell'app.
+ */
+
+.strategia-dichiarata {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--passo) * 3);
+  padding: calc(var(--passo) * 4);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+}
+
+.strategia-dichiarata > h2 {
+  margin: 0;
+  font-family: var(--carattere-titolo);
+  font-size: var(--titolo-scheda);
+  font-weight: 600;
+  color: var(--inchiostro);
+}
+
+/*
+ * Il patto: che è facoltativa, e che dichiararla è un vincolo duro che si paga
+ * in potenza. Si legge per intero, come quello della combo: colore pieno e riga
+ * stretta, non il grigio delle note.
+ */
+.strategia-dichiarata .patto {
+  max-width: 60ch;
+  margin: 0;
+  font-size: var(--testo-piccolo);
+  line-height: 1.5;
+  color: var(--inchiostro);
+}
+
+.strategia-dichiarata .scelte-strategia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--passo) * 2);
+}
+
+/*
+ * La voce della guardia. Quando compare è la cosa più importante in pagina — è
+ * un «impossibile» detto prima di premere il tasto — e si distingue dalle note
+ * come si distingue un avviso, con la stessa riga di colore degli altri avvisi
+ * dell'app.
+ */
+.strategia-dichiarata .avviso-guardia {
+  max-width: 60ch;
+  padding-left: calc(var(--passo) * 3);
+  border-left: 3px solid var(--avviso, var(--bordo));
+  color: var(--inchiostro);
+}

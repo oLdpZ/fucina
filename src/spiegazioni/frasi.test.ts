@@ -1033,7 +1033,7 @@ describe("perché la frontiera ha un mazzo solo", () => {
     // La promessa del ticket 24: chi non ha acceso il tetto non deve accorgersi
     // che il tetto esiste. La frase è quella storica, e questo test è il posto
     // in cui resta tale.
-    expect(frasePerIlMazzoSolo({ troncataPerTempo: false, tetto: null })).toBe(
+    expect(frasePerIlMazzoSolo({ troncataPerTempo: false, strategia: null, tetto: null })).toBe(
       "Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.",
     );
   });
@@ -1042,7 +1042,7 @@ describe("perché la frontiera ha un mazzo solo", () => {
     // Il tetto c'è e non ha tolto niente: la frontiera è corta per la ragione
     // di sempre, e attribuirlo al portafoglio sarebbe inventare una causa.
     expect(
-      frasePerIlMazzoSolo({ troncataPerTempo: false, tetto: { euro: 30, passiSenzaMazzo: 0 } }),
+      frasePerIlMazzoSolo({ troncataPerTempo: false, strategia: null, tetto: { euro: 30, passiSenzaMazzo: 0 } }),
     ).toBe("Un mazzo solo: cedendo tema, qui, non si guadagna potenza da nessuna parte.");
   });
 
@@ -1050,7 +1050,7 @@ describe("perché la frontiera ha un mazzo solo", () => {
     // Senza il numero sarebbe un no come gli altri. Con il numero è una
     // risposta che si può agire: alza il tetto e il baratto ricompare.
     const frase = frasePerIlMazzoSolo({
-      troncataPerTempo: false,
+      troncataPerTempo: false, strategia: null,
       tetto: { euro: 30, passiSenzaMazzo: 3 },
     });
 
@@ -1061,7 +1061,7 @@ describe("perché la frontiera ha un mazzo solo", () => {
 
   it("accorda al singolare quando il passo tolto è uno solo", () => {
     const frase = frasePerIlMazzoSolo({
-      troncataPerTempo: false,
+      troncataPerTempo: false, strategia: null,
       tetto: { euro: 12.5, passiSenzaMazzo: 1 },
     });
 
@@ -1073,7 +1073,7 @@ describe("perché la frontiera ha un mazzo solo", () => {
     // Una ricerca troncata non ha nemmeno **cercato** i passi che mancano:
     // accusare il tetto sarebbe dare al portafoglio la colpa dell'orologio.
     const frase = frasePerIlMazzoSolo({
-      troncataPerTempo: true,
+      troncataPerTempo: true, strategia: null,
       tetto: { euro: 30, passiSenzaMazzo: 3 },
     });
 

@@ -14,6 +14,7 @@ import { Avversario } from "./componenti/Avversario.js";
 import { Catalogo } from "./componenti/Catalogo.js";
 import { Combo } from "./componenti/Combo.js";
 import { Costruzione } from "./componenti/Costruzione.js";
+import { Strategia } from "./componenti/Strategia.js";
 import { Mazzo } from "./componenti/Mazzo.js";
 import {
   MazziSalvati,
@@ -54,6 +55,7 @@ import type { MazzoSalvato } from "./mazzo/salvato.js";
 import { ingressiCambiati, type IngressiDellaRichiesta } from "./ricerca/ripensamento.js";
 import { usaMotore } from "./ricerca/usa-motore.js";
 import { COMBO_VUOTA, type Combo as CarteDellaCombo } from "./combo/combo.js";
+import type { Strategia as StrategiaDichiarata } from "./strategia/strategia.js";
 import { temaDichiarato, TEMA_VUOTO, type Tema } from "./tema/tema.js";
 import { NOME_APP, NOME_APP_DA_DECIDERE } from "./identita.js";
 
@@ -157,6 +159,19 @@ export function App() {
    * Si tengono **per nome**, come il seme: i pool si aggiornano da soli.
    */
   const [combo, setCombo] = useState<CarteDellaCombo>(COMBO_VUOTA);
+  /**
+   * Come l'utente ha detto di voler vincere, o `null` — ed è così che l'app si
+   * apre (ADR-0001, ticket 04 della tappa 3).
+   *
+   * Facoltativa di suo, e non per dimenticanza: senza, l'app costruisce come ha
+   * sempre costruito, e chi apre l'app per un tema non deve passare da una
+   * domanda in più prima di avere un mazzo.
+   *
+   * Vive qui accanto al tema, al seme e al tetto, e per le stesse ragioni: è un
+   * ingresso della richiesta, e passando da una schermata all'altra non si
+   * perde.
+   */
+  const [strategia, setStrategia] = useState<StrategiaDichiarata | null>(null);
   /**
    * Il seme della ricerca (ticket 11). Vive qui, in vista e modificabile, e
    * non nasce dall'orologio: è quello che rende ripetibile il mazzo che l'app
@@ -318,7 +333,7 @@ export function App() {
   // fatta: si butta, invece di restare lì col suo tasto «mettilo in mano» a dire
   // una piccola bugia.
   const dimentica = motore.dimentica;
-  const ingressi: IngressiDellaRichiesta = { tema, combo, tettoDiSpesa, corsa };
+  const ingressi: IngressiDellaRichiesta = { tema, strategia, combo, tettoDiSpesa, corsa };
   const ingressiDiPrima = useRef(ingressi);
   useEffect(() => {
     dimentica(ingressiCambiati(ingressiDiPrima.current, ingressi));
@@ -350,7 +365,7 @@ export function App() {
     // l'avanzamento resta scritto quale ingresso è cambiato (ticket 46), e per
     // saperlo l'effetto confronta gli ingressi con quelli del giro prima.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tema, combo, tettoDiSpesa, corsa]);
+  }, [tema, strategia, combo, tettoDiSpesa, corsa]);
 
   /** Il controllo di freschezza si fa una volta per apertura, non a ogni pool. */
   const giaControllato = useRef(false);
@@ -712,7 +727,15 @@ export function App() {
    * ha deciso. Da quel momento è un mazzo come gli altri: si tocca, si salva,
    * si esporta.
    */
-  const mettiInMano = (carte: readonly CopieDiCarta[], terre: number, tetto: number | null) => {
+  const mettiInMano = (
+    carte: readonly CopieDiCarta[],
+    terre: number,
+    tetto: number | null,
+    // La strategia arriva dal **mazzo consegnato** e non dalla manopola, per la
+    // stessa ragione del tetto e del tema: da qui in poi questo mazzo è «quello
+    // costruito come un aggro», e resta tale anche se la manopola cambia idea.
+    strategiaDelMazzo: StrategiaDichiarata | null,
+  ) => {
     // Le terre non si trasportano una per una: la schermata del mazzo le
     // ricalcola dalle stesse carte, dallo stesso pool e dalle stesse
     // esclusioni del tema, e con lo stesso numero ritrova la stessa base.
@@ -747,7 +770,12 @@ export function App() {
     // per lo stesso mazzo sono peggio di una regola sola un po' larga. La
     // regola sola: chi non ha dichiarato niente prende le terre che il tema di
     // adesso permette, come è sempre stato.
-    setConsegnato({ tetto, tema: temaDichiarato(tema) ? tema : null, copie: new Map(copie) });
+    setConsegnato({
+      tetto,
+      tema: temaDichiarato(tema) ? tema : null,
+      strategia: strategiaDelMazzo,
+      copie: new Map(copie),
+    });
     setAperto(null);
     setPagina("mazzo");
   };
@@ -823,6 +851,15 @@ export function App() {
               copiePerNome={copiePerNome}
               cambiaCopie={cambiaCopie}
             />
+            <Strategia
+              pool={pool}
+              tema={tema}
+              combo={combo}
+              tettoDiSpesa={tettoDiSpesa}
+              orologi={orologiInCorsa}
+              strategia={strategia}
+              cambiaStrategia={setStrategia}
+            />
             <Combo pool={pool} tema={tema} combo={combo} cambiaCombo={setCombo} />
             <Avversario
               orologi={orologi}
@@ -833,6 +870,7 @@ export function App() {
             <Costruzione
               pool={pool}
               tema={tema}
+              strategia={strategia}
               combo={combo}
               seme={seme}
               cambiaSeme={setSeme}

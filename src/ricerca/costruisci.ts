@@ -87,7 +87,7 @@ import {
 import { terreCandidate, terrePermesseDalTema } from "../mazzo/terre-candidate.js";
 import type { EsitoDellaSimulazione } from "../mazzo/simulazione.js";
 import { DIMENSIONE_MAZZO, TERRE_MINIME } from "../mazzo/taratura.js";
-import { elenco, terre as terreDette } from "../spiegazioni/frasi.js";
+import { elenco, frasePerLaGuardia, terre as terreDette } from "../spiegazioni/frasi.js";
 import { valutaTema, type Ampiezza } from "../tema/ampiezza.js";
 import { notaDelFuoriTema } from "./nota-del-fuori-tema.js";
 import { notaDelMazzoCorto } from "./nota-del-mazzo-corto.js";
@@ -102,6 +102,13 @@ import {
   type Tema,
   type TemaRisolto,
 } from "../tema/tema.js";
+import { archetipoDi, type ArchetipoMisurato } from "../strategia/archetipo.js";
+import { guardiaDellaStrategia } from "../strategia/guardia.js";
+import {
+  distanzaDallaStrategia,
+  soddisfaLaStrategia,
+  type Strategia,
+} from "../strategia/strategia.js";
 import { TARATURA_DELLA_RICERCA, type TaraturaDellaRicerca } from "./taratura.js";
 
 /**
@@ -118,6 +125,22 @@ export type Richiesta = {
    * delle copie e non le scambia via. Vedi `combo/combo.ts`.
    */
   combo: Combo;
+  /**
+   * Come l'utente intende vincere: un ingresso **facoltativo** accanto al tema
+   * (ADR-0001, ticket 04 della tappa 3). Assente o `null`, l'app costruisce
+   * come ha sempre costruito.
+   *
+   * È un vincolo **duro** e non un peso: la ricerca consegna solo mazzi il cui
+   * archetipo misurato è questo, e un passo della frontiera che non ne trovi
+   * nessuno **sparisce** invece di consegnare un mazzo che la strategia non
+   * soddisfa. Il perché — un peso sarebbe un secondo tasso di cambio invisibile
+   * accanto all'unico che la frontiera esiste per mostrare — sta in
+   * `strategia/strategia.ts`.
+   *
+   * La quarta strategia del vocabolario classico, la combo, non si dichiara
+   * qui: si dichiara nominando le carte, ed è `combo` qui sopra.
+   */
+  strategia?: Strategia | null;
   /** Il seme del caso: senza, niente di quel che segue è verificabile. */
   seme: number;
   /** Il tetto di tempo, perché la ricerca gira sul telefono. */
@@ -225,6 +248,28 @@ export type SpesaDellaRicerca = {
   passiSenzaMazzo: number;
 };
 
+/**
+ * Quel che la ricerca dichiara di aver fatto con una strategia dichiarata.
+ * `null` sulla frontiera quando non ne era stata dichiarata nessuna: non c'è
+ * niente da dire.
+ */
+export type StrategiaDellaRicerca = {
+  /** Quella chiesta, così che chi mostra non debba andarsela a ricordare. */
+  dichiarata: Strategia;
+  /**
+   * Quanti passi della frontiera la strategia ha lasciato **senza mazzo**: il
+   * passo un mazzo lo avrebbe, e quel mazzo non si comporta come è stato
+   * chiesto.
+   *
+   * Serve alla frase che spiega una frontiera più corta del solito, ed è la
+   * stessa forma di `SpesaDellaRicerca.passiSenzaMazzo` per la stessa ragione:
+   * «cedendo tema non si guadagna potenza da nessuna parte» e «dentro l'aggro,
+   * con questo tema, il margine è piccolo» sono due risposte diverse, e senza
+   * questo numero la prima verrebbe detta al posto della seconda.
+   */
+  passiSenzaMazzo: number;
+};
+
 /** Quel che la ricerca racconta di sé mentre lavora, per chi mostra una barra. */
 export type Avanzamento = {
   /** Il mazzo della frontiera in corso, contato da zero. */
@@ -272,7 +317,14 @@ export type Esito =
   /** Non c'è un tema: non c'è niente da costruire, e non è un guasto. */
   | "tema-non-dichiarato"
   /** Nemmeno il pool intero, tolte le esclusioni, riempie un mazzo legale. */
-  | "niente-da-costruire";
+  | "niente-da-costruire"
+  /**
+   * La **guardia** ha parlato prima di cercare: con queste carte la strategia
+   * chiesta non si fa, e il conto che lo dice è certo (`strategia/guardia.ts`).
+   * È un esito a sé e non un «niente da costruire» qualunque, perché quel che
+   * manca non sono le carte: è che quelle carte non possono comportarsi così.
+   */
+  | "strategia-impossibile";
 
 export type MazzoCostruito = {
   /** Le carte non-terra, per costo e poi per nome: si legge come una lista. */
@@ -299,6 +351,17 @@ export type MazzoCostruito = {
    * nessuno ha fatto.
    */
   combo: EsitoDellaCombo | null;
+  /**
+   * L'archetipo che **questo** mazzo misura, coi valori grezzi che lo
+   * giustificano (`strategia/archetipo.ts`).
+   *
+   * C'è sempre, anche senza strategia dichiarata: è una misura del mazzo come
+   * la simulazione e la corsa, non la risposta a una domanda dell'utente, e le
+   * spiegazioni la citano per dire **perché** questo mazzo è un aggro invece di
+   * attaccargli un'etichetta. Con una strategia dichiarata è anche la prova che
+   * il vincolo è stato rispettato.
+   */
+  archetipo: ArchetipoMisurato;
   /**
    * Il peso della purezza con cui **questo** mazzo è stato cercato. Sta qui
    * perché la frontiera sia verificabile: è la manopola che l'ha prodotto.
@@ -361,6 +424,14 @@ export type Frontiera = {
   mazzi: MazzoCostruito[];
   /** Il tetto di spesa e quel che ha lasciato fuori; `null` quando è spento. */
   spesa: SpesaDellaRicerca | null;
+  /**
+   * La strategia dichiarata e quel che ha lasciato fuori; `null` quando non ne
+   * è stata dichiarata nessuna — e allora chi compone le frasi non può nemmeno
+   * andare a cercare il numero. È la stessa forma di `spesa`, e per la stessa
+   * ragione: è il modo strutturale di tenere la promessa che senza strategia
+   * non cambia una parola.
+   */
+  strategia: StrategiaDellaRicerca | null;
   allargamentiApplicati: readonly Allargamento[];
   troncataPerTempo: boolean;
   /**
@@ -374,6 +445,30 @@ export type Frontiera = {
   scambiProvati: number;
   scambiTenuti: number;
 };
+
+/**
+ * Le carte con cui la ricerca può davvero costruire: quel che entra in mano, che
+ * il tema non esclude, e che il tetto lascia comprare.
+ *
+ * È esportata per una ragione sola, e vale la pena scriverla: la **guardia**
+ * della strategia fa il suo conto su queste carte, e la schermata che la mostra
+ * prima di costruire deve guardare *le stesse* che il motore guarderà. Due
+ * filtri somiglianti in due posti diversi divergono sempre, e qui divergere
+ * vorrebbe dire dire «impossibile» su un pool e costruire su un altro.
+ *
+ * L'ordine dei tre filtri non è indifferente ed è quello di sempre: il tema
+ * decide che mazzo si vuole, il prezzo decide che cosa si può comprare (ticket
+ * 09). Qui stanno insieme perché il risultato è lo stesso e la domanda è una.
+ */
+export function giocabiliDellaRicerca(
+  pool: readonly Carta[],
+  tema: Tema,
+  tetto: number | null,
+): Carta[] {
+  return pool.filter(
+    (carta) => entraInMano(carta) && !escluso(carta, tema) && comprabile(carta, tetto),
+  );
+}
 
 /**
  * L'orologio vero, per chi non ne passa uno. Non è mai quello che i test usano.
@@ -593,10 +688,25 @@ export function costruisciMazzo(
   let laRicercaHaGirato = false;
   /** I passi che il tetto ha lasciato senza mazzo. Vedi `SpesaDellaRicerca`. */
   let passiSenzaMazzo = 0;
+  /**
+   * I passi che la **strategia** ha lasciato senza mazzo: il passo un mazzo lo
+   * avrebbe, e quel mazzo non si comporta come è stato chiesto. Contato a parte
+   * dal tetto perché sono due ragioni diverse, e la frase che le racconta non è
+   * la stessa.
+   */
+  let passiFuoriStrategia = 0;
+  /** La strategia dichiarata, o `null`: l'app costruisce come ha sempre fatto. */
+  const strategia = richiesta.strategia ?? null;
 
   /** Il tetto e quel che ha lasciato fuori, col conto dei passi aggiornato. */
   const spesaDaDichiarare = (): SpesaDellaRicerca | null =>
     spesaDichiarata === null ? null : { ...spesaDichiarata, passiSenzaMazzo };
+
+  /** La strategia chiesta, col conto dei passi che ha lasciato senza mazzo. */
+  const strategiaDaDichiarare = (): StrategiaDellaRicerca | null =>
+    strategia === null
+      ? null
+      : { dichiarata: strategia, passiSenzaMazzo: passiFuoriStrategia };
 
   /**
    * L'uscita che non consegna nessun mazzo.
@@ -622,6 +732,7 @@ export function costruisciMazzo(
     // La spesa si dichiara **anche** quando non si costruisce niente, e a
     // maggior ragione: è spesso il tetto la ragione per cui non si costruisce.
     spesa: spesaDaDichiarare(),
+    strategia: strategiaDaDichiarare(),
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: troncata,
     partenze: laRicercaHaGirato ? taratura.partenze : 0,
@@ -652,7 +763,7 @@ export function costruisciMazzo(
   // comprare. Nell'ordine inverso l'app risponderebbe prima sul portafoglio, che
   // è esattamente quel che il ticket 09 le vieta.
   const terreDelPool = terreCandidate(pool, tema, tetto);
-  const giocabili = giocabiliPermesse.filter((carta) => comprabile(carta, tetto));
+  const giocabili = giocabiliDellaRicerca(pool, tema, tetto);
 
   spesaDichiarata =
     tetto === null
@@ -773,6 +884,26 @@ export function costruisciMazzo(
           `Spegni il tetto, oppure togli dalla combo ${uno ? "quella carta" : "le carte"} che non si sa contare.`,
       );
     }
+  }
+
+  // **La guardia della strategia**, e parla qui: prima di cercare, dopo che si
+  // sa quali carte la ricerca potrebbe usare. Dice «impossibile» solo su un
+  // conto certo e tace in ogni altro caso, e non definisce nessun archetipo —
+  // lo esclude (`strategia/guardia.ts`).
+  //
+  // Le carte che guarda sono le giocabili **più i pezzi della combo**: quelli
+  // entrano nel mazzo senza passare dal prezzo (`riempi`), e un pezzo caro che
+  // il tetto ha lasciato fuori dalle giocabili nel mazzo ci sarà comunque.
+  // Dimenticarlo qui vorrebbe dire dire «impossibile» guardando meno carte di
+  // quelle che il mazzo avrà.
+  if (strategia !== null) {
+    const verdetto = guardiaDellaStrategia({
+      strategia,
+      carte: [...giocabili, ...comboRisolta.pezzi],
+      orologi: richiesta.orologi ?? [],
+    });
+    const detto = frasePerLaGuardia(verdetto);
+    if (detto !== null) return niente("strategia-impossibile", detto);
   }
 
   const risolto = risolviTema(tema, pool);
@@ -947,6 +1078,59 @@ export function costruisciMazzo(
     tetto === null || (nonSupera(misurato.spesa, tetto) && misurato.incontabili.length === 0);
 
   /**
+   * Quel che si sa di una selezione provata: il voto con cui la ricerca sale, se
+   * il mazzo si può consegnare, e — con una strategia dichiarata — se cade nella
+   * casella chiesta e quanto le manca.
+   */
+  type Misura = {
+    voto: number;
+    dentro: boolean;
+    strategia: { valida: boolean; distanza: number } | null;
+  };
+
+  /**
+   * Se la selezione provata va tenuta al posto di quella corrente.
+   *
+   * Senza strategia è la regola di sempre: si tiene quel che alza il voto.
+   *
+   * Con una strategia dichiarata la strategia viene **prima** del voto, perché
+   * è un vincolo e non un peso:
+   *
+   * - da un mazzo che la soddisfa si accettano **solo** scambi che continuano a
+   *   soddisfarla. È il «la ricerca rifiuta gli scambi che rompono l'archetipo»
+   *   del ticket, e non è una cortesia: senza, la salita finirebbe fuori dalla
+   *   casella chiesta e il passo si perderebbe per strada;
+   * - da un mazzo che **non** la soddisfa si accetta quel che avvicina — la
+   *   distanza è una pendenza, non un punteggio (`strategia/strategia.ts`) — e a
+   *   parità di distanza torna a decidere il voto. Una partenza riempita per
+   *   qualità cade spesso fuori dalla casella, e senza questa metà la ricerca
+   *   resterebbe ferma lì a rifiutare ogni scambio.
+   *
+   * Il voto scende, quando scende, per una ragione dichiarata: la potenza è il
+   * prezzo della strategia, e la frontiera lo mostra come mostra ogni prezzo.
+   */
+  const siTiene = (prova: Misura, corrente: Misura): boolean => {
+    const qui = corrente.strategia;
+    const la = prova.strategia;
+    if (qui === null || la === null) return prova.voto > corrente.voto + PARI;
+    if (qui.valida) return la.valida && prova.voto > corrente.voto + PARI;
+    if (la.valida) return true;
+    if (la.distanza < qui.distanza - PARI) return true;
+    return la.distanza <= qui.distanza + PARI && prova.voto > corrente.voto + PARI;
+  };
+
+  /**
+   * Com'è andato un passo della frontiera: il mazzo, oppure **chi** lo ha
+   * lasciato senza.
+   *
+   * I due vincoli duri dicono no per due ragioni diverse, e la frase che
+   * l'utente legge non è la stessa: «con questi soldi non si compra» manda ad
+   * alzare il tetto, «dentro l'aggro il margine è piccolo» no. Distinguerli qui,
+   * dove si sa, è il solo posto in cui si può.
+   */
+  type EsitoDelPasso = { mazzo: MazzoCostruito } | { perso: "tetto" | "strategia" };
+
+  /**
    * Una ricerca intera con **un** peso: le partenze, gli scambi, e il mazzo
    * migliore che ne esce, rivalutato per intero.
    *
@@ -955,10 +1139,20 @@ export function costruisciMazzo(
    * posti, se no la differenza che l'utente legge fra un mazzo e il precedente
    * sarebbe in parte la differenza fra due mescolate.
    */
-  const cerca = (peso: number, passo: number, passi: number): MazzoCostruito | null => {
+  const cerca = (peso: number, passo: number, passi: number): EsitoDelPasso => {
     const semi = caso(richiesta.seme);
     const candidati = scegliCandidati(giocabili, risolto, taratura, peso);
     let migliore: { selezione: Selezione; posti: number; totale: number } | null = null;
+    /**
+     * La ricerca ha visto, in questo passo, almeno un mazzo che la strategia
+     * soddisfa — dentro o fuori dal tetto.
+     *
+     * Serve a dire **di chi** è un passo senza mazzo: se un mazzo dell'archetipo
+     * chiesto c'era e non si è potuto comprare, la ragione è il tetto; se non
+     * c'era affatto, è la strategia. Con una ragione sola per tutt'e due i casi
+     * l'app manderebbe ad alzare un tetto che non morde.
+     */
+    let vistoUnMazzoDellArchetipo = false;
 
     /**
      * Il voto di una selezione, e se il mazzo che ne esce si può comprare.
@@ -968,7 +1162,7 @@ export function costruisciMazzo(
      * `dentroIlTetto`. Così un mazzo fuori dal tetto può stare sul cammino della
      * ricerca senza mai poter finire in mano a chi ha chiesto un tetto.
      */
-    const valuta = (selezione: Selezione, posti: number): { voto: number; dentro: boolean } => {
+    const valuta = (selezione: Selezione, posti: number): Misura => {
       valutazioni += 1;
       const misurato = punteggioDi(selezione, posti, peso, taratura.partiteInRicerca);
       // Il meno caro che si sia visto si conta solo sui mazzi che si **sanno**
@@ -986,9 +1180,27 @@ export function costruisciMazzo(
       if (misurato.incontabili.length === 0) {
         spesaPiuBassa = Math.min(spesaPiuBassa, misurato.spesa);
       }
+      // La strategia si misura **sullo stesso mazzo valutato** che porta il
+      // voto: `archetipoDi` legge la simulazione e le corse che stanno già
+      // dentro `valutato`, e non riceve carte — è così che la regola sulla
+      // composizione che ADR-0001 vieta resta impossibile anche qui dentro, dove
+      // le carte ci sarebbero.
+      const dellArchetipo =
+        strategia === null ? null : soddisfaLaStrategia(strategia, misurato.valutato);
+      if (dellArchetipo === true) vistoUnMazzoDellArchetipo = true;
       return {
         voto: misurato.totale - penalitaDiSpesa(misurato.spesa, peso),
-        dentro: dentroIlTetto(misurato),
+        // Le due domande stanno insieme perché sono una domanda sola — questo
+        // mazzo si può consegnare? — alla quale i due vincoli duri rispondono no
+        // per due ragioni diverse.
+        dentro: dentroIlTetto(misurato) && dellArchetipo !== false,
+        strategia:
+          strategia === null
+            ? null
+            : {
+                valida: dellArchetipo === true,
+                distanza: distanzaDallaStrategia(strategia, misurato.valutato),
+              },
       };
     };
 
@@ -1016,10 +1228,13 @@ export function costruisciMazzo(
       // La prima valutazione si fa **sempre**, anche col tempo già scaduto:
       // senza di lei non ci sarebbe nessun mazzo da restituire, e restituire un
       // mazzo c'è scritto nel ticket.
-      let misura = valuta(selezione, posti);
-      let corrente = misura.voto;
-      if (misura.dentro && (migliore === null || corrente > migliore.totale + PARI)) {
-        migliore = { selezione, posti, totale: corrente };
+      // `corrente` è la **misura** del mazzo in lavorazione e non il suo voto:
+      // con una strategia dichiarata a decidere uno scambio non è il voto da
+      // solo (`siTiene`), e tenere in mano un numero solo vorrebbe dire non
+      // poter chiedere il resto.
+      let corrente = valuta(selezione, posti);
+      if (corrente.dentro && (migliore === null || corrente.voto > migliore.totale + PARI)) {
+        migliore = { selezione, posti, totale: corrente.voto };
       }
       racconta(partenza);
 
@@ -1046,13 +1261,13 @@ export function costruisciMazzo(
           scambiProvati += 1;
           valutazioniQui += 1;
           const provata = valuta(prova, posti);
-          if (provata.voto > corrente + PARI) {
+          if (siTiene(provata, corrente)) {
             selezione = prova;
-            corrente = provata.voto;
+            corrente = provata;
             scambiTenuti += 1;
             migliorato = true;
-            if (provata.dentro && (migliore === null || corrente > migliore.totale + PARI)) {
-              migliore = { selezione, posti, totale: corrente };
+            if (provata.dentro && (migliore === null || corrente.voto > migliore.totale + PARI)) {
+              migliore = { selezione, posti, totale: corrente.voto };
             }
             racconta(partenza);
             // Primo miglioramento: si riparte a guardare gli scambi dal mazzo
@@ -1078,11 +1293,10 @@ export function costruisciMazzo(
         assestamenti += 1;
         selezione = adatta(selezione, ordine, nuoviPosti, nomiObbligati, portafoglio);
         posti = nuoviPosti;
-        misura = valuta(selezione, posti);
-        corrente = misura.voto;
+        corrente = valuta(selezione, posti);
         migliorato = true;
-        if (misura.dentro && (migliore === null || corrente > migliore.totale + PARI)) {
-          migliore = { selezione, posti, totale: corrente };
+        if (corrente.dentro && (migliore === null || corrente.voto > migliore.totale + PARI)) {
+          migliore = { selezione, posti, totale: corrente.voto };
         }
       }
 
@@ -1095,7 +1309,17 @@ export function costruisciMazzo(
     // selezioni provate stava dentro il tetto, e allora questo peso non
     // consegna niente: meglio un passo di frontiera in meno che un mazzo che
     // costa più di quanto è stato chiesto.
-    if (migliore === null) return null;
+    //
+    // Con una strategia dichiarata c'è un secondo modo di restare a `null`, ed è
+    // un vincolo duro come il primo: nessuna delle selezioni provate cadeva
+    // nella casella chiesta. Quale dei due ha morso lo dice
+    // `vistoUnMazzoDellArchetipo` — se un mazzo dell'archetipo si era visto, a
+    // fermarlo è stato il prezzo.
+    if (migliore === null) {
+      return {
+        perso: strategia !== null && !vistoUnMazzoDellArchetipo ? "strategia" : "tetto",
+      };
+    }
 
     // Il mazzo che vince si rivaluta **per intero**, con le partite piene: i
     // numeri che l'utente legge non sono quelli sbrigativi della ricerca. E si
@@ -1109,26 +1333,40 @@ export function costruisciMazzo(
     // promessa dell'utente e non una conseguenza da dedurre — il giorno che la
     // base di terre dipendesse anche da altro, questo sarebbe il posto in cui
     // accorgersene invece di consegnare un mazzo fuori dal tetto.
-    if (!dentroIlTetto(finale)) return null;
+    if (!dentroIlTetto(finale)) return { perso: "tetto" };
+    // E la stessa domanda per la strategia, sulla misura **piena**: la ricerca
+    // ha scelto questo mazzo su poche partite simulate, e su cinquecento il suo
+    // comportamento può cadere appena fuori dalla casella chiesta. Un mazzo
+    // consegnato sotto un vincolo duro deve soddisfarlo coi numeri che l'utente
+    // legge, non con quelli sbrigativi con cui è stato scelto: fra un passo di
+    // frontiera in meno e un mazzo che l'app stessa chiamerebbe midrange sotto
+    // l'etichetta «aggro», si sceglie il passo in meno.
+    const archetipo = archetipoDi(finale.valutato);
+    if (strategia !== null && archetipo.archetipo !== strategia) {
+      return { perso: "strategia" };
+    }
     return {
-      carte: [...finale.carte].sort(
-        (a, b) =>
-          a.carta.valoreDiMana - b.carta.valoreDiMana ||
-          a.carta.nome.localeCompare(b.carta.nome, "en"),
-      ),
-      terre: finale.valutato.base.terre,
-      purezza: finale.purezza,
-      punteggio: finale.valutato.punteggio,
-      base: finale.valutato.base,
-      simulazione: finale.valutato.simulazione,
-      potenza: finale.potenza,
-      combo: comboDichiarata(richiesta.combo)
-        ? misuraLaCombo(comboRisolta, finale.carte, finale.valutato.base.dimensioneMazzo)
-        : null,
-      peso,
-      passo: null,
-      totale: finale.totale,
-      spesa: finale.spesa,
+      mazzo: {
+        carte: [...finale.carte].sort(
+          (a, b) =>
+            a.carta.valoreDiMana - b.carta.valoreDiMana ||
+            a.carta.nome.localeCompare(b.carta.nome, "en"),
+        ),
+        terre: finale.valutato.base.terre,
+        purezza: finale.purezza,
+        punteggio: finale.valutato.punteggio,
+        base: finale.valutato.base,
+        simulazione: finale.valutato.simulazione,
+        potenza: finale.potenza,
+        combo: comboDichiarata(richiesta.combo)
+          ? misuraLaCombo(comboRisolta, finale.carte, finale.valutato.base.dimensioneMazzo)
+          : null,
+        archetipo,
+        peso,
+        passo: null,
+        totale: finale.totale,
+        spesa: finale.spesa,
+      },
     };
   };
 
@@ -1154,14 +1392,18 @@ export function costruisciMazzo(
   let corto: number | null = null;
   laRicercaHaGirato = true;
   for (let passo = 0; passo < pesi.length; passo++) {
-    const mazzo = cerca(pesi[passo]!, passo, pesi.length);
-    // Un passo che non consegna niente l'ha perso per il tetto, e per niente
-    // altro: col tetto spento `cerca` un mazzo lo trova sempre. Contarlo qui,
-    // e non dentro `cerca`, tiene le due uscite di quella funzione libere di
-    // restare due — nessuna selezione dentro il tetto, e la rivalutazione
-    // piena che lo sfonda — senza doverle far convergere su un contatore.
-    if (mazzo === null) passiSenzaMazzo += 1;
-    else {
+    const esitoDelPasso = cerca(pesi[passo]!, passo, pesi.length);
+    // Un passo che non consegna niente l'ha perso per uno dei due vincoli duri,
+    // e quale dei due lo dice `cerca`, che è il solo posto in cui si sa: il
+    // tetto manda ad alzare una cifra, la strategia no, e una frase sola per due
+    // ragioni ne direbbe una falsa. Contarli qui, e non dentro `cerca`, tiene
+    // quella funzione libera di dire com'è andata senza toccare nessun
+    // contatore.
+    if ("perso" in esitoDelPasso) {
+      if (esitoDelPasso.perso === "strategia") passiFuoriStrategia += 1;
+      else passiSenzaMazzo += 1;
+    } else {
+      const mazzo = esitoDelPasso.mazzo;
       const copie = copieDelMazzo(mazzo);
       // Non si consegna un mazzo che non si è contato. E non si conta nemmeno
       // come «passo perso per il tetto»: il tetto non c'entra niente.
@@ -1295,6 +1537,7 @@ export function costruisciMazzo(
     combo: comboRisolta,
     mazzi,
     spesa: spesaDaDichiarare(),
+    strategia: strategiaDaDichiarare(),
     allargamentiApplicati: tema.allargamenti,
     troncataPerTempo: troncata,
     partenze: taratura.partenze,

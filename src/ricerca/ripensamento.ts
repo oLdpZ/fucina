@@ -22,7 +22,7 @@
  */
 
 /** Le parti della richiesta che, cambiando, buttano il mazzo. */
-export type IngressoDellaRichiesta = "tema" | "combo" | "tetto" | "orologi";
+export type IngressoDellaRichiesta = "tema" | "strategia" | "combo" | "tetto" | "orologi";
 
 /**
  * Gli ingressi così come l'effetto di `App` li guarda: gli stessi valori che
@@ -31,6 +31,7 @@ export type IngressoDellaRichiesta = "tema" | "combo" | "tetto" | "orologi";
  */
 export type IngressiDellaRichiesta = {
   tema: unknown;
+  strategia: unknown;
   combo: unknown;
   tettoDiSpesa: unknown;
   corsa: unknown;
@@ -38,6 +39,7 @@ export type IngressiDellaRichiesta = {
 
 const QUALE: ReadonlyArray<readonly [keyof IngressiDellaRichiesta, IngressoDellaRichiesta]> = [
   ["tema", "tema"],
+  ["strategia", "strategia"],
   ["combo", "combo"],
   ["tettoDiSpesa", "tetto"],
   ["corsa", "orologi"],
@@ -67,6 +69,7 @@ export function ingressiCambiati(
  */
 const NOME: Record<IngressoDellaRichiesta, { nome: string; accordo: string }> = {
   tema: { nome: "il tema", accordo: "è cambiato" },
+  strategia: { nome: "la strategia", accordo: "è cambiata" },
   combo: { nome: "la combo", accordo: "è cambiata" },
   tetto: { nome: "il tetto di spesa", accordo: "è cambiato" },
   orologi: { nome: "i mazzi che incontri", accordo: "sono cambiati" },
@@ -83,7 +86,7 @@ function soggettoEVerbo(cambiati: readonly IngressoDellaRichiesta[]): string {
   if (cambiati.length === 1) return `${NOME[solo].nome} ${NOME[solo].accordo}`;
   const nomi = cambiati.map((ingresso) => NOME[ingresso].nome);
   const elenco = `${nomi.slice(0, -1).join(", ")} e ${nomi.at(-1)}`;
-  // Due o più ingressi insieme ne contano sempre uno maschile — la combo è la
-  // sola femminile — e il plurale va al maschile.
+  // Due o più ingressi insieme ne contano sempre uno maschile — la combo e la
+  // strategia sono le sole femminili — e il plurale va al maschile.
   return `${elenco} sono cambiati`;
 }

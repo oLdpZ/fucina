@@ -69,7 +69,15 @@ volte più veloce senza cedere un decimale**. E l'app **ha un nome**: si chiama
 secondo lui vincono se stanno insieme entrano nel mazzo al massimo delle copie,
 la ricerca non le scambia via mai, e l'app dice la probabilità esatta di averle
 in mano tutte al quinto turno — dichiarando per iscritto che non giudica se
-quelle carte vincano, perché a dirlo è stato l'utente.
+quelle carte vincano, perché a dirlo è stato l'utente. E dal 17 settembre si
+dichiara anche **come si vuole vincere**: aggro, midrange o controllo accanto al
+tema, facoltativo, e l'app consegna solo mazzi che ha **misurato** giocare così.
+Un passo della frontiera che non ne trovi nessuno sparisce, e la frontiera più
+corta lo dice — «dentro l'aggro, con questo tema, il margine è piccolo» — invece
+di far credere che un baratto non ci sia. Prima di costruire parla una
+**guardia**: se con le carte che restano quella strategia non si fa, lo dice
+subito e col conto in chiaro; e in ogni altro caso tace, perché un
+«impossibile» sbagliato sarebbe un guasto dell'app.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,
@@ -195,13 +203,15 @@ giocare i due mazzi, cioè sapere cosa fa ogni carta — ed è un motore di rego
 
 Che cosa si è deciso, in breve:
 
-- **La strategia si dichiara, l'archetipo si misura** (ADR-0001). Quattro
-  etichette all'ingresso — aggro, controllo, midrange, combo — trattate come
-  **vincolo duro**, mai come peso: un peso creerebbe un secondo tasso di cambio
-  invisibile, e la frontiera esiste per rendere visibile l'unico che c'è. La
-  verifica è **per comportamento misurato, mai per composizione**: il ticket 10
-  **non è ribaltato**. Un conto grossolano — la **guardia** — parla prima di
-  costruire, e solo quando è certo.
+- **La strategia si dichiara, l'archetipo si misura** (ADR-0001, fatto il 17
+  settembre 2026). Quattro etichette all'ingresso — aggro, controllo, midrange,
+  combo — trattate come **vincolo duro**, mai come peso: un peso creerebbe un
+  secondo tasso di cambio invisibile, e la frontiera esiste per rendere visibile
+  l'unico che c'è. La verifica è **per comportamento misurato, mai per
+  composizione**: il ticket 10 **non è ribaltato**, e un test lo guarda. Un
+  conto grossolano — la **guardia** — parla prima di costruire, e solo quando è
+  certo. Delle quattro etichette, tre sono caselle che si misurano; la quarta,
+  la combo, si dichiara nominando le carte.
 - **L'avversario è un orologio** (ADR-0002): tre numeri compilati a mano, e la
   **corsa** come sesta componente del punteggio. Gli orologi li scrive
   **l'utente**, perché il meta del suo negozio non è il meta di internet.
@@ -578,6 +588,16 @@ src/tema/allargamenti.ts le proposte per allargare un tema stretto, con le
                          frasi che le dicono ad alta voce
 src/tema/ampiezza.ts     `valutaTema(...)`: insufficiente, stretto o ampio
 src/tema/taratura.ts     le soglie del tema, dichiarate provvisorie
+src/strategia/strategia.ts la strategia dichiarata: le tre che si misurano, e
+                         la distanza che serve alla sola ricerca — vincolo duro,
+                         mai un peso
+src/strategia/archetipo.ts `archetipoDi(...)`: aggro, midrange, controllo o
+                         nessuno dei tre, dal solo comportamento misurato. Non
+                         riceve carte, e non è una disattenzione
+src/strategia/guardia.ts la guardia che parla prima di costruire e solo quando è
+                         certa: dice impossibile o tace, e non definisce niente
+src/strategia/taratura.ts le soglie fra le tre caselle, e quale conto la guardia
+                         possa dirsi «ovvio»: tutte provvisorie, tutte da sosta
 src/combo/combo.ts       la combo dichiarata: i nomi che l'utente afferma
                          vincano insieme, risolti sul pool di oggi. L'app non la
                          capisce, ci crede — vincolo duro, mai un peso
@@ -623,8 +643,8 @@ src/mazzo/scambio.ts     i due testi che escono dall'app: quello da scambiare
 src/dati/mazzi-salvati.ts i mazzi salvati in IndexedDB, e mai un'eccezione
 src/componenti/          le schermate: Catalogo, PannelloFiltri, GrigliaCarte,
                          SchedaCarta, CostoDiMana, NoteLegali, Mazzo,
-                         PassiDelleCopie, MazziSalvati, Vincoli, Combo,
-                         Costruzione
+                         PassiDelleCopie, MazziSalvati, Vincoli, Strategia,
+                         Combo, Costruzione
 src/stili/catalogo.css   lo stile del catalogo, tutto a variabili del tema
 src/stili/mazzo.css      lo stile della schermata del mazzo, stesse variabili
 src/stili/salvati.css    lo stile della schermata dei mazzi salvati
@@ -632,6 +652,8 @@ src/stili/vincoli.css    lo stile della schermata del tema, stesse variabili
 src/stili/costruzione.css lo stile del tasto che costruisce, del suo esito e
                          della striscia dei mazzi affiancati
 src/stili/combo.css      lo stile del riquadro della combo dichiarata
+src/stili/strategia.css  lo stile del riquadro della strategia, e dell'avviso
+                         con cui la guardia parla prima di costruire
 public/dati/pool.json    il pool: prodotto di compilazione, in git, mai a mano
 public/dati/formato.json il documento di formato: l'opposto del pool — lo
                          scrive una persona, si corregge a mano, e nessun

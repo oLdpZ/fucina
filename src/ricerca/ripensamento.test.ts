@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { fraseDellaRicercaFermata, ingressiCambiati } from "./ripensamento.js";
 
-const PRIMA = { tema: {}, combo: {}, tettoDiSpesa: null, corsa: "[]" };
+const PRIMA = { tema: {}, strategia: null, combo: {}, tettoDiSpesa: null, corsa: "[]" };
 
 describe("gli ingressi cambiati", () => {
   it("sono quelli che non sono più gli stessi, e solo quelli", () => {

@@ -68,6 +68,7 @@ import { fraseDellaRicercaFermata } from "../ricerca/ripensamento.js";
 import type { Motore } from "../ricerca/usa-motore.js";
 import { frasePerIlMazzoSolo, frasePerLaCorsa, PATTO_DELLA_CORSA } from "../spiegazioni/frasi.js";
 import { spiegaFrontiera } from "../spiegazioni/spiegazioni.js";
+import type { Strategia } from "../strategia/strategia.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
 
 const NUMERI = new Intl.NumberFormat("it-IT");
@@ -103,6 +104,7 @@ const SEME_MASSIMO = 0xffffffff;
 export function Costruzione({
   pool,
   tema,
+  strategia,
   combo,
   seme,
   cambiaSeme,
@@ -114,6 +116,11 @@ export function Costruzione({
 }: {
   pool: Pool;
   tema: Tema;
+  /**
+   * Come l'utente ha detto di voler vincere, o `null`: va nella richiesta, ed è
+   * un vincolo duro (ADR-0001). La si dichiara nel riquadro «Come vuoi vincere».
+   */
+  strategia: Strategia | null;
   /** Le carte della combo dichiarata, per nome: vanno nella richiesta. */
   combo: CarteDellaCombo;
   seme: number;
@@ -133,6 +140,8 @@ export function Costruzione({
     terre: number,
     /** Il tetto con cui è stato costruito: viaggia col mazzo. */
     tetto: number | null,
+    /** E la strategia sotto cui è nato, che viaggia con lui per la stessa ragione. */
+    strategia: Strategia | null,
   ) => void;
 }) {
   const dichiarato = temaDichiarato(tema);
@@ -168,6 +177,7 @@ export function Costruzione({
     const richiesta: Richiesta = {
       tema,
       combo,
+      ...(strategia === null ? {} : { strategia }),
       seme,
       tempoMassimoMs: TEMPO_MASSIMO_PREDEFINITO_MS,
       tettoDiSpesa,
@@ -287,6 +297,13 @@ export function Costruzione({
                         : {
                             euro: motore.frontiera.spesa.tetto,
                             passiSenzaMazzo: motore.frontiera.spesa.passiSenzaMazzo,
+                          },
+                    strategia:
+                      motore.frontiera.strategia === null
+                        ? null
+                        : {
+                            dichiarata: motore.frontiera.strategia.dichiarata,
+                            passiSenzaMazzo: motore.frontiera.strategia.passiSenzaMazzo,
                           },
                   })}
                 </p>
@@ -450,7 +467,12 @@ export function Costruzione({
                 type="button"
                 class="genera"
                 onClick={() =>
-                  mettiInMano(mazzo.carte, mazzo.base.numeroTerre, motore.frontiera?.spesa?.tetto ?? null)
+                  mettiInMano(
+                    mazzo.carte,
+                    mazzo.base.numeroTerre,
+                    motore.frontiera?.spesa?.tetto ?? null,
+                    motore.frontiera?.strategia?.dichiarata ?? null,
+                  )
                 }
               >
                 Mettilo in mano

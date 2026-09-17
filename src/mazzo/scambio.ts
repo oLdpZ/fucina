@@ -56,6 +56,7 @@
 
 import { interpretaIdentita, stessoFormato, type IdentitaDiFormato } from "../dati/ambito.js";
 import { frasePerUnMazzoDiUnAltroFormato } from "../spiegazioni/frasi.js";
+import { eUnaStrategia, type Strategia } from "../strategia/strategia.js";
 import { interpretaTema } from "../tema/interpreta.js";
 import { temaDichiarato, type Tema } from "../tema/tema.js";
 import {
@@ -65,10 +66,31 @@ import {
   type VoceSalvata,
 } from "./salvato.js";
 
-/** La versione del formato di scambio. Cresce quando cresce la richiesta. */
+/**
+ * Le versioni del formato di scambio. Cresce quando cresce la richiesta, e
+ * questa app **le legge tutte fino alla più alta**.
+ *
+ * `FORMATO_CON_STRATEGIA` è la seconda, ed è arrivata con la strategia
+ * dichiarata (ticket 04 della tappa 3). Il numero si scrive **solo sui mazzi
+ * che una strategia la portano**, e non su tutti, per la stessa ragione per cui
+ * il tema e il tetto non lo avevano alzato: un'app vecchia che non guarda quelle
+ * righe legge comunque la lista intera, e alzare il numero a tutti la farebbe
+ * rifiutare in blocco dei mazzi che sa leggere benissimo.
+ *
+ * Con la strategia, invece, alzarlo è la cosa giusta: quella riga **non si può
+ * perdere per strada**. Un mazzo importato senza il vincolo che l'ha prodotto è
+ * la stessa lista sotto una richiesta diversa da quella che è stata fatta — e
+ * chi lo riapre gli rifà le terre e lo risalva convinto che fosse un aggro
+ * chiesto a nessuno. Fra mezza richiesta importata in silenzio e un rifiuto che
+ * si legge — «aggiornala e riprova» — si sceglie il rifiuto.
+ */
 const FORMATO = 1;
+const FORMATO_CON_STRATEGIA = 2;
+/** Il più alto che questa app sappia leggere. */
+const FORMATO_MASSIMO = FORMATO_CON_STRATEGIA;
 
-const INTESTAZIONE = `Mazzi fuori meta — mazzo da scambiare (formato ${FORMATO})`;
+const intestazione = (formato: number) =>
+  `Mazzi fuori meta — mazzo da scambiare (formato ${formato})`;
 const CHIUSURA = "Fine del mazzo.";
 const RICHIESTA_A_MANO = "costruito a mano dal catalogo";
 /**
@@ -89,12 +111,19 @@ const TERRE_DALLA_CURVA = "decise dalla curva del mazzo";
  */
 const RIGA_TETTO = "Tetto di spesa in euro";
 const RIGA_TEMA = "Tema";
+/**
+ * Come si voleva vincere. Una riga che si legge a occhio, con dentro la stessa
+ * parola che la schermata mostra: aggro, midrange, controllo.
+ */
+const RIGA_STRATEGIA = "Strategia";
 
 /** Il mazzo come testo: la lista, la richiesta, e di che dati era fatto. */
 export function scriviScambio(mazzo: ContenutoMazzo): string {
   const copie = mazzo.carte.reduce((somma, voce) => somma + voce.copie, 0);
   return [
-    INTESTAZIONE,
+    // Il numero di formato lo decide quel che c'è dentro il mazzo, non la
+    // versione dell'app che lo scrive: vedi `FORMATO_CON_STRATEGIA`.
+    intestazione(mazzo.richiesta.strategia === undefined ? FORMATO : FORMATO_CON_STRATEGIA),
     "",
     `Nome: ${mazzo.nome}`,
     `Salvato il: ${mazzo.salvatoIl}`,
@@ -121,6 +150,9 @@ export function scriviScambio(mazzo: ContenutoMazzo): string {
     ...(mazzo.richiesta.tema === undefined
       ? []
       : [`${RIGA_TEMA}: ${JSON.stringify(mazzo.richiesta.tema)}`]),
+    ...(mazzo.richiesta.strategia === undefined
+      ? []
+      : [`${RIGA_STRATEGIA}: ${mazzo.richiesta.strategia}`]),
     "",
     `Carte (${copie} copie, ${mazzo.carte.length} diverse):`,
     ...mazzo.carte.map((voce) => `${voce.copie} ${voce.nome}`),
@@ -157,7 +189,7 @@ export function leggiScambio(testo: string, corrente: IdentitaDiFormato): Conten
   if (righe.length === 0 || !intestazione) {
     throw new Error("Questo testo non è un mazzo esportato da quest’app.");
   }
-  if (Number(intestazione[1]) > FORMATO) {
+  if (Number(intestazione[1]) > FORMATO_MASSIMO) {
     throw new Error(
       "Questo mazzo viene da una versione più recente dell’app: aggiornala e riprova.",
     );
@@ -255,12 +287,39 @@ function leggiRichiesta(voci: ReadonlyMap<string, string>): Richiesta | undefine
   // dicesse «tema: nessuno» direbbe qualcosa che nessuno ha mai scritto.
   const tetto = leggiTetto(voci.get(RIGA_TETTO));
   const tema = leggiTema(voci.get(RIGA_TEMA));
+  const strategia = leggiStrategia(voci.get(RIGA_STRATEGIA));
   return {
     origine: "a-mano",
     terreVolute,
     ...(tema === undefined ? {} : { tema }),
     ...(tetto === undefined ? {} : { tetto }),
+    ...(strategia === undefined ? {} : { strategia }),
   };
+}
+
+/**
+ * La strategia, dalla riga che la dichiara.
+ *
+ * Assente è un mazzo che nessuna strategia ha prodotto — o un testo scritto
+ * prima che l'app la scrivesse — e si legge lo stesso. Presente e non una delle
+ * tre, **no**: qui il testo arriva da fuori, e la lettura è severa come per il
+ * tema. Una parola che questa app non conosce viene da un'app che ne conosce
+ * più di lei, e il numero di formato in testa lo avrebbe già detto: se non lo ha
+ * detto, quel testo è stato messo insieme a mano. In tutt'e due i casi il
+ * vincolo che ha prodotto il mazzo non si sa, e importarlo senza sarebbe
+ * importare mezza richiesta.
+ */
+function leggiStrategia(riga: string | undefined): Strategia | undefined {
+  if (riga === undefined) return undefined;
+  if (!eUnaStrategia(riga)) {
+    throw new Error(
+      `La strategia di questo mazzo non si riconosce: «${riga}». ` +
+        "Forse viene da una versione più recente dell’app: aggiornala e riprova. " +
+        `Togli la riga «${RIGA_STRATEGIA}» per importare la lista senza la strategia ` +
+        "con cui il mazzo era stato costruito.",
+    );
+  }
+  return riga;
 }
 
 function leggiTerreAMano(terre: string): number {

@@ -334,3 +334,42 @@ describe("il tema e il tetto nel testo da scambiare", () => {
     expect(() => leggi(storto)).toThrow(/tetto/i);
   });
 });
+
+describe("la strategia dichiarata nel testo da scambiare", () => {
+  const CON_STRATEGIA: ContenutoMazzo = {
+    ...MAZZO,
+    richiesta: { ...MAZZO.richiesta, strategia: "aggro" },
+  };
+
+  it("scrive come si voleva vincere, e riletta torna quella", () => {
+    const testo = scriviScambio(CON_STRATEGIA);
+
+    expect(testo).toMatch(/aggro/);
+    expect(leggi(testo).richiesta.strategia).toBe("aggro");
+  });
+
+  it("alza il numero di formato, così un'app vecchia non importa mezza richiesta", () => {
+    // Un'app che non sappia leggere la strategia importerebbe il mazzo con la
+    // sua lista e senza il vincolo che l'ha prodotto: la stessa lista sotto una
+    // richiesta diversa da quella che è stata fatta. Meglio un rifiuto che si
+    // legge.
+    const testa = (mazzo: ContenutoMazzo) => scriviScambio(mazzo).split("\n")[0];
+
+    expect(testa(CON_STRATEGIA)).not.toBe(testa(MAZZO));
+    expect(testa(CON_STRATEGIA)).toMatch(/formato 2\)$/);
+    // Un mazzo che di strategia non ne porta nessuna resta leggibile dalle app
+    // di prima: alzargli il numero le farebbe rifiutare una lista intera che
+    // sanno leggere benissimo.
+    expect(testa(MAZZO)).toMatch(/formato 1\)$/);
+  });
+
+  it("rifiuta una strategia che non conosce invece di tirare a indovinare", () => {
+    const storto = scriviScambio(CON_STRATEGIA).replace("aggro", "prigione");
+
+    expect(() => leggi(storto)).toThrow(/versione più recente/);
+  });
+
+  it("legge un mazzo che di strategia non ne porta nessuna", () => {
+    expect(leggi(scriviScambio(MAZZO)).richiesta.strategia).toBeUndefined();
+  });
+});

@@ -33,6 +33,7 @@
  */
 
 import { identitaSeSiLegge, stessoFormato, type IdentitaDiFormato } from "../dati/ambito.js";
+import { eUnaStrategia, type Strategia } from "../strategia/strategia.js";
 import { temaSeSiLegge } from "../tema/interpreta.js";
 import type { Tema } from "../tema/tema.js";
 import { DIMENSIONE_MAZZO } from "./taratura.js";
@@ -83,6 +84,22 @@ export type Richiesta = {
    * adesso al motore, non con che cifra il mazzo che sta salvando è nato.
    */
   tetto?: number | undefined;
+  /**
+   * La strategia sotto cui questo mazzo è stato costruito, quando ce n'era una
+   * (ticket 04 della tappa 3); assente quando nessuna lo ha prodotto.
+   *
+   * Sta nella richiesta accanto al tema e al tetto perché è della stessa
+   * specie: è **la domanda** a cui questo mazzo è la risposta. A differenza
+   * degli altri due, però, non decide niente di quel che si rilegge — le terre
+   * non dipendono da lei — e serve a una cosa sola: dire, di un mazzo riaperto
+   * fra un mese, che era stato chiesto un aggro. Senza, quel mazzo sarebbe la
+   * risposta a una domanda che nessuno sa più quale fosse.
+   *
+   * **Manca** nei mazzi salvati prima che l'app la scrivesse, ed è la stessa
+   * indulgenza del tema: quei mazzi si aprono, e non dichiarano nessuna
+   * strategia perché nessuna gliene fu chiesta che si sappia.
+   */
+  strategia?: Strategia | undefined;
 };
 
 /** Il mazzo come si scambia: tutto tranne il posto che occupa nel deposito. */
@@ -244,7 +261,11 @@ function interpretaRichiesta(dati: unknown): Richiesta {
   if (terreVolute !== null && (!interoPositivo(terreVolute) || terreVolute === 0)) {
     throw new Error("Le terre chieste da questo mazzo non sono un numero di terre.");
   }
-  const { tema, tetto } = dati as { tema?: unknown; tetto?: unknown };
+  const { tema, tetto, strategia } = dati as {
+    tema?: unknown;
+    tetto?: unknown;
+    strategia?: unknown;
+  };
   return {
     origine,
     terreVolute: terreVolute as number | null,
@@ -257,7 +278,22 @@ function interpretaRichiesta(dati: unknown): Richiesta {
     // Il testo che arriva da fuori è severo dove deve, cioè prima di qui.
     tema: temaSeSiLegge(tema),
     tetto: tettoSeSiLegge(tetto),
+    strategia: strategiaSeSiLegge(strategia),
   };
+}
+
+/**
+ * La strategia riletta: una delle tre che l'app conosce, o niente.
+ *
+ * Indulgente come il tema e il formato di gioco qui sopra, e per la stessa
+ * ragione — di qui passa il deposito, e una parola storta non deve far sparire
+ * il mazzo intero dall'elenco. Perde però meno di loro: una strategia illeggibile
+ * non rifà nessuna base di terre in silenzio, si limita a lasciare il mazzo
+ * senza il racconto di com'era stato chiesto. Chi è severo — il testo che arriva
+ * da fuori — lo è prima di arrivare qui (`scambio.ts`).
+ */
+function strategiaSeSiLegge(dati: unknown): Strategia | undefined {
+  return eUnaStrategia(dati) ? dati : undefined;
 }
 
 /**

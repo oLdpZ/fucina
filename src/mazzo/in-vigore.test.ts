@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { temaInVigore, tettoInVigore, vincoliDaSalvare } from "./in-vigore.js";
+import {
+  temaInVigore,
+  tettoInVigore,
+  vincoliDaSalvare,
+  vincoliDiUnMazzoRiaperto,
+} from "./in-vigore.js";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 
 const copie = (voci: Record<string, number>) => new Map(Object.entries(voci));
@@ -15,6 +20,7 @@ const SENZA_NERO: Tema = {
 const CONSEGNATO = {
   tetto: 30,
   tema: SENZA_NERO,
+  strategia: null,
   copie: copie({ "Serra Angel": 4, "Swords to Plowshares": 3 }),
 };
 
@@ -88,7 +94,7 @@ describe("tettoInVigore", () => {
     // tema e nessuna cifra, e nessuna cifra deve comparire dal nulla.
     expect(
       tettoInVigore(
-        { tetto: null, tema: SENZA_NERO, copie: copie({ "Serra Angel": 4 }) },
+        { tetto: null, strategia: null, tema: SENZA_NERO, copie: copie({ "Serra Angel": 4 }) },
         copie({ "Serra Angel": 4 }),
       ),
     ).toBeNull();
@@ -120,7 +126,7 @@ describe("temaInVigore", () => {
   it("un mazzo consegnato senza tema — nessun vincolo dichiarato — non ne inventa uno", () => {
     expect(
       temaInVigore(
-        { tetto: 30, tema: null, copie: copie({ "Serra Angel": 4 }) },
+        { tetto: 30, tema: null, strategia: null, copie: copie({ "Serra Angel": 4 }) },
         copie({ "Serra Angel": 4 }),
       ),
     ).toBeNull();
@@ -180,5 +186,53 @@ describe("vincoliDaSalvare", () => {
     // Il testo da mandare a un amico rifiuta la riga del tema quando non
     // contiene un tema (`scambio.ts`): l'app non ne scrive mai uno.
     expect(vincoliDaSalvare({ ...CONSEGNATO, tema: TEMA_VUOTO }, INTATTO)).toEqual({ tetto: 30 });
+  });
+});
+
+describe("la strategia, che viaggia col mazzo come il tema e il tetto", () => {
+  const INTATTO = copie({ "Serra Angel": 4, "Swords to Plowshares": 3 });
+  const COME_AGGRO = { ...CONSEGNATO, strategia: "aggro" as const };
+
+  it("il mazzo appena consegnato scrive nel file la strategia sotto cui è nato", () => {
+    expect(vincoliDaSalvare(COME_AGGRO, INTATTO)).toEqual({
+      tema: SENZA_NERO,
+      tetto: 30,
+      strategia: "aggro",
+    });
+  });
+
+  it("una carta cambiata a mano la stacca insieme agli altri due", () => {
+    // Cadono insieme e dallo stesso confronto, perché sono un fatto solo: sotto
+    // quale domanda questo mazzo è nato. Metà scritta e metà no racconterebbe
+    // una richiesta che nessuno ha fatto.
+    const toccato = copie({ "Serra Angel": 3, "Swords to Plowshares": 3 });
+    expect(vincoliDaSalvare(COME_AGGRO, toccato)).toEqual({});
+  });
+
+  it("un mazzo costruito senza strategia non ne scrive nessuna", () => {
+    expect(vincoliDaSalvare(CONSEGNATO, INTATTO).strategia).toBeUndefined();
+  });
+
+  it("riaperto, un mazzo che porta la sola strategia se la ritrova in vigore", () => {
+    // La strategia da sola basta a legare un mazzo alla sua richiesta: non
+    // decide le terre, ma dice sotto quale domanda quel mazzo è nato, e un
+    // mazzo che la dichiara non è un mazzo senza richiesta.
+    const riaperto = vincoliDiUnMazzoRiaperto(
+      { origine: "a-mano", terreVolute: null, strategia: "controllo" },
+      INTATTO,
+    );
+
+    expect(riaperto).not.toBeNull();
+    expect(riaperto!.strategia).toBe("controllo");
+    expect(riaperto!.tema).toBeNull();
+    expect(riaperto!.tetto).toBeNull();
+    // E risalvandolo la strategia non si perde per strada.
+    expect(vincoliDaSalvare(riaperto, INTATTO)).toEqual({ strategia: "controllo" });
+  });
+
+  it("un mazzo salvato prima che l'app la scrivesse resta senza richiesta", () => {
+    expect(
+      vincoliDiUnMazzoRiaperto({ origine: "a-mano", terreVolute: 22 }, INTATTO),
+    ).toBeNull();
   });
 });
