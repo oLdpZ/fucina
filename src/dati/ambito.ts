@@ -15,10 +15,10 @@
  *   allo stesso gioco. Si confronta, e non si mostra da sola.
  *
  * Tenerli separati è la decisione di questo modulo, e la ragione è nel
- * documento stesso: il nome del formato è **dichiarato da confermare** — nessuno
- * sa ancora come lo chiama il gruppo al tavolo. Se i mazzi salvati si
- * confrontassero per nome, il giorno in cui il gruppo risponde si chiuderebbero
- * tutti in una volta, per un gioco che non è cambiato di una carta.
+ * storia del documento: il nome del formato è stato a lungo **da confermare**, e
+ * quando il gruppo ha risposto è cambiato. Se i mazzi salvati si confrontassero
+ * per nome, quel giorno si sarebbero chiusi tutti in una volta, per un gioco che
+ * non era cambiato di una carta.
  *
  * ## Che cosa fa un formato diverso
  *
@@ -34,9 +34,9 @@
  *
  * Le **lingue ammesse** stanno con le limitate e le bandite, per la stessa
  * ragione e per una in più: dicono quale copia si porta al tavolo, non quali
- * carte esistono. Il giorno che il gruppo rispondesse che la Quarta inglese non
- * si gioca, l'app cambierebbe la copia da cui prende il prezzo per centinaia di
- * carte — e non cambierebbe un solo nome. Deciso in ADR-0006.
+ * carte esistono. Il giorno che il gruppo togliesse una lingua a un'edizione,
+ * l'app cambierebbe la copia da cui prende il prezzo per centinaia di carte — e
+ * non cambierebbe un solo nome. Deciso in ADR-0006.
  */
 
 import type { Formato } from "./formato.js";

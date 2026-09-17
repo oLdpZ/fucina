@@ -419,13 +419,14 @@ perché sta in [ADR-0007](docs/adr/0007-a-pari-lingua-l-edizione-mostrata-la-sce
 Non è una preferenza fra edizioni, e non va scritta nel documento come se lo
 fosse: è la regola che tiene mostrata e prezzata sullo stesso cartoncino.
 
-Quando la stampa mostrata per figura ha un **dorso** — capita a quasi tutta la
-Quarta italiana — l'illustrazione arriva da un'altra copia ammessa della **stessa
+Quando la stampa mostrata per figura ha un **dorso** — capitava a quasi tutta la
+Quarta italiana finché la Quarta era nel formato, e oggi a una parte della Terza
+italiana — l'illustrazione arriva da un'altra copia ammessa della **stessa
 edizione e dello stesso numero di collezione**: stesso cartoncino, stessa figura,
 la scritta in un'altra lingua. L'identità della stampa non si sposta: è la sola
 figura a essere presa in prestito, e mai da un'altra edizione, che sarebbe
-un'altra illustrazione. Senza questo ripiego metà del catalogo resterebbe senza
-figura.
+un'altra illustrazione. Senza questo ripiego, sul pool del 2026-09-17, 102 carte
+su 725 resterebbero senza figura invece di 56.
 
 La stampa che **prezza** la carta è la copia più economica, fra quelle ammesse,
 che su Cardmarket un listino ce l'abbia davvero — di qualunque lingua ammessa
@@ -493,7 +494,9 @@ numero di collezione mostrato non è più quello di una stampa inglese, ma quell
 della copia che il giocatore avrà in mano. Il secondo: l'argomento del riquadro
 vuoto — «per un sesto delle carte nessuna immagine» — non regge più, perché da
 quando la figura si prende in prestito dentro l'edizione (ADR-0007) le carte
-senza illustrazione sono **nove su 753** e non 129.
+senza illustrazione erano **nove su 753** e non 129. Uscita la Quarta, il
+2026-09-17, sono tornate a salire: **56 su 725**, quasi tutte della Terza
+italiana, di cui nessuna copia ammessa ha su Scryfall una figura.
 
 Resta in piedi l'argomento del testo di regole, che è il più grosso: su Scryfall
 il testo italiano di queste carte non esiste. La decisione regge su quello, e su

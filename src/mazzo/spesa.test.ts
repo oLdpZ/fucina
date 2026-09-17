@@ -292,9 +292,8 @@ describe("quale stampa ha fatto il prezzo, quando non è quella mostrata", () =>
   });
 
   it("avvisa anche quando a cambiare è il numero di collezione dentro la stessa edizione", () => {
-    // Nel pool vero sono sette: le cinque terre base, che dentro la Quarta
-    // hanno più figure con numeri diversi, e due carte che la Quarta tedesca
-    // numera per conto suo. L'edizione è la stessa, ma il cartoncino no — e la
+    // Succede alle terre base, che dentro la stessa edizione hanno più figure
+    // con numeri diversi. L'edizione è la stessa, ma il cartoncino no — e la
     // riga manda a cercare un numero che non è quello mostrato. Dirlo nel
     // registro sottovoce vorrebbe dire chiamarlo «la stessa carta».
     const carta: Carta = {

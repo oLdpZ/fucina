@@ -113,11 +113,16 @@ nessun abbonamento, nessun link d'acquisto remunerato.
 
 ## 7. Il cambio di formato del 6 settembre 2026
 
-Il destinatario non gioca in Standard. Gioca **Old School**: le quattro edizioni del
-1994 più Rinascimento, una lista di limitate e bandite decisa dal suo gruppo, e
-le carte **stampate in italiano**. Q5 dice che quest'app è uno strumento per lui, e
+Il destinatario non gioca in Standard. Gioca **Old School**: le edizioni del
+1994, una lista di limitate e bandite decisa dal suo gruppo, e le carte
+**stampate in italiano**. Q5 dice che quest'app è uno strumento per lui, e
 un'app che costruisce mazzi per un formato che il suo unico utente non gioca
 vale zero. Il formato cambia.
+
+Quali edizioni siano non lo dice questa sezione ma il documento di formato,
+perché il gruppo le ha corrette due volte: il 2026-09-07 è uscito Rinascimento,
+il 2026-09-17 la Quarta, ed è entrata la Terza a bordo bianco straniera. I
+numeri qui sotto sono quelli del pool rimisurato il 2026-09-17 (ticket 82).
 
 Il perché per esteso, coi numeri verificati, sta in
 [ADR-0005](docs/adr/0005-da-standard-a-old-school-su-stampe-italiane.md); il
@@ -144,7 +149,7 @@ condizione che le rende valide: l'app resta gratuita.
 
 | # | Che cosa cade | Che cosa resta |
 |---|---|---|
-| **Q1** | *Standard*. Il pool è **Old School su stampe italiane**: 786 nomi in cinque edizioni, 7 bandite, 18 limitate | *Formato unico*. L'app non impara a gestirne due: lo Standard esce e non torna |
+| **Q1** | *Standard*. Il pool è **Old School su stampe italiane**: 725 nomi in quattro edizioni, 6 bandite, 19 limitate | *Formato unico*. L'app non impara a gestirne due: lo Standard esce e non torna |
 | **Q10** | I 5-8 mazzi di riferimento sono Standard e **si buttano**. Si riparte da cinque o sei archetipi classici, riscritti sul pool solo-italiano e non copiati dalle liste storiche, che girano su carte che qui non esistono | Che l'app conosca il meta come **orologi** e ci si confronti (ADR-0002) |
 | **Q31** | Le liste da incollare | Che il meta lo **compili a mano l'utente**: il meta del suo negozio non è il meta di internet, e su questo formato è ancora più vero |
 | **Q29** | L'*ibrido*: che le carte possano cambiare. Il pool si **congela nell'app** — le carte del 1994 non cambiano, non c'è rotazione e non c'è annuncio bandi | L'aggiornamento in sottofondo, **ristretto** a quel che davvero invecchia: il documento di formato e i prezzi. Il codice si semplifica invece di complicarsi, e «degrada bene se abbandonata» (Q27) diventa vero alla lettera: senza rete l'app resta corretta per sempre |
@@ -153,18 +158,19 @@ Toccate ma non decadute: **Q9** (il tetto di spesa c'è ancora, ma **parte
 spento**, se no il budget diventerebbe un secondo tasso di cambio accanto al
 solo che la frontiera deve mostrare) e **Q13** (il modello delle sinergie regge
 intero; è il **vocabolario** dei tag che si riscrive invece di ereditarsi,
-perché i tag `synergy-*` coprono otto carte di 786).
+perché i tag `synergy-*` coprivano otto carte delle 786 di
+allora).
 
 ### Le decisioni che reggono con una ragione nuova
 
 **Q24 — lingua delle carte: solo inglese.** Regge, e la ragione non è più quella
 di prima. Il formato è **definito** dalle stampe italiane, e sembrerebbe naturale
-mostrarle; ma il nome italiano esiste per tutte e 786, l'**immagine** italiana
-manca per 98 (tutta la Quarta italiana è un segnaposto) e il **testo di regole**
-italiano su Scryfall **non esiste** — 7 stampe su 1182. L'italiano in
-interfaccia significherebbe nome italiano, immagine a volte inglese e testo
-sempre inglese. In più i prezzi disponibili sono quelli delle stampe inglesi:
-mostrando l'inglese, nome e prezzo parlano della stessa carta.
+mostrarle; ma il nome italiano esiste per tutte e 725, l'**immagine** italiana
+manca per 102 (e per 56 di queste non ce l'ha nessuna copia ammessa) e il
+**testo di regole** italiano su Scryfall **non esiste** — 6 stampe su 1041.
+L'italiano in interfaccia significherebbe nome italiano, immagine a volte
+straniera e testo sempre inglese. In più nessuna stampa italiana ha un prezzo:
+quelli disponibili sono delle stampe inglesi e francesi.
 
 L'italiano entra dove serve davvero — come **chiave di ricerca**: chi scrive
 «Labirinto di Ith» trova *Maze of Ith*, e il pool conserva il nome italiano di
@@ -177,8 +183,8 @@ va motivata a parole* — e diventa il servizio principale, non una cortesia.
 
 **Q4 — nessun motore di regole.** Regge, con la conseguenza già scritta in
 ADR-0002 e in `HANDOFF.md`: la potenza è una misura da aggro, perché la
-simulazione legge di ogni carta quattro cose e mai il testo. Su un pool con 32
-terre non base su 37 e 44 carte a costo zero — cioè un pool che produce combo e
+simulazione legge di ogni carta quattro cose e mai il testo. Su un pool con 25
+terre non base su 30 e 37 carte a costo zero — cioè un pool che produce combo e
 prigione — quella misura sbaglia più spesso di prima. È la casella aperta più
 grossa del cambio, e non la chiude questa sezione.
 

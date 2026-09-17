@@ -94,8 +94,8 @@ describe("l'identità di un formato", () => {
     // Un mazzo è una lista di nomi, e l'impronta risponde a una domanda sola:
     // questo mazzo salvato è dello stesso gioco? Le lingue dicono quale copia si
     // porta al tavolo, non quali carte esistono — se entrassero, il giorno che
-    // il gruppo risponde sulla Quarta inglese si chiuderebbero tutti i mazzi
-    // salvati per una regola che non ne tocca nessuna carta (ADR-0006).
+    // il gruppo risponde sulle lingue di un'edizione si chiuderebbero tutti i
+    // mazzi salvati per una regola che non ne tocca nessuna carta (ADR-0006).
     const altreLingue: Formato = {
       ...FORMATO,
       edizioni: FORMATO.edizioni.map((edizione) => ({ ...edizione, lingue: ["fr", "de"] })),

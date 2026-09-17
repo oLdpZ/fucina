@@ -400,10 +400,10 @@ export function altraStampaDelPrezzo(carta: Carta): string | null {
  * tornasse a seguire il prezzo (ADR-0007).
  *
  * Il caso di mezzo è il più facile da lasciarsi sfuggire, ed è il motivo per cui
- * queste frasi guardano il **numero di collezione** e non la sola edizione: nel
- * pool vero sono sette carte — le cinque terre base, che dentro la stessa
- * edizione hanno più figure numerate diversamente, e due carte che la Quarta
- * tedesca numera per conto suo. L'edizione è la stessa, ma il numero da cercare
+ * queste frasi guardano il **numero di collezione** e non la sola edizione: le
+ * terre base, dentro la stessa edizione, hanno più figure numerate diversamente
+ * — nel pool vero erano sette carte, e dal 2026-09-17 è una, perché delle altre
+ * terre base nessuna copia ammessa ha un prezzo. L'edizione è la stessa, ma il numero da cercare
  * al negozio no, e dirlo nel registro più quieto vorrebbe dire chiamarlo «la
  * stessa carta».
  *
