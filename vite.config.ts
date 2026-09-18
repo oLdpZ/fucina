@@ -236,5 +236,26 @@ export default defineConfig({
     // Due programmi, due posti: l'app sotto `src/`, gli strumenti del
     // manutentore sotto `strumenti/`. I test seguono il codice che provano.
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "strumenti/**/*.test.ts"],
+    /**
+     * Venti secondi per test, contro i cinque che vitest dà di suo (ticket 80).
+     *
+     * Non è un tetto alzato per far passare un test che non passava: è il tetto
+     * riportato a fare il suo mestiere. Questa suite **simula centinaia di
+     * partite** apposta — la frontiera che si apre davvero, il mazzo intero
+     * dentro un tetto stretto, la ricerca ripetibile a parità di seme — e quei
+     * test costano fra i due e i tre secondi e mezzo su una macchina scarica,
+     * cioè fino al 70% del predefinito.
+     *
+     * Con quel margine il timeout smetteva di essere una rete e diventava un
+     * cronometro: sotto un secondo `vitest` in parallelo, o su una macchina più
+     * lenta, la suite dava due rossi che **non dicevano** «sono andato lungo» ma
+     * sembravano due regressioni della ricerca. È già successo una volta, e la
+     * caccia a quel fallimento è il motivo per cui questa riga esiste.
+     *
+     * Venti secondi restano una rete vera: un test che li supera non è lento, è
+     * **piantato** — una ricerca che non si ferma, un'attesa che non arriva mai
+     * — ed è esattamente quel che un timeout deve trovare.
+     */
+    testTimeout: 20_000,
   },
 });
