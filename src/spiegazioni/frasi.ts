@@ -732,6 +732,49 @@ export function frasePerIlTettoInVigore(grezzi: GrezziDelTettoInVigore): string 
   );
 }
 
+/* --- Le copie contate a un prezzo dichiarato ------------------------------- */
+
+/**
+ * Quante copie del mazzo stanno nel conto a un prezzo **dichiarato dal
+ * gruppo**, e quanto pesano (ticket 83).
+ */
+export type GrezziDelPrezzoDichiarato = {
+  copie: number;
+  euro: number;
+};
+
+/**
+ * **Quel che il conto ha contato senza chiederlo al mercato.**
+ *
+ * Nasce da una promessa che rischiava di diventare falsa. L'avviso che
+ * accompagna ogni cifra dell'app dice che ogni prezzo è quello della copia
+ * ammessa più economica che su Cardmarket un listino ce l'abbia. Da quando il
+ * documento di formato può **dichiarare** quanto vale una terra base, una parte
+ * del conto su Cardmarket non ci è mai passata — e senza questa riga l'avviso
+ * direbbe di quelle copie una cosa non vera.
+ *
+ * Non è un avvertimento e non è una scusa: è un pezzo del conto, detto. Per
+ * questo porta tutt'e due i numeri — quante copie, e quanto pesano — e non
+ * giudica se la cifra dichiarata sia giusta: a dirlo è stato il gruppo.
+ *
+ * `null` quando di copie così non ce n'è nessuna: una riga che dicesse «zero
+ * copie stanno a un prezzo dichiarato» sotto ogni singolo mazzo insegnerebbe a
+ * saltare anche le volte che il numero non è zero.
+ */
+export function frasePerIlPrezzoDichiarato(grezzi: GrezziDelPrezzoDichiarato): string | null {
+  if (grezzi.copie <= 0) return null;
+  // Le copie si scrivono col modello che l'app usa dappertutto — «1 copia», «24
+  // copie» — e non con un plurale rifatto qui: due modi di contare le stesse
+  // copie sono due modi di scriverle, e si vedono nella stessa schermata.
+  const sta = grezzi.copie === 1 ? "sta" : "stanno";
+  const pesa = grezzi.copie === 1 ? "pesa" : "pesano";
+  return (
+    `Dentro quel conto ${copie(grezzi.copie)} ${sta} a un prezzo che il gruppo ha dichiarato ` +
+    `invece di leggerlo dal mercato: ${pesa} ${decimale(grezzi.euro)} € in tutto, e su Cardmarket ` +
+    `non ci sono mai passate.`
+  );
+}
+
 /* --- Il tema che sceglie le terre del mazzo che si ha in mano -------------- */
 
 export type GrezziDelTemaInVigore = {

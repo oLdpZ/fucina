@@ -457,3 +457,66 @@ describe("il documento vero", () => {
     expect(new Set(nomi).size).toBe(nomi.length);
   });
 });
+
+/**
+ * Ticket 83: col pool del 2026-09-17 quattro terre base su cinque non hanno
+ * prezzo in euro, e col tetto acceso l'app non mette in mazzo quel che non sa
+ * contare — cioè, sotto un tetto, solo i mazzi verdi potevano avere terre base.
+ *
+ * La strada scelta è la prima delle tre che il ticket elenca: **il documento
+ * dichiara quanto vale una terra base**, perché al tavolo non le compra
+ * nessuno. Il numero è un dato e non una costante del sorgente (ADR-0004), e
+ * come ogni voce del documento porta con sé il suo perché.
+ */
+describe("il prezzo dichiarato delle terre base", () => {
+  it("si legge, col perché accanto", () => {
+    const formato = interpretaFormato({
+      ...COMPLETO,
+      prezzoDelleTerreBase: {
+        euro: 0,
+        perché: "Al tavolo le terre base non le compra nessuno.",
+        daConfermare: null,
+      },
+    });
+
+    expect(formato.prezzoDelleTerreBase?.euro).toBe(0);
+    expect(formato.prezzoDelleTerreBase?.perché).toContain("tavolo");
+  });
+
+  it("un documento che non lo dichiara resta un documento buono", () => {
+    // Non dichiararlo è una risposta legittima — vuol dire «le terre base si
+    // comprano come tutte le altre» — e i documenti scritti prima di questo
+    // ticket non devono smettere di aprirsi.
+    expect(interpretaFormato(COMPLETO).prezzoDelleTerreBase).toBeNull();
+  });
+
+  it("dichiarato senza il suo perché, si rifiuta dicendo quale campo manca", () => {
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        prezzoDelleTerreBase: { euro: 0, perché: "  ", daConfermare: null },
+      }),
+    ).toThrow(/terre base/i);
+  });
+
+  it("una cifra che non è un numero non passa per zero", () => {
+    // Zero e «non si sa» sono due risposte diverse, e leggere la seconda come
+    // la prima regalerebbe all'utente un mazzo che costa quel che non sa.
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        prezzoDelleTerreBase: { euro: "gratis", perché: "Perché sì.", daConfermare: null },
+      }),
+    ).toThrow(/terre base/i);
+  });
+
+  it("una cifra negativa non si legge: un prezzo sotto zero non esiste", () => {
+    expect(() =>
+      interpretaFormato({
+        ...COMPLETO,
+        prezzoDelleTerreBase: { euro: -1, perché: "Perché sì.", daConfermare: null },
+      }),
+    ).toThrow(/terre base/i);
+  });
+});
+

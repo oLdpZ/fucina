@@ -32,6 +32,7 @@ import {
   frasePerLaCombo,
   frasePerLArchetipo,
   frasePerLaFrontieraPiuCorta,
+  frasePerIlPrezzoDichiarato,
   PATTO_DELLA_CORSA,
   frasePerLaPresenza,
   frasePerLeCopie,
@@ -1634,6 +1635,33 @@ describe("la frontiera più corta del solito", () => {
 
     expect(frase).toContain("midrange");
     expect(frase).not.toContain("42,50");
+  });
+});
+
+/**
+ * Ticket 83, seconda casella: il conto dice il vero su quel che le terre base
+ * costano. Col prezzo dichiarato le sa contare — ma l'avviso che accompagna
+ * ogni cifra promette il prezzo della copia più economica su Cardmarket, e
+ * quella parte del conto su Cardmarket non ci è mai passata.
+ */
+describe("le copie contate a un prezzo dichiarato", () => {
+  it("tace quando non ce n'è nessuna", () => {
+    expect(frasePerIlPrezzoDichiarato({ copie: 0, euro: 0 })).toBeNull();
+  });
+
+  it("dice quante copie sono e quanto pesano", () => {
+    const frase = frasePerIlPrezzoDichiarato({ copie: 24, euro: 0 });
+
+    expect(frase).toContain("24");
+    expect(frase).toContain("0,00 €");
+    expect(frase).toMatch(/dichiarat/u);
+  });
+
+  it("con una copia sola concorda il verbo", () => {
+    const frase = frasePerIlPrezzoDichiarato({ copie: 1, euro: 0.5 });
+
+    expect(frase).not.toMatch(/1 copie|pesano/u);
+    expect(frase).toContain("0,50 €");
   });
 });
 

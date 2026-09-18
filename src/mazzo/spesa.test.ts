@@ -6,7 +6,10 @@ import type { CopieDiCarta } from "./base-di-terre.js";
 import {
   altraStampaDelPrezzo,
   attaccoDelPrezzo,
+  AVVISO_PREZZO_DICHIARATO,
   AVVISO_STIMA_AL_RIBASSO,
+  copieAPrezzoDichiarato,
+  prezzoDichiarato,
   descriviLaStampa,
   listaDellaSpesa,
   contoDelMazzo,
@@ -449,3 +452,109 @@ describe("quando un cambio di spesa non peggiora", () => {
     expect(nonPeggiora(29, 10, 30)).toBe(true);
   });
 });
+
+/**
+ * Ticket 83: il prezzo che il gruppo **dichiara** — oggi quello delle terre
+ * base — non viene da nessuna copia, e chi lo mostra non deve mandare nessuno a
+ * cercarne una su Cardmarket.
+ *
+ * Si riconosce dalla forma e non da una bandiera in più: una cifra c'è, e una
+ * stampa da cui verrebbe no. Le altre due combinazioni sono le due che l'app
+ * conosceva già — prezzo e stampa insieme è il listino, nessuno dei due è la
+ * carta che nessuna copia ammessa prezza.
+ */
+describe("il prezzo dichiarato dal gruppo", () => {
+  const unaCarta = (): Carta => carta("Goblin Chieftain");
+
+  const dichiarata = (): Carta => ({
+    ...unaCarta(),
+    prezzo: { euro: 0, aggiornatoIl: "2026-09-17", stampa: null },
+  });
+
+  it("si riconosce dalla forma: una cifra c'è, la copia da cui verrebbe no", () => {
+    expect(prezzoDichiarato(dichiarata())).toBe(true);
+  });
+
+  it("l'avviso che lo accompagna non promette Cardmarket", () => {
+    // I due avvisi non possono stare insieme: quello sopra manda al mercato,
+    // questo dice che al mercato non c'è niente da cercare.
+    expect(AVVISO_PREZZO_DICHIARATO).not.toMatch(/Cardmarket/i);
+    expect(AVVISO_STIMA_AL_RIBASSO).toMatch(/Cardmarket/i);
+  });
+
+  it("non manda a cercare nessun'altra stampa", () => {
+    expect(altraStampaDelPrezzo(dichiarata())).toBeNull();
+  });
+
+  it("la carta che nessuno prezza non è una carta col prezzo dichiarato", () => {
+    const senzaPrezzo: Carta = {
+      ...unaCarta(),
+      prezzo: { euro: null, aggiornatoIl: "2026-09-17", stampa: null },
+    };
+
+    expect(prezzoDichiarato(senzaPrezzo)).toBe(false);
+  });
+
+  it("e nemmeno lo è quella che il listino prezza", () => {
+    expect(prezzoDichiarato(a("Goblin Chieftain", 2, 4).carta)).toBe(false);
+  });
+});
+
+/**
+ * Ticket 83, seconda casella: «il conto del mazzo dice il vero su quel che le
+ * terre base costano».
+ *
+ * Col prezzo dichiarato il conto le sa contare, e le conta — ma chi legge
+ * «costa 233,25 €, terre comprese» sotto un avviso che promette il prezzo della
+ * copia più economica su Cardmarket merita di sapere che quella parte del conto
+ * su Cardmarket non ci è mai passata. Il riassunto sta in un posto solo, e le
+ * due schermate che lo mostrano lo chiedono a lui.
+ */
+describe("le copie contate a un prezzo dichiarato", () => {
+  const dichiarata = (nome: string, euro: number, copie: number): CopieDiCarta => ({
+    carta: { ...carta(nome), prezzo: { euro, aggiornatoIl: "2026-09-17", stampa: null } },
+    copie,
+  });
+
+  it("nessuna, quando nessun prezzo è dichiarato", () => {
+    const quante = copieAPrezzoDichiarato(listaDellaSpesa([a("Goblin Chieftain", 2, 4)]));
+
+    expect(quante.copie).toBe(0);
+    expect(quante.euro).toBe(0);
+  });
+
+  it("le conta, e dice quanto pesano nel totale", () => {
+    const voci = [a("Goblin Chieftain", 2, 4), dichiarata("Mountain", 0.5, 10)];
+    const quante = copieAPrezzoDichiarato(listaDellaSpesa(voci));
+
+    expect(quante.copie).toBe(10);
+    expect(quante.euro).toBeCloseTo(5, 10);
+    // Sono dentro il conto, non accanto: il mazzo costa quel che costa.
+    expect(contoDelMazzo(voci).minimo).toBeCloseTo(13, 10);
+  });
+
+  it("una voce a zero copie non entra nel conto delle dichiarate", () => {
+    expect(copieAPrezzoDichiarato(listaDellaSpesa([dichiarata("Mountain", 0.5, 0)])).copie).toBe(0);
+  });
+});
+
+/** Anche la lista della spesa dice quali copie il mercato non ha mai prezzato. */
+describe("la lista della spesa e i prezzi dichiarati", () => {
+  it("nomina le voci col prezzo dichiarato, e quante copie sono", () => {
+    const lista = listaDellaSpesa([
+      a("Goblin Chieftain", 2, 4),
+      {
+        carta: { ...carta("Mountain"), prezzo: { euro: 0, aggiornatoIl: "2026-09-17", stampa: null } },
+        copie: 10,
+      },
+    ]);
+
+    expect(lista.dichiarate.map((voce) => voce.carta.nome)).toEqual(["Mountain"]);
+    expect(lista.dichiarate[0]?.copie).toBe(10);
+  });
+
+  it("su una lista senza prezzi dichiarati resta vuota", () => {
+    expect(listaDellaSpesa([a("Goblin Chieftain", 2, 4)]).dichiarate).toEqual([]);
+  });
+});
+

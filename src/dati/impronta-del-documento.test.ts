@@ -69,6 +69,7 @@ const FORMATO: Formato = {
     daConfermare: null,
     carte: [unaVoce("Carta Inventata Seconda")],
   },
+  prezzoDelleTerreBase: null,
 };
 
 /** Il documento con una voce sostituita, per dire cosa cambia e cosa no. */

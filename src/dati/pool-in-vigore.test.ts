@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { POOL_FINTO } from "../catalogo/pool-finto.js";
+import { POOL_FINTO, TERRE_FINTE } from "../catalogo/pool-finto.js";
 import { COPIE_DI_UNA_LIMITATA } from "../mazzo/copie.js";
 import { COPIE_MASSIME } from "../mazzo/taratura.js";
 import type { Formato } from "./formato.js";
@@ -32,6 +32,7 @@ const FORMATO: Formato = {
   edizioniEscluse: [],
   limitate: { perché: "Troppo forti.", daConfermare: null, carte: [voce("Goblin Chieftain")] },
   bandite: { perché: "La posta.", daConfermare: null, carte: [voce("Lightning Strike")] },
+  prezzoDelleTerreBase: null,
 };
 
 /** Una carta che nel testo si concede quante copie vuole. */
@@ -41,7 +42,10 @@ const POOL: Pool = {
   generatoIl: "2026-09-02T09:05:48.145+00:00",
   improntaDelDocumento: improntaDelDocumento(FORMATO),
   registroTagScryfall: [],
-  carte: [...POOL_FINTO, SCIAME],
+  // Le terre base ci sono perché il prezzo dichiarato tocca loro e nessun'altra
+  // carta (ticket 83): un pool senza terre base renderebbe quei test verdi
+  // senza provare niente.
+  carte: [...POOL_FINTO, SCIAME, ...TERRE_FINTE],
 };
 
 const nomi = (pool: Pool) => pool.carte.map((carta) => carta.nome);
@@ -174,3 +178,73 @@ describe("il pool in vigore", () => {
     );
   });
 });
+
+/**
+ * Ticket 83: il prezzo che il gruppo dichiara per le terre base, applicato
+ * sopra il pool come le limitate e le bandite.
+ *
+ * Il guasto da cui nasce: quattro terre base su cinque, nelle edizioni ammesse
+ * dal 2026-09-17, non hanno nessun prezzo in euro — e col tetto di spesa acceso
+ * l'app non mette in mazzo quel che non sa contare.
+ */
+describe("il prezzo dichiarato delle terre base sopra il pool", () => {
+  const CON_PREZZO: Formato = {
+    ...FORMATO,
+    prezzoDelleTerreBase: {
+      euro: 0,
+      perché: "Al tavolo non le compra nessuno.",
+      daConfermare: null,
+    },
+  };
+
+  /** Le terre base del pool finto, che sono quelle con «Basic» fra i tipi. */
+  const terreBase = (pool: Pool): Carta[] => pool.carte.filter((c) => c.tipi.includes("Basic"));
+
+  it("dà a ogni terra base la cifra dichiarata, anche a quelle che un listino non ce l'hanno", () => {
+    const senzaPrezzo: Pool = {
+      ...POOL,
+      carte: POOL.carte.map((c) =>
+        c.tipi.includes("Basic") ? { ...c, prezzo: { ...c.prezzo, euro: null, stampa: null } } : c,
+      ),
+    };
+
+    const inVigore = poolInVigore(senzaPrezzo, CON_PREZZO, null);
+
+    expect(terreBase(inVigore).length).toBeGreaterThan(0);
+    for (const terra of terreBase(inVigore)) expect(terra.prezzo.euro).toBe(0);
+  });
+
+  it("le tratta tutte allo stesso modo: una terra base col listino non resta più cara delle altre", () => {
+    // È la ragione per cui il prezzo dichiarato vince sul listino. Nel pool vero
+    // una sola terra base ha un prezzo in euro, e lasciarglielo vorrebbe dire
+    // una base di terre in cui un colore costa e gli altri quattro no.
+    const inVigore = poolInVigore(POOL, CON_PREZZO, null);
+
+    for (const terra of terreBase(inVigore)) expect(terra.prezzo.euro).toBe(0);
+  });
+
+  it("non tocca nessuna carta che non sia una terra base", () => {
+    const prima = POOL.carte.filter((c) => !c.tipi.includes("Basic"));
+    const dopo = poolInVigore(POOL, CON_PREZZO, null).carte.filter(
+      (c) => !c.tipi.includes("Basic"),
+    );
+
+    expect(dopo.map((c) => c.prezzo.euro)).toEqual(
+      prima.filter((c) => !FORMATO.bandite.carte.some((v) => v.carta === c.nome)).map((c) => c.prezzo.euro),
+    );
+  });
+
+  it("un documento che non lo dichiara lascia i prezzi come stanno", () => {
+    const inVigore = poolInVigore(POOL, FORMATO, null);
+    const prima = POOL.carte.filter((c) => c.tipi.includes("Basic")).map((c) => c.prezzo.euro);
+
+    expect(terreBase(inVigore).map((c) => c.prezzo.euro)).toEqual(prima);
+  });
+
+  it("la cifra dichiarata non porta con sé nessuna stampa: non c'è una copia da cercare", () => {
+    const inVigore = poolInVigore(POOL, CON_PREZZO, null);
+
+    for (const terra of terreBase(inVigore)) expect(terra.prezzo.stampa).toBeNull();
+  });
+});
+

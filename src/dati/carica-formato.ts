@@ -30,6 +30,7 @@ import type {
   EdizioneEsclusa,
   ElencoDiCarte,
   Formato,
+  PrezzoDichiarato,
   VoceDiCarta,
 } from "./formato.js";
 import { scaricaFresco, type Arrivo } from "./scarica.js";
@@ -106,7 +107,44 @@ export function interpretaFormato(dati: unknown): Formato {
     edizioniEscluse,
     limitate,
     bandite,
+    prezzoDelleTerreBase: leggiPrezzoDelleTerreBase(grezzo["prezzoDelleTerreBase"]),
   };
+}
+
+/**
+ * Il prezzo dichiarato delle terre base, quando il documento lo dichiara.
+ *
+ * Non dichiararlo è una risposta legittima — vuol dire «le terre base si
+ * comprano come tutte le altre» — e i documenti scritti prima del ticket 83 non
+ * devono smettere di aprirsi: l'assenza vale `null`.
+ *
+ * Dichiararlo **male**, invece, si rifiuta. Una cifra che non è un numero letta
+ * come zero regalerebbe all'utente terre gratis che nessuno ha dichiarato
+ * gratis, e zero e «non si sa» sono le due risposte che questo ticket esiste
+ * per tenere separate.
+ */
+function leggiPrezzoDelleTerreBase(grezzo: unknown): PrezzoDichiarato | null {
+  if (grezzo === undefined || grezzo === null) return null;
+  if (typeof grezzo !== "object") {
+    throw new Error("Il prezzo dichiarato delle terre base non si legge.");
+  }
+
+  const voce = grezzo as Record<string, unknown>;
+  const euro = voce["euro"];
+  if (typeof euro !== "number" || !Number.isFinite(euro) || euro < 0) {
+    throw new Error(
+      "Il documento di formato dichiara per le terre base una cifra che non è un prezzo in euro.",
+    );
+  }
+
+  const perché = testo(voce["perché"]);
+  if (perché === null) {
+    throw new Error(
+      "Il documento di formato dichiara il prezzo delle terre base senza dire perché.",
+    );
+  }
+
+  return { euro, perché, daConfermare: testo(voce["daConfermare"]) };
 }
 
 /**

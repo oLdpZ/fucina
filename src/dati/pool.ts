@@ -116,11 +116,25 @@ export type Stampa = {
  * è un errore. Allora `stampa` è `null` a sua volta: non si prende il prezzo di
  * una copia non ammessa per tappare il buco, e una provenienza scritta accanto a
  * un euro che non c'è sarebbe una mezza verità.
+ *
+ * Gli stati sono quindi **tre**, e si distinguono da questi due campi soli
+ * (ticket 83):
+ *
+ * - euro e stampa insieme: il prezzo viene dal **listino**, cioè dal mercato;
+ * - né l'uno né l'altra: nessuna copia ammessa ha un listino;
+ * - euro senza stampa: il prezzo lo **dichiara il documento di formato**, e non
+ *   c'è nessuna copia da andare a cercare al banchetto. Lo riconosce
+ *   `prezzoDichiarato` (`mazzo/spesa.ts`), e chi mostra una cifra così non deve
+ *   promettere Cardmarket.
  */
 export type Prezzo = {
   euro: number | null;
   aggiornatoIl: string;
-  /** La copia da cui l'euro viene; `null` insieme a lui, e mai da sola. */
+  /**
+   * La copia da cui l'euro viene; `null` insieme a lui, e `null` anche quando
+   * l'euro è **dichiarato** invece che letto da un listino (vedi sopra). Non ha
+   * mai un valore senza l'euro: una provenienza senza cifra non direbbe niente.
+   */
   stampa: Stampa | null;
 };
 

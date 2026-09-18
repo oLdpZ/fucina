@@ -31,7 +31,7 @@ import type { Formato } from "./formato.js";
 import { improntaDelDocumento } from "./impronta-del-documento.js";
 import type { Listino } from "./listino.js";
 import type { Pool } from "./pool.js";
-import { COPIE_DI_UNA_LIMITATA } from "../mazzo/copie.js";
+import { COPIE_DI_UNA_LIMITATA, eTerraBase } from "../mazzo/copie.js";
 
 /**
  * Il documento di formato sopra il pool: le bandite escono, le limitate stanno
@@ -113,13 +113,69 @@ export function applicaIlListino(pool: Pool, listino: Listino): Pool {
 }
 
 /**
+ * Il prezzo che il gruppo **dichiara** per le terre base, sopra il pool
+ * (ticket 83).
+ *
+ * Nasce da un guasto che nessun test vedeva. Nelle edizioni ammesse dal
+ * 2026-09-17 quattro terre base su cinque non hanno prezzo in euro, e col tetto
+ * di spesa acceso l'app non mette in mazzo quel che non sa contare: sotto un
+ * tetto, un mazzo che non fosse verde non poteva avere terre base — cioè non
+ * poteva esistere.
+ *
+ * Il prezzo dichiarato vince sul listino, e non è una svista. Nel pool vero una
+ * sola terra base un prezzo ce l'ha: lasciarglielo darebbe una base di terre in
+ * cui un colore costa e gli altri quattro no, che come conto non vuol dire
+ * niente. O le terre base valgono quel che il gruppo ha dichiarato, tutte, o la
+ * dichiarazione non serve.
+ *
+ * Non porta con sé nessuna **stampa**, e non perché non si sappia quale: perché
+ * non c'è nessuna copia da andare a cercare al banchetto. È il terzo stato di
+ * `Prezzo`, dichiarato lì accanto agli altri due (`pool.ts`).
+ *
+ * Non è esportata: si applica **dopo** che il documento è stato accettato, e da
+ * sola non ha modo di sapere se lo sia. Chi la volesse per conto proprio
+ * chiamerebbe `poolInVigore`, che i controlli li fa.
+ */
+function applicaIlPrezzoDichiarato(pool: Pool, formato: Formato): Pool {
+  const dichiarato = formato.prezzoDelleTerreBase;
+  if (dichiarato === null) return pool;
+
+  return {
+    ...pool,
+    carte: pool.carte.map((carta) =>
+      eTerraBase(carta.tipi)
+        ? {
+            ...carta,
+            prezzo: {
+              euro: dichiarato.euro,
+              // La data è quella del documento che l'ha dichiarato: è di lì che
+              // il numero viene, e datarlo col listino direbbe che l'ha detto
+              // il mercato.
+              aggiornatoIl: formato.aggiornatoIl,
+              stampa: null,
+            },
+          }
+        : carta,
+    ),
+  };
+}
+
+/**
  * Il pool che l'app mostra e con cui costruisce: il listino, se ce n'è uno più
- * fresco del pool, e poi il formato.
+ * fresco del pool, poi il formato, e infine i prezzi che il formato dichiara.
  *
  * Il listino va **prima**: si confronta col pool intero, bandite comprese,
  * perché è così che la preparazione lo scrive — e un listino giusto non deve
  * sembrare incompleto per via di un bando.
+ *
+ * Il prezzo dichiarato va **ultimo**, e per due ragioni. Dopo il listino, o il
+ * listino glielo riscriverebbe sopra: è una dichiarazione del gruppo, e il
+ * mercato non la smentisce. Dopo il formato, perché è il formato a dire se
+ * quel documento si possa applicare affatto — scrivere prezzi da un documento
+ * non ancora accettato vorrebbe dire lavorare su una risposta che sta per
+ * essere rifiutata.
  */
 export function poolInVigore(pool: Pool, formato: Formato, listino: Listino | null): Pool {
-  return applicaIlFormato(listino === null ? pool : applicaIlListino(pool, listino), formato);
+  const conPrezzi = listino === null ? pool : applicaIlListino(pool, listino);
+  return applicaIlPrezzoDichiarato(applicaIlFormato(conPrezzi, formato), formato);
 }

@@ -54,7 +54,7 @@ export function leggiTettoDiCopie(
   testo: string,
   tipi: readonly string[],
 ): number | null {
-  if (tipi.includes("Basic") && tipi.includes("Land")) return null;
+  if (eTerraBase(tipi)) return null;
   if (PERMESSO.test(testo)) return null;
   return COPIE_MASSIME;
 }
@@ -149,4 +149,17 @@ export function copieInMano(carta: Carta, volute: number): number {
 export function tettoInMano(carta: Carta): number {
   if (!entraInMano(carta)) return 0;
   return Math.min(copieMassime(carta), DIMENSIONE_MAZZO);
+}
+
+/**
+ * Se questi tipi sono quelli di una **terra base**.
+ *
+ * Il supertipo e il tipo insieme, e nessun nome di carta: è così che l'app
+ * riconosce le terre base ovunque le serva riconoscerle (ADR-0004). Sta qui
+ * perché qui nasce — il gioco concede copie illimitate a queste e a nessun'altra
+ * — e da qui la legge anche chi applica il prezzo che il gruppo dichiara per
+ * loro (`dati/pool-in-vigore.ts`, ticket 83).
+ */
+export function eTerraBase(tipi: readonly string[]): boolean {
+  return tipi.includes("Basic") && tipi.includes("Land");
 }

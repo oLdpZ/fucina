@@ -219,5 +219,11 @@
         "daConfermare": null
       }
     ]
+  },
+
+  "prezzoDelleTerreBase": {
+    "euro": 0,
+    "perché": "Le terre base non si comprano: al tavolo le presta la scatola o un amico, e nessuno del gruppo ne ha mai comprata una. Nelle edizioni ammesse, poi, quattro terre base su cinque non hanno nemmeno un prezzo in euro su Cardmarket — e finché valevano «non si sa», col tetto di spesa acceso un mazzo che non fosse verde non poteva avere terre base.",
+    "daConfermare": null
   }
 }

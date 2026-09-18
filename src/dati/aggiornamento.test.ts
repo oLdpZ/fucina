@@ -45,6 +45,7 @@ const FORMATO: Formato = {
   edizioniEscluse: [],
   limitate: { perché: "Troppo forti.", daConfermare: null, carte: [voce("Goblin Chieftain")] },
   bandite: { perché: "La posta.", daConfermare: null, carte: [voce("Lightning Strike")] },
+  prezzoDelleTerreBase: null,
 };
 
 /** Lo stesso documento, più fresco, con un bando in più e un nome nuovo. */

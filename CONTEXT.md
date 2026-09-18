@@ -607,6 +607,28 @@ e i prezzi di Cardmarket sono di ieri. La distanza nessuno la conosce, e per
 questo non si stima: si dichiara che c'è, ovunque un prezzo compaia — insieme a
 **da quale copia** il numero viene, che è l'unico modo di renderla verificabile.
 
+## Prezzo dichiarato
+
+**Una cifra che decide il gruppo, non il mercato.**
+
+Il documento di formato può dichiarare quanto vale una **terra base**: una cifra
+col suo perché accanto, come ogni altra voce del documento. Oggi è zero, perché
+al tavolo le terre base non le compra nessuno.
+
+Non è un'eccezione alla stima al ribasso: è un'altra specie di numero, e le due
+non si mescolano mai. Un prezzo letto ha dietro una copia da cercare al negozio;
+uno dichiarato no, e chi lo mostra **non nomina il mercato** — dire «prezzo
+Cardmarket» sopra una cifra che su Cardmarket non è mai passata sarebbe la bugia
+che il prezzo dichiarato è nato per evitare. Si riconosce dalla forma dei dati:
+una cifra c'è, e la stampa da cui verrebbe no (`Prezzo` in `dati/pool.ts`).
+
+Nasce da un guasto vero: senza un prezzo per le terre base, che nelle edizioni
+ammesse quasi nessun listino prezza, col tetto di spesa acceso un mazzo che non
+fosse verde non poteva avere terre base — perché il tetto non lascia entrare
+quel che l'app non sa contare.
+
+## Reserved List
+
 La **Reserved List** è l'altra metà della stessa onestà: 118 carte del pool non
 saranno mai ristampate, e il loro prezzo non scenderà aspettando. Quando il
 tetto di spesa le lascia fuori, le lascia fuori per sempre — alzare il tetto è

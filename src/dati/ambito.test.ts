@@ -53,6 +53,7 @@ const FORMATO: Formato = {
   edizioniEscluse: [],
   limitate: { perché: "Troppo forti.", daConfermare: null, carte: [] },
   bandite: { perché: "Si giocano per la posta.", daConfermare: null, carte: [] },
+  prezzoDelleTerreBase: null,
 };
 
 describe("l'identità di un formato", () => {

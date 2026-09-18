@@ -102,6 +102,12 @@ export const SPARTIZIONE = {
       // dal pool — toglierla dalle **ammesse** sì, e quello lo vede già
       // `edizioni`.
       "edizioniEscluse",
+      // Il prezzo dichiarato delle terre base non cambia **quali carte
+      // esistono**: le stesse terre base ci sono e ci restano, e cambia solo
+      // quel che l'app dice che costano. Lo applica l'app sopra il pool, come
+      // le limitate e le bandite, e il giorno che il gruppo lo corregge non si
+      // riscarica nessun archivio (ticket 83).
+      "prezzoDelleTerreBase",
     ],
   } satisfies Spartizione<Formato>,
 

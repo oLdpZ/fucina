@@ -60,7 +60,11 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import type { Combo as CarteDellaCombo } from "../combo/combo.js";
 import type { Pool } from "../dati/pool.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
-import { AVVISO_STIMA_AL_RIBASSO, listaDellaSpesa } from "../mazzo/spesa.js";
+import {
+  AVVISO_STIMA_AL_RIBASSO,
+  copieAPrezzoDichiarato,
+  listaDellaSpesa,
+} from "../mazzo/spesa.js";
 import type { Orologio } from "../avversario/orologio.js";
 import type { Richiesta, SpesaDellaRicerca } from "../ricerca/costruisci.js";
 import { TEMPO_MASSIMO_PREDEFINITO_MS } from "../ricerca/taratura.js";
@@ -68,6 +72,7 @@ import { fraseDellaRicercaFermata } from "../ricerca/ripensamento.js";
 import type { Motore } from "../ricerca/usa-motore.js";
 import {
   frasePerIlMazzoSolo,
+  frasePerIlPrezzoDichiarato,
   frasePerLaCorsa,
   frasePerLaFrontieraPiuCorta,
   PATTO_DELLA_CORSA,
@@ -196,10 +201,16 @@ export function Costruzione({
 
   // Quante carte del mazzo scelto un listino non ce l'hanno: sono quelle che il
   // conto non racconta, e il conto va detto «almeno» quando ce ne sono.
-  const senzaListino =
-    mazzo === null
-      ? 0
-      : listaDellaSpesa([...mazzo.carte, ...mazzo.terre]).senzaPrezzo.length;
+  // La lista della spesa del mazzo scelto, che risponde a due domande: quante
+  // carte un listino non ce l'hanno — il conto va detto «almeno» quando ce ne
+  // sono — e quante copie stanno a un prezzo che il gruppo ha **dichiarato**
+  // invece di leggerlo dal mercato (ticket 83).
+  const spesaDelMazzo = mazzo === null ? null : listaDellaSpesa([...mazzo.carte, ...mazzo.terre]);
+  const senzaListino = spesaDelMazzo === null ? 0 : spesaDelMazzo.senzaPrezzo.length;
+  const prezzoDichiarato =
+    spesaDelMazzo === null
+      ? null
+      : frasePerIlPrezzoDichiarato(copieAPrezzoDichiarato(spesaDelMazzo));
 
   const costruisci = () => {
     const richiesta: Richiesta = {
@@ -450,6 +461,10 @@ export function Costruzione({
                 {AVVISO_STIMA_AL_RIBASSO} La lista con le stampe da cercare sta nella schermata
                 «Mazzo», appena lo metti in mano.
               </p>
+
+              {prezzoDichiarato === null ? null : (
+                <p class="spiegazione spiegazione-spesa">{prezzoDichiarato}</p>
+              )}
 
               {spiegato !== null && spiegato.passo !== null ? (
                 <p class="spiegazione spiegazione-passo">{spiegato.passo.frase}</p>

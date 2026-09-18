@@ -4,10 +4,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { COMBO_VUOTA } from "../combo/combo.js";
+import { interpretaFormato } from "../dati/carica-formato.js";
 import { interpretaPool } from "../dati/carica-pool.js";
+import { poolInVigore } from "../dati/pool-in-vigore.js";
 import type { Carta } from "../dati/pool.js";
 import { analizzaBaseDiTerre } from "../mazzo/base-di-terre.js";
-import { contoDelMazzo, PARI_IN_EURO } from "../mazzo/spesa.js";
+import { terreCandidate } from "../mazzo/terre-candidate.js";
+import { comprabile, contoDelMazzo, PARI_IN_EURO } from "../mazzo/spesa.js";
 import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, type Tema } from "../tema/tema.js";
 import { costruisciMazzo, type Opzioni, type Richiesta } from "./costruisci.js";
 
@@ -239,3 +242,86 @@ describe("il tetto di spesa sul pool vero", () => {
     }
   });
 });
+
+/**
+ * Ticket 83: col tetto acceso, un mazzo che non sia verde deve poter avere
+ * terre base.
+ *
+ * Il guasto stava fra due cose giuste. Il pool del 2026-09-17 non ha un prezzo
+ * in euro per quattro terre base su cinque — nelle edizioni ammesse nessuna
+ * copia ne ha uno —, e `comprabile` tiene fuori dal tetto quel che non sa
+ * contare, perché contarlo zero sarebbe la bugia più cara di tutte. Messe
+ * insieme: sotto un tetto, solo un mazzo verde poteva avere terre base.
+ *
+ * Il test gira sul pool **in vigore**, cioè col documento di formato vero
+ * sopra: è lì che il prezzo dichiarato dal gruppo si applica, ed è il pool che
+ * l'app usa davvero. Nessun nome di carta e nessun euro sono scritti qui: le
+ * terre base si riconoscono dal supertipo, e il colore si chiede con la lettera
+ * che il catalogo già usa.
+ */
+describe("le terre base sotto il tetto, sul pool vero e col documento vero", () => {
+  const FORMATO_VERO = interpretaFormato(
+    JSON.parse(
+      readFileSync(fileURLToPath(new URL("../../public/dati/formato.json", import.meta.url)), "utf8"),
+    ),
+  );
+  const IN_VIGORE: readonly Carta[] = poolInVigore(
+    interpretaPool(
+      JSON.parse(
+        readFileSync(fileURLToPath(new URL("../../public/dati/pool.json", import.meta.url)), "utf8"),
+      ),
+    ),
+    FORMATO_VERO,
+    null,
+  ).carte;
+
+  const terreBase = IN_VIGORE.filter((carta) => carta.tipi.includes("Basic"));
+
+  it("il documento dichiara quanto vale una terra base", () => {
+    // Senza la dichiarazione i due controlli qui sotto proverebbero soltanto
+    // che il mercato, quel giorno, era gentile.
+    expect(FORMATO_VERO.prezzoDelleTerreBase).not.toBeNull();
+    expect(terreBase.length).toBeGreaterThan(0);
+  });
+
+  it("ogni terra base si può comprare, sotto un tetto qualunque", () => {
+    for (const terra of terreBase) {
+      expect(comprabile(terra, 1), terra.nome).toBe(true);
+    }
+  });
+
+  it("la base può scegliere una terra base di qualunque colore, e non solo quella che il mercato prezza", () => {
+    // È il guasto per intero, e la prima stesura di questo test non lo vedeva:
+    // chiedeva a un mazzo di avere «una terra base qualunque», e la frontiera
+    // gliela dava — sempre la stessa, l'unica che un prezzo di mercato ce
+    // l'abbia. Verde su un motore rotto.
+    //
+    // Quel che va provato è che sotto un tetto le **candidate** siano tutte:
+    // una base che può scegliere un colore solo non è una base.
+    const conMercato = new Set(
+      interpretaPool(
+        JSON.parse(
+          readFileSync(fileURLToPath(new URL("../../public/dati/pool.json", import.meta.url)), "utf8"),
+        ),
+      )
+        .carte.filter((carta) => carta.tipi.includes("Basic") && carta.prezzo.euro !== null)
+        .map((carta) => carta.nome),
+    );
+
+    // Il pool vero è fatto così, ed è la ragione del ticket: se un giorno il
+    // mercato le prezzasse tutte, questo test smetterebbe di provare qualcosa e
+    // deve dirlo invece di restare verde.
+    expect(conMercato.size).toBeLessThan(terreBase.length);
+
+    const candidate = terreCandidate(IN_VIGORE, TEMA_VUOTO, 400).filter((carta) =>
+      carta.tipi.includes("Basic"),
+    );
+
+    expect(candidate.map((carta) => carta.nome).sort()).toEqual(
+      terreBase.map((carta) => carta.nome).sort(),
+    );
+    expect(candidate.some((carta) => !conMercato.has(carta.nome))).toBe(true);
+  });
+
+});
+

@@ -21,13 +21,16 @@
 import { useMemo } from "preact/hooks";
 
 import { dataInItaliano } from "../dati/carica-pool.js";
+import { frasePerIlPrezzoDichiarato } from "../spiegazioni/frasi.js";
 import type { CopieDiCarta } from "../mazzo/base-di-terre.js";
 import {
   altraStampaDelPrezzo,
   attaccoDelPrezzo,
   AVVISO_STIMA_AL_RIBASSO,
+  copieAPrezzoDichiarato,
   descriviLaStampa,
   listaDellaSpesa,
+  prezzoDichiarato as prezzoDichiaratoDi,
 } from "../mazzo/spesa.js";
 
 const EURO = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
@@ -38,6 +41,7 @@ export function ListaDellaSpesa({ mazzo }: { mazzo: readonly CopieDiCarta[] }) {
   if (lista.voci.length === 0) return null;
 
   const incompleto = lista.senzaPrezzo.length > 0;
+  const prezzoDichiarato = frasePerIlPrezzoDichiarato(copieAPrezzoDichiarato(lista));
 
   return (
     <section class="lista-della-spesa">
@@ -52,6 +56,10 @@ export function ListaDellaSpesa({ mazzo }: { mazzo: readonly CopieDiCarta[] }) {
       </p>
 
       <p class="avviso-prezzi">{AVVISO_STIMA_AL_RIBASSO}</p>
+
+      {/* Le copie il cui prezzo il gruppo ha dichiarato: stanno nel totale, e
+          l'avviso qui sopra promette Cardmarket anche per loro (ticket 83). */}
+      {prezzoDichiarato === null ? null : <p class="avviso-prezzi">{prezzoDichiarato}</p>}
 
       {incompleto ? (
         <p class="avviso-prezzi">
@@ -87,6 +95,11 @@ export function ListaDellaSpesa({ mazzo }: { mazzo: readonly CopieDiCarta[] }) {
               <span class="stampa">
                 {descriviLaStampa(voce.carta)}
                 {altraStampa === null ? null : ` · ${attaccoDelPrezzo(voce.carta)}${altraStampa}`}
+                {/* La cifra dichiarata si dice sulla **riga**, e non solo nel
+                    riassunto in testa: è lì che si legge «0,00 €», ed è lì che
+                    senza una parola sembrerebbe un prezzo di mercato che nessun
+                    negozio farà (ticket 83). */}
+                {prezzoDichiaratoDi(voce.carta) ? " · prezzo dichiarato dal gruppo" : null}
               </span>
               <span class="prezzo-voce">
                 {voce.euro === null ? (

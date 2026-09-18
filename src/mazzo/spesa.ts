@@ -37,6 +37,21 @@ export const AVVISO_STIMA_AL_RIBASSO =
   "che su Cardmarket un listino ce l'abbia. La copia che troverai da comprare può essere un'altra, e costare di più.";
 
 /**
+ * L'avviso che prende il posto di quello sopra dove la cifra **non viene dal
+ * mercato** (ticket 83).
+ *
+ * I due non possono stare insieme e non sono due sfumature della stessa cosa:
+ * quello sopra promette il prezzo di una copia vera su Cardmarket, questo dice
+ * che una copia da cercare non c'è. Mostrare il primo su una cifra dichiarata
+ * sarebbe attribuire a Cardmarket un numero che su Cardmarket non è mai
+ * passato, ed è l'unico modo in cui questo ticket poteva finire per far dire
+ * all'app una bugia nuova.
+ */
+export const AVVISO_PREZZO_DICHIARATO =
+  "Questa cifra non viene dal mercato: la dichiara il documento di formato, cioè il gruppo con cui " +
+  "giochi, e non c'è nessuna copia da cercare al negozio.";
+
+/**
  * Sotto questa differenza due cifre in euro si dicono **la stessa cifra**:
  * mezzo centesimo.
  *
@@ -178,6 +193,12 @@ export type ListaDellaSpesa = {
   /** Le voci in Reserved List: quelle che non diventeranno più economiche. */
   riservate: VoceDiSpesa[];
   /**
+   * Le voci il cui prezzo il **gruppo ha dichiarato** invece di leggerlo dal
+   * mercato (ticket 83): stanno dentro il totale, e chi mostra dice che su
+   * Cardmarket non ci sono mai passate.
+   */
+  dichiarate: VoceDiSpesa[];
+  /**
    * La data dei prezzi — la più recente fra quelle delle carte, che nel pool
    * vero sono tutte la stessa. `null` su una lista vuota: una data inventata
    * su un conto che non c'è sarebbe una data che non vuol dire niente.
@@ -206,6 +227,23 @@ export function comprabile(carta: Carta, tetto: number | null): boolean {
   if (tetto === null) return true;
   const euro = prezzoDiUnaCopia(carta);
   return euro !== null && euro <= tetto;
+}
+
+/**
+ * Se questa cifra è un prezzo **dichiarato** dal gruppo invece che letto da un
+ * listino (ticket 83).
+ *
+ * Si riconosce dalla forma, e non da una bandiera in più nei dati: una cifra
+ * c'è, e la copia da cui verrebbe no. Le altre due combinazioni sono quelle che
+ * l'app conosceva già — cifra e stampa insieme è il listino, nessuna delle due
+ * è la carta che nessuna copia ammessa prezza — e restano quel che erano.
+ *
+ * La bandiera in più sarebbe stata un terzo stato da tenere allineato agli
+ * altri due, e il primo posto che si scordasse di guardarla direbbe di una
+ * cifra dichiarata che viene dal mercato.
+ */
+export function prezzoDichiarato(carta: Carta): boolean {
+  return carta.prezzo.euro !== null && carta.prezzo.stampa === null;
 }
 
 /** Il prezzo di una copia, `null` quando nessuna copia ammessa ha listino. */
@@ -311,6 +349,7 @@ export function listaDellaSpesa(mazzo: readonly CopieDiCarta[]): ListaDellaSpesa
     totale: voci.reduce((somma, voce) => somma + (voce.euro ?? 0), 0),
     senzaPrezzo: voci.filter((voce) => voce.euro === null),
     riservate: voci.filter((voce) => voce.carta.riservata),
+    dichiarate: voci.filter((voce) => prezzoDichiarato(voce.carta)),
     aggiornatoIl: date[date.length - 1] ?? null,
   };
 }
@@ -425,4 +464,27 @@ function descrivi(stampa: Stampa): string {
   const lingua =
     stampa.lingua === "" ? "" : `, ${NOMI_DELLE_LINGUE[stampa.lingua] ?? stampa.lingua}`;
   return `${stampa.edizione.toUpperCase()}${numero}${lingua}`;
+}
+
+/**
+ * Quante copie di una lista stanno a un prezzo **dichiarato**, e quanto pesano.
+ *
+ * Il conto sta qui e non nelle due schermate che lo mostrano, per la ragione di
+ * sempre: due somme scritte in due posti diventano, prima o poi, due numeri
+ * diversi sotto la stessa promessa.
+ */
+export function copieAPrezzoDichiarato(lista: ListaDellaSpesa): {
+  copie: number;
+  euro: number;
+} {
+  let copie = 0;
+  let euro = 0;
+  for (const voce of lista.dichiarate) {
+    copie += voce.copie;
+    // `euro` di una voce dichiarata non è mai `null` — un prezzo dichiarato una
+    // cifra ce l'ha per definizione — ma il tipo non lo sa, e qui il valore
+    // predefinito non serve a coprire un caso: serve a non scrivere un `!`.
+    euro += voce.euro ?? 0;
+  }
+  return { copie, euro };
 }

@@ -24,7 +24,9 @@ import type { Carta, Faccia } from "../dati/pool.js";
 import {
   altraStampaDelPrezzo,
   attaccoDelPrezzo,
+  AVVISO_PREZZO_DICHIARATO,
   AVVISO_STIMA_AL_RIBASSO,
+  prezzoDichiarato,
   descriviLaStampa,
 } from "../mazzo/spesa.js";
 import { tipoPrincipale } from "../catalogo/vocabolario.js";
@@ -173,11 +175,19 @@ export function SchedaCarta({
             ) : null}
 
             <p class="prezzo">
+              {/* Una cifra dichiarata dal gruppo non si attribuisce a
+                  Cardmarket: è l'unico posto dell'app che nominava il mercato
+                  accanto al numero, e su una terra base avrebbe detto il falso
+                  (ticket 83). */}
               {carta.prezzo.euro === null
                 ? "Prezzo non disponibile"
-                : `${EURO.format(carta.prezzo.euro)} · prezzo Cardmarket del ${dataInItaliano(
-                    carta.prezzo.aggiornatoIl,
-                  )}`}
+                : prezzoDichiarato(carta)
+                  ? `${EURO.format(carta.prezzo.euro)} · prezzo dichiarato dal gruppo il ${dataInItaliano(
+                      carta.prezzo.aggiornatoIl,
+                    )}`
+                  : `${EURO.format(carta.prezzo.euro)} · prezzo Cardmarket del ${dataInItaliano(
+                      carta.prezzo.aggiornatoIl,
+                    )}`}
               {/* La stampa si dice **sempre**, anche quando il prezzo non c'è:
                   è la copia che si compra, e serve a cercarla al negozio tanto
                   quanto serviva a spiegare l'assenza del prezzo. */}
@@ -194,8 +204,13 @@ export function SchedaCarta({
                 </>
               )}
             </p>
+            {/* I due avvisi non stanno mai insieme: uno promette il prezzo di
+                una copia vera su Cardmarket, l'altro dice che una copia da
+                cercare non c'è. */}
             {carta.prezzo.euro === null ? null : (
-              <p class="avviso-prezzi">{AVVISO_STIMA_AL_RIBASSO}</p>
+              <p class="avviso-prezzi">
+                {prezzoDichiarato(carta) ? AVVISO_PREZZO_DICHIARATO : AVVISO_STIMA_AL_RIBASSO}
+              </p>
             )}
             {carta.riservata ? (
               <p class="avviso-prezzi">

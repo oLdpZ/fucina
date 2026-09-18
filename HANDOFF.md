@@ -86,7 +86,14 @@ del solito dice chi l'ha accorciata anche quando i mazzi sono più di uno. E due
 guardiani tengono chiuse due scorciatoie: nessun nome di carta entra nei modelli
 di frase — i nomi ruotano, e una frase che ne nominasse uno resterebbe a parlare
 di una carta che l'app non ha — e nessuna schermata mostra un numero di corsa
-senza dichiarare che l'avversario è una caricatura.
+senza dichiarare che l'avversario è una caricatura. E dal 18 settembre il
+**tetto di spesa non caccia più le terre base**: quattro su cinque, nelle
+edizioni ammesse, un prezzo in euro non ce l'hanno, e col tetto acceso un mazzo
+che non fosse verde non poteva avere terre — adesso quanto vale una terra base
+lo **dichiara il documento di formato**, oggi zero, col perché scritto accanto.
+Dove quella cifra si mostra, l'app non nomina il mercato: dire «prezzo
+Cardmarket» di un numero deciso dal gruppo sarebbe una bugia nuova al posto di
+un guasto vecchio.
 
 Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 `npm test` per i test, `npm run tipi` per il solo controllo dei tipi,

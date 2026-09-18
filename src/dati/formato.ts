@@ -165,6 +165,37 @@ export type Formato = {
   edizioniEscluse: EdizioneEsclusa[];
   limitate: ElencoDiCarte;
   bandite: ElencoDiCarte;
+  /**
+   * Quanto vale una **terra base**, dichiarato dal gruppo; `null` quando il
+   * documento non lo dichiara, e allora le terre base si comprano come tutte
+   * le altre carte.
+   *
+   * Nasce da un guasto vero (ticket 83). Nelle edizioni ammesse dal 2026-09-17
+   * quattro terre base su cinque non hanno nessun prezzo in euro, e col tetto
+   * di spesa acceso l'app non mette in mazzo quel che non sa contare: sotto un
+   * tetto, un mazzo che non fosse verde non poteva avere terre base.
+   *
+   * La risposta non poteva stare nel codice. Quanto valga una terra base al
+   * tavolo del venerdì è una cosa che sa il gruppo e non il programma — e come
+   * ogni voce di questo documento porta con sé il **perché**, perché fra un
+   * anno quel numero va spiegato a chi lo contesta.
+   */
+  prezzoDelleTerreBase: PrezzoDichiarato | null;
+};
+
+/**
+ * Un prezzo che il gruppo **dichiara** invece di leggerlo da un listino.
+ *
+ * Non è una stima al ribasso e non viene da una copia: è una cifra decisa, e
+ * per questo non porta una stampa con sé — non c'è nessuna copia da andare a
+ * cercare al banchetto. Quel che porta è il perché, che è l'unica cosa che la
+ * rende difendibile.
+ */
+export type PrezzoDichiarato = {
+  /** In euro, e mai negativo: un prezzo sotto zero non esiste. */
+  euro: number;
+  perché: string;
+  daConfermare: string | null;
 };
 
 /** Una voce ancora da confermare col gruppo, e la domanda da fargli. */
