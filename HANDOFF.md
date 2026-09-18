@@ -1,4 +1,4 @@
-# Ripresa del lavoro — stato al 4 settembre 2026
+# Ripresa del lavoro — stato al 18 settembre 2026
 
 Documento di passaggio: aprendo un nuovo terminale, leggi questo per primo,
 poi `PROGETTO.md`.
@@ -132,15 +132,38 @@ spiegazioni mai inventate.
 
 ## Prossimi comandi, in ordine
 
-**Il fronte è fermo, e per una ragione sola: la sosta.** Al 4 settembre 2026 i
-sei ticket della tappa 3 stanno così — `01` (i tag di Scryfall nel pool) e `05`
-(la combo dichiarata) sono **fatti**, ed erano gli unici due che non
-dipendevano da una taratura; `02`, `03`, `04` e `06` sono **bloccati**, tutti a
-valle del ticket 14. La catena è
-`sosta → 02 orologio e corsa → 03 archetipo misurato → 04 la strategia come
-vincolo`, e non si può accorciare: il «controllo» non è misurabile senza
-l'orologio, e il peso della corsa — sesta componente — va messo in mezzo ai
-cinque che la sosta sta per ritarare.
+**Al 18 settembre 2026 la tappa 3 è chiusa**: tutti e sei i ticket di
+`.scratch/strategia-e-avversario/` sono `done`. Il branch è
+`old-school-italiano`, l'albero è pulito, e gli ultimi quattro commit sono:
+
+    018cd7c  ticket 80 — il timeout dei test torna a essere una rete
+    dad0957  ticket 83 — col tetto acceso le terre base si comprano
+    b0d92cf  tappa 3, ticket 06 — il mazzo porta il conto, non l'etichetta
+    b8983f3  tappa 3, ticket 04 — la strategia è un vincolo duro, e la guardia parla prima
+
+Comandi: `npm test` (1285 verdi), `npm run tipi`, `npm run build` — tutti puliti
+il 18 settembre. **Non lanciare due suite complete in parallelo**: passano tutte
+ma il processo esce con codice 1 per un guasto dentro vitest, e il ticket 80 lo
+spiega.
+
+**Quel che resta aperto**, in ordine di peso:
+
+1. **La sosta e prova reale** (`old-school-italiano/15`, e `fondamenta-e-motore/14`
+   che è `ready-for-human`). È il pezzo grosso e il rischio serio del progetto
+   (`PROGETTO.md` §4): rimisurare le tarature sui mazzi veri. La tappa 3 le ha
+   appena moltiplicate — sei nuove, elencate in
+   `.scratch/strategia-e-avversario/spec.md`, «Le sei tarature». Serve l'occhio
+   dell'utente sulle liste: l'agente prepara le misure, il giudizio su che cosa
+   sia un buon mazzo è suo. **Conviene aprirla con un contesto pulito.**
+2. **La rigenerazione del pool** (`npm run dati`), che chiude le caselle rimaste
+   aperte dei ticket `61` e `05`. Adesso è più sicura di prima: i prezzi del
+   giorno non toccano più le terre base, perché quanto valgono lo dichiara il
+   documento di formato (ticket 83).
+3. Il ticket `03`, con la sua casella rimasta.
+
+Quel che segue è il piano com'era **al 4 settembre**, tenuto perché il
+ragionamento serve ancora; la catena dei ticket della tappa 3 che descrive è
+però stata percorsa tutta.
 
 **Che cosa un agente ha già apparecchiato** (4 settembre, in `.scratch/`, fuori
 da git):
