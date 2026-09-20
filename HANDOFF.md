@@ -1,4 +1,4 @@
-# Ripresa del lavoro — stato al 18 settembre 2026
+# Ripresa del lavoro — stato al 20 settembre 2026
 
 Documento di passaggio: aprendo un nuovo terminale, leggi questo per primo,
 poi `PROGETTO.md`.
@@ -146,7 +146,19 @@ il 18 settembre. **Non lanciare due suite complete in parallelo**: passano tutte
 ma il processo esce con codice 1 per un guasto dentro vitest, e il ticket 80 lo
 spiega.
 
-**Quel che resta aperto**, in ordine di peso:
+**Il 20 settembre il pool è stato rigenerato**, e con quello si chiudono tre
+ticket: il `05`, il `61` e il `03`. `npm run dati` sull'archivio Scryfall del
+2026-09-20 scrive **725 carte** — il numero che il ticket 82 aveva previsto
+togliendo la Quarta — con zero entrate e zero uscite: il criterio non si è
+mosso, si sono mossi solo i prezzi del giorno. Le tre correzioni ai tag del
+ticket 61, che vivevano solo nel sorgente perché i tag stanno congelati nel
+pool, adesso si vedono nell'app: **Earthbind** non dà più il volo che punisce,
+**Johan** non imbriglia più nessuno, e **Stone Giant** non conta più come
+rimozione una creatura tua che ammazza. Tipi puliti e 1285 test verdi col pool
+nuovo. Il ticket `03` non aveva caselle aperte: gli mancava solo la riga di
+stato.
+
+**Quel che resta aperto** è una cosa sola, ed è la più grossa:
 
 1. **La sosta e prova reale** (`old-school-italiano/15`, e `fondamenta-e-motore/14`
    che è `ready-for-human`). È il pezzo grosso e il rischio serio del progetto
@@ -154,12 +166,8 @@ spiega.
    appena moltiplicate — sei nuove, elencate in
    `.scratch/strategia-e-avversario/spec.md`, «Le sei tarature». Serve l'occhio
    dell'utente sulle liste: l'agente prepara le misure, il giudizio su che cosa
-   sia un buon mazzo è suo. **Conviene aprirla con un contesto pulito.**
-2. **La rigenerazione del pool** (`npm run dati`), che chiude le caselle rimaste
-   aperte dei ticket `61` e `05`. Adesso è più sicura di prima: i prezzi del
-   giorno non toccano più le terre base, perché quanto valgono lo dichiara il
-   documento di formato (ticket 83).
-3. Il ticket `03`, con la sua casella rimasta.
+   sia un buon mazzo è suo. **Conviene aprirla con un contesto pulito**, e
+   `la-sosta.md` va rigenerato: quello sul disco viene dal pool del 3 settembre.
 
 Quel che segue è il piano com'era **al 4 settembre**, tenuto perché il
 ragionamento serve ancora; la catena dei ticket della tappa 3 che descrive è
