@@ -2,6 +2,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { COMBO_VUOTA } from "../src/combo/combo.ts";
+import { interpretaFormato } from "../src/dati/carica-formato.ts";
+import { applicaIlFormato } from "../src/dati/pool-in-vigore.ts";
 import type { Carta, Pool } from "../src/dati/pool.ts";
 import { costruisciMazzo, type Frontiera, type MazzoCostruito } from "../src/ricerca/costruisci.ts";
 import {
@@ -46,6 +48,7 @@ import { FILTRO_TEMA_VUOTO, TEMA_VUOTO, eTerra, type Tema } from "../src/tema/te
 const qui = (percorso: string) => fileURLToPath(new URL(percorso, import.meta.url));
 
 const POOL = qui("../public/dati/pool.json");
+const FORMATO = qui("../public/dati/formato.json");
 const USCITA = qui("../.scratch/old-school-italiano/la-sosta.md");
 
 /**
@@ -359,7 +362,15 @@ function scriviProva(prova: Prova, frontiera: Frontiera, ms: number, pool: reado
 /* -------------------------------------------------------------------------- */
 
 function main(): void {
-  const pool = JSON.parse(readFileSync(POOL, "utf8")) as Pool;
+  const congelato = JSON.parse(readFileSync(POOL, "utf8")) as Pool;
+  // **Il pool come lo legge l'app, non come sta sul disco.** `pool.json` è il
+  // pool *congelato*: le bandite ci sono ancora e le limitate portano quattro
+  // copie, perché chi le toglie è il documento di formato applicato
+  // all'apertura (`src/dati/pool-in-vigore.ts`, ADR-0008). Un banco che legge
+  // il file crudo misura un gioco che nessuno gioca: fino al 20 settembre 2026
+  // questo banco costruiva mazzi con Falling Star dentro e quattro Sol Ring.
+  const formato = interpretaFormato(JSON.parse(readFileSync(FORMATO, "utf8")));
+  const pool = applicaIlFormato(congelato, formato);
   const carte = pool.carte;
 
   const intestazione: string[] = [
@@ -375,7 +386,8 @@ function main(): void {
     "- la differenza fra il primo e l'ultimo mazzo è un compromesso vero o è rumore?",
     "- le spiegazioni si capiscono lette **a voce alta**, senza già sapere le cose?",
     "",
-    `- pool del **${pool.generatoIl}**, ${carte.length} carte`,
+    `- pool del **${pool.generatoIl}**, ${carte.length} carte giocabili (${congelato.carte.length} nel file, meno le bandite)`,
+    `- documento di formato **${formato.nome}**, lista del ${formato.aggiornatoIl}: ${formato.limitate.carte.length} limitate a una copia, ${formato.bandite.carte.length} bandite fuori`,
     `- seme **${SEME}**, fisso: due esecuzioni a parità di codice danno lo stesso documento`,
     `- tetto di tempo **${TEMPO_MASSIMO_MS / 1000} s** per tema, largo apposta — sul telefono è molto più stretto, e la troncatura falserebbe il giudizio`,
     "",

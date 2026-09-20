@@ -158,6 +158,25 @@ rimozione una creatura tua che ammazza. Tipi puliti e 1285 test verdi col pool
 nuovo. Il ticket `03` non aveva caselle aperte: gli mancava solo la riga di
 stato.
 
+**Il 20 settembre, più tardi, il banco della sosta si è rivelato rotto
+(ticket 84).** `strumenti/apparecchia-la-sosta.ts` leggeva `pool.json` crudo e
+non applicava mai il documento di formato: costruiva su 725 carte invece di
+719, con le sei bandite dentro e le diciannove limitate a quattro copie invece
+che a una. Dodici liste su trenta erano illegali — `3× Falling Star`,
+`4× Balance`, `4× Mana Drain`. **L'app è sana**: `applicaIlFormato` sui dati
+veri toglie le bandite e porta ogni limitata a una copia, e nessun utente ha
+mai visto uno di quei mazzi. Il banco è riparato e rimisurato; le liste nuove
+passano un controllo di legalità fatto contro `formato.json`, non contro il
+motore.
+
+**Tutte le misure della sosta precedenti vanno buttate**, compresa la
+ritaratura di `DENSITA_DI_SINERGIA_PIENA` da 0,15 a 0,30 del 13 settembre: le
+carte in più erano Sol Ring, Balance, Mind Twist, Wheel of Fortune, Channel e
+Mana Drain, cioè le più forti del formato, e la ricerca ottimizza la potenza.
+La lezione del primo giro — *una taratura si misura due volte* — ne prende una
+seconda accanto: **un banco si controlla contro i dati, non contro il motore
+che sta misurando.**
+
 **Quel che resta aperto** è una cosa sola, ed è la più grossa:
 
 1. **La sosta e prova reale** (`old-school-italiano/15`, e `fondamenta-e-motore/14`
