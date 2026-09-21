@@ -19,7 +19,6 @@
  * della loro API e non del nostro gioco.
  */
 
-import { basename } from "node:path";
 
 /**
  * L'archivio di **tutte** le carte in **tutte le lingue**.
@@ -57,9 +56,16 @@ const IMPRONTA_DI_UN_ALTRO = /^(.+)-\d{14}\.jsonl(?:\.gz)?$/;
  * e sbagliarla vorrebbe dire mentire a chi legge un euro. Guarda **solo il nome
  * del file** e non il percorso, perché una cartella chiamata con dei numeri
  * darebbe una data plausibile e falsa.
+ *
+ * L'ultimo pezzo si taglia su **tutti e due i separatori**, non con `basename`
+ * di Node: `basename` sa quelli del sistema su cui gira, e su Linux la barra
+ * rovescia non separa niente. Il manutentore scrive percorsi Windows, i test
+ * girano anche su Linux, e la guardia deve dire la stessa cosa da tutte e due
+ * le parti — altrimenti è verde a casa e rossa in pubblicazione, che è
+ * esattamente com'è stata scoperta (ticket 85).
  */
 export function dataDellArchivio(percorso: string): string {
-  const nome = basename(percorso);
+  const nome = percorso.replaceAll("\\", "/").split("/").pop() ?? "";
   const impronta = IMPRONTA.exec(nome);
 
   if (!impronta) {
