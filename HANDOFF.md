@@ -1,4 +1,4 @@
-# Ripresa del lavoro — stato al 20 settembre 2026
+# Ripresa del lavoro — stato al 21 settembre 2026
 
 Documento di passaggio: aprendo un nuovo terminale, leggi questo per primo,
 poi `PROGETTO.md`.
@@ -102,8 +102,9 @@ Comandi: `npm run dev` per sviluppare, `npm run build` per compilare,
 ## Cosa costruiamo, in una frase
 
 App web installabile sul telefono (PWA), interamente lato browser, che dato un
-tema scelto dall'utente e un tetto di spesa in euro costruisce il mazzo Standard
-cartaceo più forte possibile dentro quel vincolo, spiega ogni scelta a parole, e
+tema scelto dall'utente e un tetto di spesa in euro costruisce il mazzo più
+forte possibile dentro quel vincolo — **Old School su stampe italiane** dal
+2026-09-06, ADR-0005 — spiega ogni scelta a parole, e
 produce la lista della spesa. Il fulcro è il **tasso di cambio fra originalità e
 potenza**.
 
@@ -176,6 +177,57 @@ Mana Drain, cioè le più forti del formato, e la ricerca ottimizza la potenza.
 La lezione del primo giro — *una taratura si misura due volte* — ne prende una
 seconda accanto: **un banco si controlla contro i dati, non contro il motore
 che sta misurando.**
+
+**Il 21 settembre Fucina è stata pubblicata davvero.** Fino a quel giorno
+`https://oldpz.github.io/fucina/` serviva l'app dello **Standard**: `main` era
+fermo al 4 settembre, con `AMBITO_APP = "Standard · cartaceo"`, 4886 carte e
+nessun `formato.json`. Il ramo `old-school-italiano` non era mai stato fuso, e
+aveva 103 commit. Adesso `main` è il ramo, ed è spinto: il sito serve `Classic
+94`, lista del 2026-09-17, e il pool da 725 carte — verificato interrogando il
+sito, non fidandosi del workflow.
+
+**La prima pubblicazione è fallita, e ha trovato il ticket 85.**
+`dataDellArchivio` tagliava il nome del file con `basename` di `node:path`, che
+conosce i separatori del sistema su cui gira: su Linux la barra rovescia non
+separa niente, e il test che le passa apposta un percorso Windows con una
+cartella di quattordici cifre — il caso che il ticket 18 difende — andava rosso.
+In locale 1285 verdi, su `ubuntu-latest` rosso. Riparato: il nome si taglia su
+tutti e due i separatori senza chiedere al sistema.
+
+Il guasto è piccolo; **quel che conta è perché nessuno l'aveva visto.** La
+pubblicazione non girava dal 4 settembre, quindi per diciassette giorni l'unica
+macchina che eseguiva i test era Windows, e un test scritto apposta per il caso
+Windows era l'unico a non poter essere smentito. È la stessa specie del ticket
+84 vista da un'altra angolazione — là il banco si misurava contro sé stesso
+invece che contro i dati — e la lezione si scrive una volta per tutte e due:
+**un controllo che gira in un posto solo non è un controllo, è un'abitudine.**
+
+## Due decisioni aperte, piccole, che aspettano una persona
+
+1. **Dove mettere il controllo di legalità** (casella aperta del ticket 84). Le
+   dieci righe che hanno trovato il guasto stanno fuori dal repo. Possono
+   vivere nel banco, oppure in un test che gira su **ogni** mazzo che il motore
+   consegna — il secondo è più forte, perché coprirebbe anche l'app.
+2. **Se far girare il workflow anche sui rami** (casella aperta del ticket 85),
+   così il rosso arriva il giorno in cui lo si scrive e non diciassette giorni
+   dopo. Costa minuti di CI a ogni spinta.
+
+## Il tester, e i due fogli che lo aspettano
+
+Stanno in `.scratch/old-school-italiano/per-il-tester/`, che è **fuori da git**:
+se la cartella si perde, si rigenerano dal banco.
+
+- **`liste.md`** — 32 mazzi da sessanta carte, **senza nessun punteggio**, con
+  le caselle da barrare. Verificato contro `formato.json`: tutti legali.
+- **`cronometro.md`** — punta al sito pubblicato, e chiede di non cronometrare
+  la prima apertura, che scarica le carte.
+
+**L'ordine conta, ed è l'unica cosa da rispettare**: prima le liste su carta, a
+freddo, senza il link. L'app mostra purezza e potenza in percentuale accanto a
+ogni mazzo (`Costruzione.tsx:378`), ed è giusto così — è il fulcro. Ma il
+giudizio cieco *questa lista sta in piedi?* si spende una volta sola. Dopo, il
+link, e lo si lascia giocare: i temi li sceglie lui, ed è lì che il prodotto si
+vede.
 
 **Quel che resta aperto** è una cosa sola, ed è la più grossa:
 
@@ -319,11 +371,15 @@ Verificati il 3 settembre 2026 contro fonti vive; per esteso in ADR-0002.
   loro avvertenza: quel che si misura è *«AI engine behavior»*, non come gioca
   una persona.
 
-## La pubblicazione — fatta il 3 settembre 2026
+## La pubblicazione — apparecchiata il 3 settembre 2026, vera dal 21
 
 Fucina è online: **https://oldpz.github.io/fucina/**, repo pubblico
 `oLdpZ/fucina`. È l'indirizzo da dare all'amico dell'utente, e da lì la PWA si
 installa sul telefono.
+
+> ⚠️ **Dal 4 al 21 settembre quell'indirizzo ha servito l'app sbagliata**: lo
+> Standard, perché `main` era fermo e il ramo non era mai stato fuso. Il
+> meccanismo qui sotto ha sempre funzionato; quel che mancava era spingere.
 
 Come sta messa:
 
